@@ -14,5 +14,5 @@ ChessPieceSet >> byteArrayForPiece: aPiece color: aColor [
 { #category : 'accessing' }
 ChessPieceSet >> default [
 
-	^ MadwareChessPieceSet new
+	^ LiviusPieceSet new
 ]

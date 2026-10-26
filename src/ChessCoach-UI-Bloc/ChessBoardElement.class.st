@@ -92,7 +92,7 @@ ChessBoardElement >> initialize [
 	squares := OrderedCollection new.
 	pieceElements := Dictionary new.
 	currentState := Dictionary new.
-	pieceSet := MadwareChessPieceSet new.
+	pieceSet := MeridianPieceSet new.
 	self layout: (BlGridLayout horizontal columnCount: 8).
 	self constraintsDo: [ :c |
 			c horizontal exact: 400.

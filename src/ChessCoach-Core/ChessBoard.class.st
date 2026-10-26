@@ -21,6 +21,14 @@ ChessBoard >> fen [
 ]
 
 { #category : 'initialization' }
+ChessBoard >> initialize [
+
+	super initialize.
+	fen := 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'.
+	^ self
+]
+
+{ #category : 'initialization' }
 ChessBoard >> initializeWithFEN: aFENString [
 
 	fen := aFENString.

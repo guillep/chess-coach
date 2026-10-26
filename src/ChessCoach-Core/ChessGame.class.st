@@ -38,6 +38,12 @@ ChessGame >> gameId: aString pgn: aPGN metadata: aDict moves: aMoveList board: a
 ]
 
 { #category : 'accessing' }
+ChessGame >> initialBoard [
+
+	^ ChessBoard new
+]
+
+{ #category : 'accessing' }
 ChessGame >> metadata [
 
 	^ metadata

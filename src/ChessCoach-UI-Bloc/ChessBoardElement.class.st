@@ -33,6 +33,15 @@ ChessBoardElement >> displayBoard [
 	^ self
 ]
 
+{ #category : 'accessing' }
+ChessBoardElement >> game: aPGNGame [
+
+	| b |
+	b := aPGNGame initialBoard.
+	self board: b.
+	^ self
+]
+
 { #category : 'action' }
 ChessBoardElement >> highlightSquares: squareList [
 
@@ -61,4 +70,11 @@ ChessBoardElement >> initializeWithBoard: aChessBoard [
 ChessBoardElement >> selectSquare: squareCoordinates [
 
 	selectedSquare := squareCoordinates
+]
+
+{ #category : 'accessing' }
+ChessBoardElement >> setBoard: aChessBoard [
+
+	board := aChessBoard.
+	^ self
 ]

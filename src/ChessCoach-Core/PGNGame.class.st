@@ -9,6 +9,12 @@ Class {
 	#package : 'ChessCoach-Core'
 }
 
+{ #category : 'accessing' }
+PGNGame >> initialBoard [
+
+	^ ChessBoard new
+]
+
 { #category : 'initialization' }
 PGNGame >> initialize [
 

@@ -83,6 +83,15 @@ MoveReplayController >> jumpToMove: moveIndex [
 ]
 
 { #category : 'accessing' }
+MoveReplayController >> loadPGNGame: aPGNGame [
+
+	game := aPGNGame.
+	currentMoveIndex := 0.
+	board ifNotNil: [ board board: game initialBoard ].
+	^ self
+]
+
+{ #category : 'accessing' }
 MoveReplayController >> moveAtIndex: anIndex [
 
 	| moves |

@@ -6,6 +6,21 @@ Class {
 }
 
 { #category : 'tests' }
+MoveReplayControllerTest >> testLoadPGNGame [
+
+	| p game ctrl |
+	p := '[Event "Test"]
+
+1. e4 e5'.
+	game := PGNParser new parse: p.
+	ctrl := MoveReplayController new.
+	ctrl loadPGNGame: game.
+	self assert: ctrl game equals: game.
+	self assert: ctrl gameMoves size equals: 2.
+	self assert: ctrl moveList equals: '1. e4 e5'
+]
+
+{ #category : 'tests' }
 MoveReplayControllerTest >> testMoveListFromBlackStart [
 
 	| p game ctrl |

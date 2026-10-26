@@ -28,15 +28,22 @@ BaselineOfChessCoach >> baseline: spec [
 			"Coach logic (Socratic prompts, review sequencing)"
 			spec package: 'ChessCoach-Coach' dependsOn: #( 'ChessCoach-Core' ).
 
+			"Bloc dependencies"
+			spec
+				baseline: 'Bloc'
+				with: [
+				spec repository: 'github://pharo-graphics/Bloc:dev-1.0/src' ].
+
 			"Bloc-based UI"
 			spec
 				package: 'ChessCoach-UI-Bloc'
-				dependsOn: #( 'ChessCoach-Core' 'ChessCoach-Coach' ).
+				dependsOn: #( 'ChessCoach-Core' 'ChessCoach-Coach'
+				   'Bloc' ).
 
 			"Tests"
 			spec
 				package: 'ChessCoach-Tests'
 				dependsOn:
-				#( 'ChessCoach-Core' 'ChessCoach-FileStorage'
-				   'ChessCoach-Coach' ) ]
+					#( 'ChessCoach-Core' 'ChessCoach-FileStorage'
+					   'ChessCoach-Coach' 'ChessCoach-UI-Bloc' ) ]
 ]

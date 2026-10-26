@@ -8,14 +8,14 @@ Class {
 	#package : 'BaselineOfChessCoach'
 }
 
-{ #category : 'baseline' }
+{ #category : 'baselines' }
 BaselineOfChessCoach >> baseline: spec [
 
 	<baseline>
 	spec for: #common do: [
 			spec baseline: 'Bloc' with: [
 				spec repository:
-					'github://pharo-graphics/Bloc:release-candidate/src' ].
+					'github://pharo-graphics/Bloc:v2.9.0' ].
 
 			spec package: 'ChessCoach-Core'.
 
@@ -28,16 +28,10 @@ BaselineOfChessCoach >> baseline: spec [
 				with: [
 				spec requires: #( 'ChessCoach-Core' 'ChessCoach-FileStorage' ) ].
 
-			spec
-				package: 'ChessCoach-Coach'
-				with: [ spec requires: #( 'ChessCoach-Core' ) ].
-
 			spec package: 'ChessCoach-UI-Bloc' with: [
-					spec requires: #( 'ChessCoach-Core' 'ChessCoach-Coach'
-					   'Bloc' ) ].
+					spec requires: #( 'ChessCoach-Core' 'Bloc' ) ].
 
 			spec package: 'ChessCoach-Tests' with: [
 					spec requires:
-						#( 'ChessCoach-Core' 'ChessCoach-FileStorage'
-						   'ChessCoach-Coach' 'ChessCoach-UI-Bloc' ) ] ]
+						#( 'ChessCoach-Core' 'ChessCoach-FileStorage' 'ChessCoach-UI-Bloc' ) ] ]
 ]

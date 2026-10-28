@@ -8,12 +8,45 @@ Class {
 		'squares',
 		'pieceElements',
 		'pieceSet',
-		'chessPosition'
+		'chessPosition',
+		'orientation',
+		'arrows',
+		'arrowLayer',
+		'pressedSquare',
+		'selectedSquare',
+		'moveBlock'
 	],
 	#category : 'ChessCoach-UI-Board',
 	#package : 'ChessCoach-UI',
 	#tag : 'Board'
 }
+
+{ #category : 'accessing' }
+ChessBoardElement >> arrows [
+
+	^ arrows
+]
+
+{ #category : 'accessing' }
+ChessBoardElement >> arrows: someChessArrows [
+
+	arrows := someChessArrows asArray.
+	self redrawArrows
+]
+
+{ #category : 'initialization' }
+ChessBoardElement >> buildArrowLayer [
+	"Arrows are drawn above the squares and pieces and never take mouse events"
+
+	arrowLayer := BlElement new
+		              constraintsDo: [ :c | c ignoreByLayout ];
+		              preventMeAndChildrenMouseEvents;
+		              yourself.
+	self addChild: arrowLayer.
+	self
+		addEventHandlerOn: BlElementExtentChangedEvent
+		do: [ :event | self redrawArrows ]
+]
 
 { #category : 'initialization' }
 ChessBoardElement >> buildBoard [
@@ -38,8 +71,23 @@ ChessBoardElement >> buildBoard [
 								          c horizontal matchParent.
 								          c vertical matchParent ];
 						          yourself.
+					square
+						addEventHandlerOn: BlMouseDownEvent
+						do: [ :event | self pressedOn: (self squareNameOf: square) ].
+					square
+						addEventHandlerOn: BlMouseUpEvent
+						do: [ :event | self releasedOn: (self squareNameOf: square) ].
 					self addChild: square.
 					squares add: square ] ]
+]
+
+{ #category : 'drawing' }
+ChessBoardElement >> centerOf: aSquare [
+
+	| index size |
+	index := self squareIndexOf: aSquare.
+	size := self width / 8.
+	^ index - 1 \\ 8 + 0.5 * size @ (index - 1 // 8 + 0.5 * size)
 ]
 
 { #category : 'accessing' }
@@ -64,7 +112,39 @@ ChessBoardElement >> initialize [
 	pieceElements := Dictionary new.
 	chessPosition := ChessPosition new.
 	pieceSet := MeridianPieceSet new.
-	self buildBoard
+	orientation := #white.
+	arrows := #(  ).
+	moveBlock := [ :uci |  ].
+	self buildBoard.
+	self buildArrowLayer
+]
+
+{ #category : 'input' }
+ChessBoardElement >> mark: fromSquare to: toSquare [
+
+	| piece promotion |
+	piece := chessPosition pieceAt: fromSquare.
+	promotion := (piece notNil and: [
+		              piece asUppercase = 'P' and: [
+			              '18' includes: toSquare second ] ])
+		             ifTrue: [ 'q' ]
+		             ifFalse: [ '' ].
+	moveBlock value: fromSquare , toSquare , promotion
+]
+
+{ #category : 'accessing' }
+ChessBoardElement >> orientation [
+
+	^ orientation
+]
+
+{ #category : 'accessing' }
+ChessBoardElement >> orientation: aColor [
+	"Show the board from aColor's side (#white or #black)"
+
+	orientation := aColor.
+	self redrawPieces.
+	self redrawArrows
 ]
 
 { #category : 'private' }
@@ -114,6 +194,39 @@ ChessBoardElement >> pieceTypeFor: sym [
 	^ #pawn
 ]
 
+{ #category : 'input' }
+ChessBoardElement >> pressedOn: aSquare [
+
+	pressedSquare := aSquare
+]
+
+{ #category : 'drawing' }
+ChessBoardElement >> redrawArrows [
+
+	| size |
+	arrowLayer removeChildren.
+	arrowLayer extent: self extent.
+	size := self width / 8.
+	size > 0 ifFalse: [ ^ self ].
+	arrows do: [ :arrow |
+			| element |
+			element := BlElement new
+				           extent: self extent;
+				           geometry: (BlPolygonGeometry vertices: (arrow
+								             verticesFrom: (self centerOf: arrow from)
+								             to: (self centerOf: arrow to)
+								             squareSize: size));
+				           background: arrow color;
+				           yourself.
+			arrow style = #subject ifTrue: [
+					element border: (BlBorder builder
+							 paint: (arrow color alpha: 0.9);
+							 width: 2;
+							 dashArray: #( 6 4 );
+							 build) ].
+			arrowLayer addChild: element ]
+]
+
 { #category : 'initialization' }
 ChessBoardElement >> redrawPieces [
 
@@ -132,9 +245,79 @@ ChessBoardElement >> redrawPieces [
 			pieceElements at: square put: element ]
 ]
 
+{ #category : 'input' }
+ChessBoardElement >> releasedOn: aSquare [
+	"A drag ends on another square; a click either selects the origin or completes a click-click move"
+
+	| pressed |
+	pressed := pressedSquare.
+	pressedSquare := nil.
+	pressed ifNil: [ ^ self ].
+	pressed ~= aSquare ifTrue: [
+			selectedSquare := nil.
+			^ self mark: pressed to: aSquare ].
+	(selectedSquare isNil or: [ selectedSquare = aSquare ]) ifTrue: [
+			selectedSquare := selectedSquare isNil
+				                  ifTrue: [ aSquare ]
+				                  ifFalse: [ nil ].
+			^ self ].
+	pressed := selectedSquare.
+	selectedSquare := nil.
+	self mark: pressed to: aSquare
+]
+
+{ #category : 'accessing' }
+ChessBoardElement >> selectedSquare [
+	"The origin chosen by a first click, waiting for the target click; nil when none"
+
+	^ selectedSquare
+]
+
+{ #category : 'accessing' }
+ChessBoardElement >> squareElementAt: aSquare [
+	"The element showing aSquare (e.g. 'e4')"
+
+	^ squares at: (self squareIndexOf: aSquare)
+]
+
 { #category : 'private' }
 ChessBoardElement >> squareIndexOf: aSquare [
-	"squares are laid out rank 8 to rank 1, file a to file h"
+	"squares are laid out top-left to bottom-right as seen from orientation's side"
 
-	^ 8 - aSquare second digitValue * 8 + (aSquare first asInteger - 96)
+	| file rank |
+	file := aSquare first asInteger - 96.
+	rank := aSquare second digitValue.
+	^ orientation = #white
+		  ifTrue: [ 8 - rank * 8 + file ]
+		  ifFalse: [ rank - 1 * 8 + (9 - file) ]
+]
+
+{ #category : 'private' }
+ChessBoardElement >> squareNameAt: anIndex [
+	"The square (e.g. 'e4') shown at anIndex, the inverse of squareIndexOf:"
+
+	| row column file rank |
+	row := anIndex - 1 // 8.
+	column := anIndex - 1 \\ 8.
+	orientation = #white
+		ifTrue: [
+				file := column + 1.
+				rank := 8 - row ]
+		ifFalse: [
+				file := 8 - column.
+				rank := row + 1 ].
+	^ (Character value: 96 + file) asString , rank printString
+]
+
+{ #category : 'private' }
+ChessBoardElement >> squareNameOf: aSquareElement [
+
+	^ self squareNameAt: (squares indexOf: aSquareElement)
+]
+
+{ #category : 'input' }
+ChessBoardElement >> whenMoveMarkedDo: aBlock [
+	"aBlock receives the UCI of each move I mark, by dragging or by clicking the origin then the target square. Pawns reaching the last rank promote to a queen."
+
+	moveBlock := aBlock
 ]

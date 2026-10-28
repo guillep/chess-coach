@@ -100,6 +100,39 @@ ChessComImportTest >> setUp [
 ]
 
 { #category : 'tests' }
+ChessComImportTest >> testAppFiltersTheListBySpeed [
+
+	| app scripter ids |
+	session
+		loadMoreGames;
+		loadMoreGames.
+	app := ChessCoachAppElement new
+		       backgroundRunner: [ :work | work value ];
+		       session: session;
+		       yourself.
+	scripter := BlDevScripter new.
+	scripter element: app.
+	scripter space extent: 1200 @ 700.
+	scripter pulse.
+	ids := [
+	       app gameList dataAccessor asArray collect: [ :each |
+		       each gameId ] ].
+	self assert: ids value size equals: 3.
+	scripter testClick onChildFromBlock: [ :root |
+		app speedButtonFor: 'blitz' ].
+	scripter
+		syncContinue;
+		pulse.
+	self assert: ids value equals: #( 'chesscom-101' ).
+	scripter testClick onChildFromBlock: [ :root |
+		app speedButtonFor: nil ].
+	scripter
+		syncContinue;
+		pulse.
+	self assert: ids value size equals: 3
+]
+
+{ #category : 'tests' }
 ChessComImportTest >> testFilterBySpeed [
 
 	session

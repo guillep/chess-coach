@@ -21,7 +21,9 @@ Class {
 		'coach',
 		'waitingEntry',
 		'waitingLabel',
-		'dashboard'
+		'dashboard',
+		'speedFilter',
+		'speedButtons'
 	],
 	#category : 'ChessCoach-UI-App',
 	#package : 'ChessCoach-UI',
@@ -139,6 +141,15 @@ ChessCoachAppElement >> exitCoach [
 	self showInPane: (analysis ifNil: [ dashboard ])
 ]
 
+{ #category : 'actions' }
+ChessCoachAppElement >> filterBySpeed: aSpeedOrNil [
+	"Show only the games of one time control (all when nil)"
+
+	speedFilter := aSpeedOrNil.
+	self updateSpeedButtons.
+	self updateFromSession
+]
+
 { #category : 'accessing' }
 ChessCoachAppElement >> gameList [
 
@@ -241,9 +252,32 @@ ChessCoachAppElement >> newGamesPane [
 			                  self runInBackground: [ session loadMoreGames ] ];
 		                  yourself.
 	pane
+		addChild: self newSpeedBar;
 		addChild: gameList;
 		addChild: loadMoreButton.
 	^ pane
+]
+
+{ #category : 'initialization' }
+ChessCoachAppElement >> newSpeedBar [
+	"Buttons that filter the game list by time control; the selected one is shown in brackets"
+
+	| bar |
+	bar := ToElement new
+		       layout: BlFlowLayout horizontal;
+		       hMatchParent;
+		       vFitContent;
+		       yourself.
+	speedButtons := Dictionary new.
+	self speeds do: [ :each |
+			| button |
+			button := ToButton new
+				          clickAction: [ self filterBySpeed: each value ];
+				          yourself.
+			speedButtons at: each value put: button.
+			bar addChild: button ].
+	self updateSpeedButtons.
+	^ bar
 ]
 
 { #category : 'initialization' }
@@ -412,6 +446,25 @@ ChessCoachAppElement >> showInPane: anElement [
 	analysisPane addChild: anElement
 ]
 
+{ #category : 'accessing' }
+ChessCoachAppElement >> speedButtonFor: aSpeedOrNil [
+
+	^ speedButtons at: aSpeedOrNil
+]
+
+{ #category : 'private' }
+ChessCoachAppElement >> speeds [
+	"Label -> speed (nil for all games)"
+
+	^ {
+		  ('All' -> nil).
+		  ('Bullet' -> 'bullet').
+		  ('Blitz' -> 'blitz').
+		  ('Rapid' -> 'rapid').
+		  ('Classical' -> 'classical').
+		  ('Daily' -> 'correspondence') }
+]
+
 { #category : 'analysis queue' }
 ChessCoachAppElement >> startBackgroundAnalysis [
 	"Queue every unanalysed game and analyse them in the background; rows show their state"
@@ -460,7 +513,16 @@ ChessCoachAppElement >> updateFromSession [
 		session analysisQueue enqueueUnanalysed ].
 	dashboard database: session mistakeDatabase.
 	gameList dataAccessor removeAll.
-	gameList dataAccessor addAll: session games
+	gameList dataAccessor addAll: (session gamesWithSpeed: speedFilter)
+]
+
+{ #category : 'updating' }
+ChessCoachAppElement >> updateSpeedButtons [
+
+	self speeds do: [ :each |
+			(speedButtons at: each value) labelText: (each value = speedFilter
+					 ifTrue: [ '[' , each key , ']' ]
+					 ifFalse: [ each key ]) ]
 ]
 
 { #category : 'accessing' }

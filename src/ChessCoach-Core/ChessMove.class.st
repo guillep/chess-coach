@@ -8,7 +8,8 @@ Class {
 		'moveNumber',
 		'color',
 		'san',
-		'timestamp'
+		'timestamp',
+		'uci'
 	],
 	#category : 'ChessCoach-Core',
 	#package : 'ChessCoach-Core'
@@ -56,4 +57,17 @@ ChessMove >> san [
 ChessMove >> timestamp [
 
 	^ timestamp
+]
+
+{ #category : 'accessing' }
+ChessMove >> uci [
+	"The move in UCI notation, filled in by Game>>uciMoves; nil until then"
+
+	^ uci
+]
+
+{ #category : 'accessing' }
+ChessMove >> uci: aString [
+
+	uci := aString
 ]

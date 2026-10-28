@@ -13,7 +13,8 @@ Class {
 		'castlingBlackKingSide',
 		'castlingBlackQueenSide',
 		'enPassantTarget',
-		'pieces'
+		'pieces',
+		'lastMoveUCI'
 	],
 	#category : 'ChessCoach-Core',
 	#package : 'ChessCoach-Core'
@@ -73,6 +74,32 @@ ChessPosition >> applySAN: aSAN [
 	(san = 'O-O-O' or: [ san = '0-0-0' ]) ifTrue: [
 		^ self castleKingSide: false san: aSAN ].
 	self applyPieceMove: san san: aSAN
+]
+
+{ #category : 'private - moving' }
+ChessPosition >> canCastleTo: aKingTarget [
+
+	| rank kingSide allowed rookFile |
+	rank := turn = #white
+		        ifTrue: [ 1 ]
+		        ifFalse: [ 8 ].
+	kingSide := (self fileOf: aKingTarget) = 7.
+	allowed := kingSide
+		           ifTrue: [
+				           turn = #white
+					           ifTrue: [ castlingWhiteKingSide ]
+					           ifFalse: [ castlingBlackKingSide ] ]
+		           ifFalse: [
+				           turn = #white
+					           ifTrue: [ castlingWhiteQueenSide ]
+					           ifFalse: [ castlingBlackQueenSide ] ].
+	allowed ifFalse: [ ^ false ].
+	rookFile := kingSide
+		            ifTrue: [ 8 ]
+		            ifFalse: [ 1 ].
+	^ self
+		  isPathClearFrom: (self squareAtFile: 5 rank: rank)
+		  to: (self squareAtFile: rookFile rank: rank)
 ]
 
 { #category : 'private - moving' }
@@ -293,6 +320,27 @@ ChessPosition >> isKingInCheck: aColor [
 				  self isSquare: square attackedBy: (self opposite: aColor) ] ]
 ]
 
+{ #category : 'testing' }
+ChessPosition >> isLegalUCI: aString [
+	"Whether the side to move may play aString (UCI) here. Castling only checks the right and empty squares between king and rook."
+
+	| from to piece letter |
+	(aString size between: 4 and: 5) ifFalse: [ ^ false ].
+	from := aString first: 2.
+	to := aString copyFrom: 3 to: 4.
+	((self isSquare: from) and: [ self isSquare: to ]) ifFalse: [
+		^ false ].
+	piece := self pieceAt: from.
+	(piece notNil and: [ (self colorOf: piece) = turn ]) ifFalse: [
+		^ false ].
+	letter := piece asUppercase.
+	(letter = 'K' and: [
+		 ((self fileOf: from) - (self fileOf: to)) abs = 2 ]) ifTrue: [
+		^ self canCastleTo: to ].
+	^ (self canMove: letter from: from to: to) and: [
+		  (self moveLeavesKingInCheckFrom: from to: to) not ]
+]
+
 { #category : 'private - moving' }
 ChessPosition >> isPathClearFrom: from to: to [
 
@@ -330,6 +378,13 @@ ChessPosition >> isSquare: aSquare attackedBy: aColor [
 					  letter = 'P'
 						  ifTrue: [ self pawnOf: aColor on: from attacks: aSquare ]
 						  ifFalse: [ self canPiece: letter from: from attack: aSquare ] ] ]
+]
+
+{ #category : 'accessing' }
+ChessPosition >> lastMoveUCI [
+	"The move that produced this position, in UCI notation (e2e4, e1g1, e7e8q); nil for a starting position"
+
+	^ lastMoveUCI
 ]
 
 { #category : 'moving' }
@@ -376,6 +431,11 @@ ChessPosition >> movePieceFrom: from to: to promotion: aLetterOrNil [
 	halfMoveClock := (letter = 'P' or: [ captured notNil ])
 		                 ifTrue: [ 0 ]
 		                 ifFalse: [ halfMoveClock + 1 ].
+	lastMoveUCI := from , to
+	               ,
+	               (aLetterOrNil
+		                ifNil: [ '' ]
+		                ifNotNil: [ aLetterOrNil asLowercase ]).
 	self endTurn
 ]
 

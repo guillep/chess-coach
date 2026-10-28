@@ -46,3 +46,16 @@ Game >> positionAfterPly: aNumber [
 	^ self initialPosition moves:
 		  ((moves first: aNumber) collect: [ :move | move san ])
 ]
+
+{ #category : 'positions' }
+Game >> uciMoves [
+	"The moves in UCI notation. The first call replays the game once and stores each move's UCI."
+
+	(moves allSatisfy: [ :move | move uci notNil ]) ifFalse: [
+			| position |
+			position := self initialPosition.
+			moves do: [ :move |
+					position := position move: move san.
+					move uci: position lastMoveUCI ] ].
+	^ moves collect: [ :move | move uci ]
+]

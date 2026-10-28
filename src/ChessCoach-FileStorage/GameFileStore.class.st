@@ -18,7 +18,7 @@ GameFileStore >> allGameIds [
 	| gamesDir |
 	gamesDir := baseDirectory / 'games'.
 	gamesDir exists ifFalse: [ ^ #(  ) ].
-	^ (gamesDir allFiles select: [ :file | file extension = 'json' ])
+	^ (gamesDir files select: [ :file | file extension = 'pgn' ])
 		  collect: [ :file | file basenameWithoutExtension ]
 ]
 
@@ -31,7 +31,7 @@ GameFileStore >> baseDirectory [
 { #category : 'private' }
 GameFileStore >> gameFilePath: gameId [
 
-	^ baseDirectory / 'games' / (gameId , '.json')
+	^ baseDirectory / (self relativePathOf: gameId)
 ]
 
 { #category : 'initialization' }
@@ -43,22 +43,22 @@ GameFileStore >> initializeWithBaseDirectory: aPath [
 ]
 
 { #category : 'loading' }
-GameFileStore >> loadGame: gameId [
-	"Load game using STON deserialization"
+GameFileStore >> loadPGN: gameId [
 
-	| file jsonContent |
-	file := self gameFilePath: gameId.
-	file exists ifFalse: [ ^ nil ].
-	jsonContent := file readString.
-	^ STON fromString: jsonContent
+	^ (self gameFilePath: gameId) contents
+]
+
+{ #category : 'accessing' }
+GameFileStore >> relativePathOf: gameId [
+	"Path of the game's PGN file, relative to the base directory"
+
+	^ 'games/' , gameId , '.pgn'
 ]
 
 { #category : 'saving' }
-GameFileStore >> saveGame: aGameDict withId: gameId [
-	"Save game using STON serialization"
+GameFileStore >> savePGN: aString withId: gameId [
 
-	| file |
-	file := self gameFilePath: gameId.
-	file writeString: (STON toString: aGameDict).
-	^ file path
+	(self gameFilePath: gameId)
+		ensureDelete;
+		writeStreamDo: [ :stream | stream nextPutAll: aString ]
 ]

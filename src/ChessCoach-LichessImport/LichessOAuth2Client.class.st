@@ -6,15 +6,24 @@ Class {
 	#superclass : 'Object',
 	#instVars : [
 		'clientId',
-		'clientSecret',
 		'redirectUri',
 		'accessToken',
 		'tokenExpiresAt',
-		'codeVerifier'
+		'codeVerifier',
+		'tokenFile',
+		'authorizationCodeReceived'
 	],
 	#category : 'ChessCoach-LichessImport',
 	#package : 'ChessCoach-LichessImport'
 }
+
+{ #category : 'instance creation' }
+LichessOAuth2Client class >> onTokenFile: aFileReference [
+
+	^ self new
+		  initializeWithTokenFile: aFileReference;
+		  yourself
+]
 
 { #category : 'accessing' }
 LichessOAuth2Client >> accessToken [
@@ -24,43 +33,33 @@ LichessOAuth2Client >> accessToken [
 
 { #category : 'oauth2' }
 LichessOAuth2Client >> authenticate [
-	"Authenticate and return the access token."
+	"Run the browser PKCE flow and return the access token, saving it to the token file.
+	Answer nil when the user cancels or nothing arrives within five minutes."
 
-	| sem server authCode url |
-	(accessToken isNotNil and: [ self hasValidToken ]) ifTrue: [
-		^ accessToken ].
+	| server authCode |
+	self hasValidToken ifTrue: [ ^ accessToken ].
+	authorizationCodeReceived := Semaphore new.
+	server := ZnServer on: 8888.
+	server onRequestRespond: [ :request |
+			(request uri queryAt: #code ifAbsent: [ nil ])
+				ifNil: [
+						ZnResponse badRequest: (ZnEntity html:
+								 '<html><body><h1>Error</h1><p>No authorization code received.</p></body></html>') ]
+				ifNotNil: [ :code |
+						authCode := code.
+						authorizationCodeReceived signal.
+						ZnResponse ok: (ZnEntity html:
+								 '<html><body><h1>Authentication successful!</h1><p>You can close this window.</p></body></html>') ] ].
 	[
-		authCode := nil.
-		sem := Semaphore new.
-		server := ZnServer on: 8888.
-		server onRequestRespond: [ :request |
-				| code |
-				code := [ request uri queryAt: #code ]
-					        on: Error
-					        do: [ nil ].
-				code
-					ifNotNil: [
-							authCode := code.
-							sem signal.
-							ZnResponse ok: (ZnEntity html:
-									 '<html><body><h1>Authentication successful!</h1><p>You can close this window.</p></body></html>') ]
-					ifNil: [
-							ZnResponse badRequest: (ZnEntity html:
-									 '<html><body><h1>Error</h1><p>No authorization code received.</p></body></html>') ] ].
 		server start.
-		url := self requestAuthorizationURL.
-		WebBrowser openOn: url.
-
-		sem waitTimeoutSeconds: 300 ] ensure: [ server stop ].
+		WebBrowser openOn: self requestAuthorizationURL.
+		authorizationCodeReceived waitTimeoutSeconds: 300 ] ensure: [
+			server stop.
+			authorizationCodeReceived := nil ].
 	authCode ifNil: [ ^ nil ].
-	^ self exchangeCodeForToken: authCode
-]
-
-{ #category : 'private' }
-LichessOAuth2Client >> base64Encode: aString [
-	"Encode string to Base64"
-
-	^ ZnBase64Encoder new encode: aString asByteArray
+	self exchangeCodeForToken: authCode.
+	self saveTokenToFile.
+	^ accessToken
 ]
 
 { #category : 'oauth2 - pkce' }
@@ -80,47 +79,16 @@ LichessOAuth2Client >> base64UrlEncode: aByteArray [
 ]
 
 { #category : 'oauth2' }
-LichessOAuth2Client >> buildQueryString: aDictionary [
+LichessOAuth2Client >> cancelAuthentication [
+	"Stop waiting for the browser; a running authenticate answers nil"
 
-	| stream |
-	stream := WriteStream on: String new.
-	aDictionary associations
-		do: [ :assoc |
-				stream
-					nextPutAll: assoc key urlEncoded;
-					nextPut: $=;
-					nextPutAll: assoc value asString urlEncoded ]
-		separatedBy: [ stream nextPut: $& ].
-	^ stream contents
-]
-
-{ #category : 'oauth2' }
-LichessOAuth2Client >> buildQueryStringNoEncodeScope: aDictionary [
-
-	| stream |
-	stream := WriteStream on: String new.
-	aDictionary associations
-		do: [ :assoc |
-				stream
-					nextPutAll: assoc key urlEncoded;
-					nextPut: $=.
-				assoc key = 'scope'
-					ifTrue: [ stream nextPutAll: assoc value asString ]
-					ifFalse: [ stream nextPutAll: assoc value asString urlEncoded ] ]
-		separatedBy: [ stream nextPut: $& ].
-	^ stream contents
+	authorizationCodeReceived ifNotNil: [ :semaphore | semaphore signal ]
 ]
 
 { #category : 'accessing' }
 LichessOAuth2Client >> clientId [
 
 	^ clientId
-]
-
-{ #category : 'accessing' }
-LichessOAuth2Client >> clientSecret [
-
-	^ clientSecret
 ]
 
 { #category : 'oauth2 - pkce' }
@@ -135,8 +103,7 @@ LichessOAuth2Client >> codeChallenge [
 LichessOAuth2Client >> exchangeCodeForToken: authCode [
 	"Exchange authorization code for an access token using PKCE (public client)."
 
-	| client body data dict |
-
+	| client body dict |
 	client := ZnClient new.
 	client url: 'https://lichess.org/api/token'.
 	client method: #POST.
@@ -146,20 +113,17 @@ LichessOAuth2Client >> exchangeCodeForToken: authCode [
 	        , clientId urlEncoded , '&code_verifier='
 	        , codeVerifier urlEncoded.
 	client entity: (ZnEntity
-    with: body utf8Encoded
-    type: ZnMimeType applicationFormUrlEncoded).
+			 with: body utf8Encoded
+			 type: ZnMimeType applicationFormUrlEncoded).
 	client execute.
-	data := client contents.
-	dict := STONJSON fromString: data.
-	accessToken := dict at: 'access_token' ifAbsent: [ nil ].
-
+	client isSuccess ifFalse: [
+		^ LichessError signalForResponse: client response ].
+	dict := STONJSON fromString: client contents.
+	accessToken := dict at: 'access_token'.
 	dict
 		at: 'expires_in'
 		ifPresent: [ :secs |
-			tokenExpiresAt := DateAndTime now + secs asInteger seconds ].
-
-	accessToken ifNil: [
-		self error: 'Token exchange failed: ' , data asString].
+		tokenExpiresAt := DateAndTime now + secs asInteger seconds ].
 	^ accessToken
 ]
 
@@ -187,25 +151,36 @@ LichessOAuth2Client >> hasValidToken [
 LichessOAuth2Client >> initialize [
 
 	clientId := 'chess-coach-mvp'.
-	clientSecret := ''.
-	redirectUri := 'http://localhost:8888/'.
-	self loadTokenFromFile.
-	^ self
+	redirectUri := 'http://localhost:8888/'
+]
+
+{ #category : 'initialization' }
+LichessOAuth2Client >> initializeWithTokenFile: aFileReference [
+
+	tokenFile := aFileReference.
+	self loadTokenFromFile
 ]
 
 { #category : 'persistence' }
 LichessOAuth2Client >> loadTokenFromFile [
-	"Load access token from disk"
+	"Load the access token from the token file, if there is one"
 
-	| tokenFile dict |
-	tokenFile := FileLocator home / '.config' / 'chess-coach'
-	             / 'lichess-token.json'.
+	| dict |
 	tokenFile exists ifFalse: [ ^ nil ].
-	dict := STON fromString: tokenFile readStream upToEnd.
+	dict := STON fromString: tokenFile contents.
 	accessToken := dict at: 'access_token' ifAbsent: [ nil ].
-	(dict at: 'expires_at' ifAbsent: [ nil ]) ifNotNil: [ :exp |
-		tokenExpiresAt := DateAndTime fromString: exp ].
+	dict at: 'expires_at' ifPresent: [ :exp |
+		exp ifNotNil: [ tokenExpiresAt := DateAndTime fromString: exp ] ].
 	^ accessToken
+]
+
+{ #category : 'persistence' }
+LichessOAuth2Client >> logout [
+	"Forget the access token and delete the token file"
+
+	accessToken := nil.
+	tokenExpiresAt := nil.
+	tokenFile ensureDelete
 ]
 
 { #category : 'oauth2' }
@@ -225,24 +200,23 @@ LichessOAuth2Client >> requestAuthorizationURL [
 
 { #category : 'persistence' }
 LichessOAuth2Client >> saveTokenToFile [
-	"Save access token to disk for reuse. Do nothing when there is no token."
+	"Save the access token for reuse. Do nothing when there is no token."
 
-	| tokenFile dict |
+	| dict |
 	accessToken ifNil: [ ^ self ].
-	tokenFile := FileLocator home / '.config' / 'chess-coach'
-	             / 'lichess-token.json'.
 	tokenFile parent ensureCreateDirectory.
 	dict := Dictionary new.
 	dict at: 'access_token' put: accessToken.
 	dict
 		at: 'expires_at'
 		put: (tokenExpiresAt ifNotNil: [ tokenExpiresAt asString ]).
-	tokenFile writeStreamDo: [ :stream |
-		stream nextPutAll: (STON toString: dict) ]
+	tokenFile
+		ensureDelete;
+		writeStreamDo: [ :stream | STON put: dict onStream: stream ]
 ]
 
-{ #category : 'private' }
-LichessOAuth2Client >> urlEncode: aString [
+{ #category : 'accessing' }
+LichessOAuth2Client >> tokenFile [
 
-	^ aString asString urlEncoded
+	^ tokenFile
 ]

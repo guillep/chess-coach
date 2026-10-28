@@ -11,11 +11,19 @@ Class {
 		'source',
 		'players',
 		'result',
-		'date'
+		'date',
+		'createdAt'
 	],
 	#category : 'ChessCoach-Core',
 	#package : 'ChessCoach-Core'
 }
+
+{ #category : 'accessing' }
+GameIndexEntry >> createdAt [
+	"Creation time on the source site, in milliseconds since the Unix epoch."
+
+	^ createdAt
+]
 
 { #category : 'accessing' }
 GameIndexEntry >> date [
@@ -42,7 +50,7 @@ GameIndexEntry >> gameId [
 ]
 
 { #category : 'initialization' }
-GameIndexEntry >> gameId: aString filepath: aPath dateImported: aTimestamp source: aSource players: aPlayersList result: aResult date: aDate [
+GameIndexEntry >> gameId: aString filepath: aPath dateImported: aTimestamp source: aSource players: aPlayersList result: aResult date: aDate createdAt: aMillisecondCount [
 
 	gameId := aString.
 	filepath := aPath.
@@ -51,6 +59,7 @@ GameIndexEntry >> gameId: aString filepath: aPath dateImported: aTimestamp sourc
 	players := aPlayersList.
 	result := aResult.
 	date := aDate.
+	createdAt := aMillisecondCount.
 	^ self
 ]
 

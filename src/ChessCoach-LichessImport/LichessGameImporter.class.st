@@ -8,11 +8,37 @@ Class {
 		'oauthClient',
 		'apiClient',
 		'fileStore',
-		'indexManager'
+		'indexManager',
+		'username'
 	],
 	#category : 'ChessCoach-LichessImport',
 	#package : 'ChessCoach-LichessImport'
 }
+
+{ #category : 'instance creation' }
+LichessGameImporter class >> oauthClient: anOAuthClient apiClient: anAPIClient directory: aFileReference [
+
+	| fileStore |
+	fileStore := GameFileStore new initializeWithBaseDirectory:
+		             aFileReference.
+	^ self new
+		  initializeWithOAuthClient: anOAuthClient
+		  apiClient: anAPIClient
+		  fileStore: fileStore
+		  indexManager:
+		  (GameIndexManager new initializeWithFileStore: fileStore)
+]
+
+{ #category : 'instance creation' }
+LichessGameImporter class >> onDirectory: aFileReference [
+	"Keep the token, the PGN files and the index under aFileReference"
+
+	^ self
+		  oauthClient:
+		  (LichessOAuth2Client onTokenFile: aFileReference / 'lichess-token')
+		  apiClient: LichessAPIClient new
+		  directory: aFileReference
+]
 
 { #category : 'accessing' }
 LichessGameImporter >> apiClient [
@@ -20,44 +46,93 @@ LichessGameImporter >> apiClient [
 	^ apiClient
 ]
 
-{ #category : 'private' }
-LichessGameImporter >> filterNewGames: games [
-	"Return only games not already in index"
+{ #category : 'oauth2' }
+LichessGameImporter >> cancelLogin [
 
-	| currentIds |
-	currentIds := indexManager index gameIds asSet.
-	^ games select: [ :gameData |
-		  (currentIds includes: (gameData at: 'id')) not ]
+	oauthClient cancelAuthentication
+]
+
+{ #category : 'accessing' }
+LichessGameImporter >> fileStore [
+
+	^ fileStore
+]
+
+{ #category : 'accessing' }
+LichessGameImporter >> games [
+	"Answer the imported games' index entries, newest first"
+
+	^ indexManager index entries asArray sort: [ :a :b |
+		  a createdAt > b createdAt ]
+]
+
+{ #category : 'private' }
+LichessGameImporter >> importGamesUntil: untilMillis since: sinceMillis [
+
+	^ ((apiClient
+		    fetchUserGames: self username
+		    max: self pageSize
+		    until: untilMillis
+		    since: sinceMillis) reject: [ :gameData |
+		   (indexManager index findById: (gameData at: 'id')) notNil ])
+		  collect: [ :gameData | self saveGameFromData: gameData ]
 ]
 
 { #category : 'importing' }
-LichessGameImporter >> importNewGames [
-	"Main import workflow: ensure token, fetch, save, index"
+LichessGameImporter >> importNewerGames [
+	"Import games created after the newest one we have (at most one page). Answer the new entries."
 
-	| games newGames username userInfo token |
-	oauthClient hasValidToken ifFalse: [
-			token := oauthClient authenticate.
-			token ifNil: [ ^ #(  ) ] ].
-	apiClient := LichessAPIClient new initializeWithToken:
-		             oauthClient accessToken.
-	userInfo := apiClient fetchMe.
-	username := userInfo at: 'username'.
-	games := apiClient fetchUserGames: username max: 50.
-	newGames := self filterNewGames: games.
-	newGames do: [ :gameData | self saveGameFromData: gameData ].
-	^ newGames
+	| games |
+	games := self games.
+	games ifEmpty: [ ^ self importOlderGames ].
+	^ self importGamesUntil: nil since: games first createdAt + 1
+]
+
+{ #category : 'importing' }
+LichessGameImporter >> importOlderGames [
+	"Import the page of games created before the oldest one we have. Answer the new entries."
+
+	| games |
+	games := self games.
+	^ self
+		  importGamesUntil:
+		  (games ifEmpty: [ nil ] ifNotEmpty: [ games last createdAt - 1 ])
+		  since: nil
 ]
 
 { #category : 'initialization' }
 LichessGameImporter >> initializeWithOAuthClient: anOAuthClient apiClient: anAPIClient fileStore: aFileStore indexManager: anIndexManager [
 
 	oauthClient := anOAuthClient.
-	apiClient := anAPIClient ifNotNil: [ anAPIClient ] ifNil: [
-			             anOAuthClient accessToken ifNotNil: [
-				             LichessAPIClient new initializeWithToken:
-					             anOAuthClient accessToken ] ].
+	apiClient := anAPIClient.
+	apiClient accessToken: oauthClient accessToken.
 	fileStore := aFileStore.
 	indexManager := anIndexManager
+]
+
+{ #category : 'oauth2' }
+LichessGameImporter >> isLoggedIn [
+
+	^ oauthClient hasValidToken
+]
+
+{ #category : 'oauth2' }
+LichessGameImporter >> login [
+	"Run the browser login. Answer whether it succeeded; false means cancelled or timed out."
+
+	| token |
+	token := oauthClient authenticate.
+	apiClient accessToken: token.
+	^ token notNil
+]
+
+{ #category : 'oauth2' }
+LichessGameImporter >> logout [
+	"Forget the token; imported games stay on disk"
+
+	oauthClient logout.
+	apiClient accessToken: nil.
+	username := nil
 ]
 
 { #category : 'accessing' }
@@ -66,91 +141,61 @@ LichessGameImporter >> oauthClient [
 	^ oauthClient
 ]
 
-{ #category : 'oauth2' }
-LichessGameImporter >> requestOAuthToken [
-	"OAuth handled by LichessOAuth2Client. Returns current token or nil."
+{ #category : 'accessing' }
+LichessGameImporter >> pageSize [
 
-	^ oauthClient ifNotNil: [ oauthClient accessToken ] ifNil: [ nil ]
+	^ 20
 ]
 
-{ #category : 'oauth2' }
-LichessGameImporter >> requestOAuthTokenAsync [
-	"Run the OAuth flow in background so the UI is not blocked."
+{ #category : 'private' }
+LichessGameImporter >> playerNameIn: playerData [
 
-	[ self requestOAuthToken ] forkAt: Processor userBackgroundPriority.
-	^ self
+	playerData at: 'user' ifPresent: [ :user | ^ user at: 'name' ].
+	playerData
+		at: 'aiLevel'
+		ifPresent: [ :level | ^ 'Stockfish level ' , level printString ].
+	^ 'Anonymous'
+]
+
+{ #category : 'private' }
+LichessGameImporter >> resultIn: gameData [
+
+	(gameData at: 'status') = 'started' ifTrue: [ ^ '*' ].
+	^ gameData
+		  at: 'winner'
+		  ifPresent: [ :winner |
+				  winner = 'white'
+					  ifTrue: [ '1-0' ]
+					  ifFalse: [ '0-1' ] ]
+		  ifAbsent: [ '1/2-1/2' ]
 ]
 
 { #category : 'private' }
 LichessGameImporter >> saveGameFromData: gameData [
-	"Save a single game from Lichess API response to disk and index"
+	"Save one game from a Lichess API response as PGN and index it. Answer its index entry."
 
-	| gameId pgn metadata entryDict |
+	| gameId createdAt |
 	gameId := gameData at: 'id'.
-	pgn := gameData at: 'pgn'.
-	"Extract metadata from game data"
-	metadata := Dictionary new.
-	metadata at: 'source' put: 'lichess'.
-	metadata at: 'sourceId' put: gameId.
-	metadata
-		at: 'players'
-		put: #( #( gameData at: 'players' ifAbsent: #'[' #(  ) #']' ) ).
-	metadata at: 'result' put: (gameData at: 'status' ifAbsent: [ '' ]).
-	metadata
-		at: 'date'
-		put:
-		(gameData at: 'createdAt' ifAbsent: [ DateAndTime now asString ]).
-	metadata
-		at: 'timeControl'
-		put: (gameData at: 'speed' ifAbsent: [ '' ]).
-	metadata at: 'dateImported' put: DateAndTime now asString.
-	"Save game file"
-	fileStore
-		saveGame: (Dictionary new
-				 at: 'pgn' put: pgn;
-				 at: 'metadata' put: metadata;
-				 yourself)
-		withId: gameId.
-	"Add to index"
-	entryDict := Dictionary new.
-	entryDict at: 'gameId' put: gameId.
-	entryDict at: 'filepath' put: 'games/' , gameId , '.json'.
-	entryDict at: 'dateImported' put: DateAndTime now asString.
-	entryDict at: 'source' put: 'lichess'.
-	entryDict at: 'players' put: (metadata at: 'players').
-	entryDict at: 'result' put: (metadata at: 'result').
-	entryDict at: 'date' put: (metadata at: 'date').
-	indexManager addGameEntry: entryDict
+	createdAt := gameData at: 'createdAt'.
+	fileStore savePGN: (gameData at: 'pgn') withId: gameId.
+	^ indexManager addGameEntry: (Dictionary new
+			   at: 'gameId' put: gameId;
+			   at: 'filepath' put: (fileStore relativePathOf: gameId);
+			   at: 'dateImported' put: DateAndTime now asString;
+			   at: 'source' put: 'lichess';
+			   at: 'players' put: (#( 'white' 'black' ) collect: [ :color |
+						    self playerNameIn: ((gameData at: 'players') at: color) ]);
+			   at: 'result' put: (self resultIn: gameData);
+			   at: 'date'
+			   put:
+				   (DateAndTime fromUnixTime: createdAt // 1000) asDate yyyymmdd;
+			   at: 'createdAt' put: createdAt;
+			   yourself)
 ]
 
-{ #category : 'private' }
-LichessGameImporter >> startOAuthCallbackServer [
-	"Start a simple HTTP server to capture the OAuth callback on localhost:8888"
+{ #category : 'accessing' }
+LichessGameImporter >> username [
+	"The logged-in Lichess user's name, asked for once per login"
 
-	| server authCode sem |
-	authCode := nil.
-	sem := Semaphore new.
-	server := ZnServer on: 8888.
-	server onRequestRespond: [ :request |
-			| code response |
-			code := [ request uri queryAt: #code ]
-				        on: Error
-				        do: [ nil ].
-			code
-				ifNotNil: [
-						authCode := code.
-						[
-							(Delay forMilliseconds: 100) wait.
-							oauthClient exchangeCodeForToken: authCode.
-							sem signal ] fork.
-						response := ZnResponse ok: (ZnEntity html:
-								             '<html><body><h1>Authentication successful!</h1><p>You can close this window.</p></body></html>') ]
-				ifNil: [
-						response := ZnResponse badRequest: (ZnEntity html:
-								             '<html><body><h1>Error</h1><p>No authorization code received.</p></body></html>') ].
-			response ].
-	server start.
-	sem waitTimeoutSeconds: 300.
-	server stop.
-	^ oauthClient accessToken
+	^ username ifNil: [ username := apiClient fetchMe at: 'username' ]
 ]

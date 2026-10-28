@@ -128,12 +128,13 @@ ChessCoachIntegrationTest >> testGameIndexCreation [
 	entry := GameIndexEntry new.
 	entry
 		gameId: 'game1'
-		filepath: 'games/game1.json'
+		filepath: 'games/game1.pgn'
 		dateImported: DateAndTime now asString
 		source: 'test'
 		players: #( 'player1' 'player2' )
 		result: '1-0'
-		date: '2024-10-15'.
+		date: '2024-10-15'
+		createdAt: 1729000000000.
 	index addEntry: entry.
 
 	self assert: index entries size equals: 1.

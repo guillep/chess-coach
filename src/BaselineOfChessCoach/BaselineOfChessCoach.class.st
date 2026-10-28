@@ -18,6 +18,11 @@ BaselineOfChessCoach >> baseline: spec [
 				with: [
 				spec repository: 'github://pharo-graphics/Bloc:v2.9.0/src' ].
 
+			spec
+				baseline: 'Toplo'
+				with: [
+				spec repository: 'github://pharo-graphics/Toplo:v0.10.0/src' ].
+
 			spec package: 'ChessCoach-Core'.
 
 			spec
@@ -30,11 +35,15 @@ BaselineOfChessCoach >> baseline: spec [
 				spec requires: #( 'ChessCoach-Core' 'ChessCoach-FileStorage' ) ].
 
 			spec
+				package: 'ChessCoach-App'
+				with: [ spec requires: #( 'ChessCoach-LichessImport' ) ].
+
+			spec
 				package: 'ChessCoach-UI'
-				with: [ spec requires: #( 'ChessCoach-Core' 'Bloc' ) ].
+				with: [ spec requires: #( 'ChessCoach-Core' 'Bloc' 'Toplo' ) ].
 
 			spec package: 'ChessCoach-Tests' with: [
 					spec requires:
 						#( 'ChessCoach-Core' 'ChessCoach-FileStorage'
-						   'ChessCoach-UI' ) ] ]
+						   'ChessCoach-LichessImport' 'ChessCoach-App' 'ChessCoach-UI' ) ] ]
 ]

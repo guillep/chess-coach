@@ -31,7 +31,7 @@ PGNParser >> parse: aStringOrStream [
 	input := aStringOrStream isStream
 		         ifTrue: [ aStringOrStream upToEnd ]
 		         ifFalse: [ aStringOrStream asString ].
-	pgnGame := PGNGame new.
+	pgnGame := Game new.
 	lines := input lines.
 	headerDone := false.
 	movesText := String new writeStream.
@@ -182,7 +182,6 @@ PGNParser >> tokenizeToken: token into: pgnGame moveNumber: moveNum seenWhite: s
 						 moveNumber: num
 						 color: 'b'
 						 san: token
-						 uci: token
 						 timestamp: nil).
 				b := true ]
 		ifFalse: [
@@ -190,7 +189,6 @@ PGNParser >> tokenizeToken: token into: pgnGame moveNumber: moveNum seenWhite: s
 						 moveNumber: num
 						 color: 'w'
 						 san: token
-						 uci: token
 						 timestamp: nil).
 				w := true ].
 	^ {

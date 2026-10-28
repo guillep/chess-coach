@@ -8,7 +8,6 @@ Class {
 		'moveNumber',
 		'color',
 		'san',
-		'uci',
 		'timestamp'
 	],
 	#category : 'ChessCoach-Core',
@@ -28,12 +27,21 @@ ChessMove >> moveNumber [
 ]
 
 { #category : 'initialization' }
-ChessMove >> moveNumber: aNumber color: aColor san: aSAN uci: aUCI timestamp: aDuration [
+ChessMove >> moveNumber: aNumber color: aColor san: aSAN [
 
 	moveNumber := aNumber.
 	color := aColor.
 	san := aSAN.
-	uci := aUCI.
+	timestamp := nil.
+	^ self
+]
+
+{ #category : 'initialization' }
+ChessMove >> moveNumber: aNumber color: aColor san: aSAN timestamp: aDuration [
+
+	moveNumber := aNumber.
+	color := aColor.
+	san := aSAN.
 	timestamp := aDuration.
 	^ self
 ]
@@ -48,10 +56,4 @@ ChessMove >> san [
 ChessMove >> timestamp [
 
 	^ timestamp
-]
-
-{ #category : 'accessing' }
-ChessMove >> uci [
-
-	^ uci
 ]

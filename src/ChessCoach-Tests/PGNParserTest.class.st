@@ -42,7 +42,6 @@ PGNParserTest >> testChessMoveFields [
 	game := PGNParser new parse: '1. e4'.
 	move := game moves first.
 	self assert: move san equals: 'e4'.
-	self assert: move uci equals: 'e4'.
 	self assert: move color equals: 'w'.
 	self assert: move moveNumber equals: 1.
 	self assert: move timestamp isNil
@@ -184,7 +183,7 @@ PGNParserTest >> testPGNGameStructure [
 	game := PGNParser new parse: '[Event "Test"]
 
 1. e4'.
-	self assert: (game isKindOf: PGNGame).
+	self assert: (game isKindOf: Game).
 	self assert: (game metadata isKindOf: Dictionary).
 	self assert: (game metadata at: 'Event') equals: 'Test'.
 	self assert: (game moves isKindOf: OrderedCollection)

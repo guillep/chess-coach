@@ -6,15 +6,54 @@ Class {
 }
 
 { #category : 'tests' }
+ChessBoardElementTest >> testMoveListTakesGameAndAnnounces [
+
+	| list selectedPly |
+	list := MoveListElement new.
+	list game: (PGNParser new parse: '1. e4 e5').
+	selectedPly := nil.
+	list whenMoveSelectedDo: [ :ply | selectedPly := ply ].
+	list selectMoveAt: 1.
+	self assert: selectedPly equals: 1.
+	self assert: list layoutMode equals: #compact
+]
+
+{ #category : 'tests' }
+ChessBoardElementTest >> testPieceMatchesSquareExtent [
+
+	| board piece |
+	board := ChessBoardElement new.
+	board extent: 600 @ 600.
+	board chessPosition:
+		(ChessPosition fromFEN: '8/8/8/8/4P3/8/8/8 w - - 0 1').
+	board forceLayout.
+	piece := board pieceElements at: 'e4'.
+	self assert: piece extent equals: piece parent extent.
+	self assert: piece extent equals: 75 @ 75.
+	self assert: piece background image extent equals: 75 @ 75
+]
+
+{ #category : 'tests' }
+ChessBoardElementTest >> testPositionShowsAllPieces [
+
+	| board |
+	board := ChessBoardElement new.
+	board chessPosition: ChessPosition initial.
+	self assert: board pieceElements size equals: 32.
+	board chessPosition: (ChessPosition initial move: 'e4').
+	self assert: board pieceElements size equals: 32.
+	self assert: (board pieceElements includesKey: 'e4').
+	self deny: (board pieceElements includesKey: 'e2')
+]
+
+{ #category : 'tests' }
 ChessBoardElementTest >> testSetLiviusPieceSetProgrammatically [
 
-	| board set state |
-	set := LiviusPieceSet new.
+	| board |
 	board := ChessBoardElement new.
-	board pieceSet: set.
-	state := Dictionary new.
-	state at: 'e4' put: 'P'.
-	board state: state.
+	board pieceSet: LiviusPieceSet new.
+	board chessPosition:
+		(ChessPosition fromFEN: '8/8/8/8/4P3/8/8/8 w - - 0 1').
 	self assert: board pieceSet notNil.
 	self assert: board pieceElements size equals: 1
 ]
@@ -22,13 +61,11 @@ ChessBoardElementTest >> testSetLiviusPieceSetProgrammatically [
 { #category : 'tests' }
 ChessBoardElementTest >> testSetPieceSetProgrammatically [
 
-	| board set state |
-	set := MadwareChessPieceSet new.
+	| board |
 	board := ChessBoardElement new.
-	board pieceSet: set.
-	state := Dictionary new.
-	state at: 'e4' put: 'P'.
-	board state: state.
+	board pieceSet: MadwareChessPieceSet new.
+	board chessPosition:
+		(ChessPosition fromFEN: '8/8/8/8/4P3/8/8/8 w - - 0 1').
 	self assert: board pieceSet notNil.
 	self assert: board pieceElements size equals: 1
 ]
@@ -39,9 +76,7 @@ ChessBoardElementTest >> testSetStateProgrammatically [
 	| board |
 	board := ChessBoardElement new.
 	board pieceSet: MadwareChessPieceSet new.
-	board state: (Dictionary new
-			 at: 'e4' put: 'P';
-			 yourself).
-	self assert: board notNil.
+	board chessPosition:
+		(ChessPosition fromFEN: '8/8/8/8/4P3/8/8/8 w - - 0 1').
 	self assert: board pieceElements size equals: 1
 ]

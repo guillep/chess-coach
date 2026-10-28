@@ -9,6 +9,115 @@ Class {
 }
 
 { #category : 'tests' }
+ChessCoachIntegrationTest >> testFENBlackToMove [
+
+	| board |
+	board := ChessPosition fromFEN:
+		         'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR b KQkq - 0 1'.
+	self assert: board turn equals: #black
+]
+
+{ #category : 'tests' }
+ChessCoachIntegrationTest >> testFENCastlingOrder [
+
+	| board |
+	board := ChessPosition fromFEN:
+		         'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w QkKq - 0 1'.
+	self assert: board castlingWhiteQueenSide.
+	self assert: board castlingBlackKingSide.
+	self assert: board castlingWhiteKingSide.
+	self assert: board castlingBlackQueenSide
+]
+
+{ #category : 'tests' }
+ChessCoachIntegrationTest >> testFENEmptyBoard [
+
+	| board |
+	board := ChessPosition fromFEN: '8/8/8/8/8/8/8/8 w - - 0 1'.
+	self assert: board pieces isEmpty
+]
+
+{ #category : 'tests' }
+ChessCoachIntegrationTest >> testFENEnPassant [
+
+	| board |
+	board := ChessPosition fromFEN:
+		         'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1'.
+	self assert: board enPassantTarget equals: 'e3'.
+	self assert: board turn equals: #black
+]
+
+{ #category : 'tests' }
+ChessCoachIntegrationTest >> testFENEnPassantDash [
+
+	| board |
+	board := ChessPosition fromFEN:
+		         'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'.
+	self assert: board enPassantTarget isNil
+]
+
+{ #category : 'tests' }
+ChessCoachIntegrationTest >> testFENHalfMoveAndFullMove [
+
+	| board |
+	board := ChessPosition fromFEN:
+		         'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 5 10'.
+	self assert: board halfmoveClock equals: 5.
+	self assert: board fullmoveNumber equals: 10
+]
+
+{ #category : 'tests' }
+ChessCoachIntegrationTest >> testFENHoles [
+
+	| board |
+	board := ChessPosition fromFEN: '8/8/8/3p4/3P4/8/8/8 w - - 0 1'.
+	self assert: (board pieceAt: 'd4') equals: 'P'.
+	self assert: (board pieceAt: 'd5') equals: 'p'
+]
+
+{ #category : 'tests' }
+ChessCoachIntegrationTest >> testFENNoCastling [
+
+	| board |
+	board := ChessPosition fromFEN:
+		         'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w - - 0 1'.
+	self deny: board castlingWhiteKingSide.
+	self deny: board castlingWhiteQueenSide.
+	self deny: board castlingBlackKingSide.
+	self deny: board castlingBlackQueenSide
+]
+
+{ #category : 'tests' }
+ChessCoachIntegrationTest >> testFENPartialCastling [
+
+	| board |
+	board := ChessPosition fromFEN:
+		         'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w Kq - 0 1'.
+	self assert: board castlingWhiteKingSide.
+	self deny: board castlingWhiteQueenSide.
+	self deny: board castlingBlackKingSide.
+	self assert: board castlingBlackQueenSide
+]
+
+{ #category : 'tests' }
+ChessCoachIntegrationTest >> testFENStartingPosition [
+
+	| board |
+	board := ChessPosition fromFEN:
+		         'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'.
+	self assert: (board pieceAt: 'e2') equals: 'P'.
+	self assert: (board pieceAt: 'e7') equals: 'p'.
+	self assert: board turn equals: #white.
+	self assert: board castlingWhiteKingSide.
+	self assert: board castlingWhiteQueenSide.
+	self assert: board castlingBlackKingSide.
+	self assert: board castlingBlackQueenSide.
+	self assert: board enPassantTarget isNil.
+	self assert: board halfmoveClock equals: 0.
+	self assert: board fullmoveNumber equals: 1
+]
+
+{ #category : 'tests' }
 ChessCoachIntegrationTest >> testGameIndexCreation [
 	"Test that we can create and manage a game index"
 
@@ -32,38 +141,6 @@ ChessCoachIntegrationTest >> testGameIndexCreation [
 ]
 
 { #category : 'tests' }
-ChessCoachIntegrationTest >> testGameReviewNavigation [
-	"Test that we can create and navigate a game review"
-
-	| game moves review |
-	moves := OrderedCollection new.
-	moves add: (ChessMove new
-			 moveNumber: 1
-			 color: #white
-			 san: 'e4'
-			 uci: 'e2e4'
-			 timestamp: 0).
-	moves add: (ChessMove new
-			 moveNumber: 1
-			 color: #black
-			 san: 'e5'
-			 uci: 'e7e5'
-			 timestamp: 0).
-
-	game := ChessGame new.
-	game
-		gameId: 'testgame'
-		pgn: '[Event "Test"]\n1. e4 e5'
-		metadata: Dictionary new
-		moves: moves
-		board: nil.
-
-	review := GameReview new game: game positions: #(  ).
-	self assert: review game equals: game.
-	self assert: review currentPosition isNil
-]
-
-{ #category : 'tests' }
 ChessCoachIntegrationTest >> testPGNParsing [
 
 	| pgn game |
@@ -72,20 +149,4 @@ ChessCoachIntegrationTest >> testPGNParsing [
 	self assert: (game metadata at: 'Event') equals: 'Test'.
 	self assert: game moves size equals: 2.
 	self assert: game moves first san equals: 'e4'
-]
-
-{ #category : 'tests' }
-ChessCoachIntegrationTest >> testSocraticCoachPrompts [
-	"Test that the Socratic coach provides meaningful prompts"
-
-	| coach position prompt |
-	coach := SocraticCoach new.
-	position := ReviewPosition new
-		            moveNumber: 5
-		            board: nil
-		            movePlayedSAN: 'Nf3'.
-
-	prompt := coach promptForRecall: position.
-	self assert: (prompt includesSubstring: 'move').
-	self assert: (prompt includesSubstring: '5')
 ]

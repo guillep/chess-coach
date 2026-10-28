@@ -38,9 +38,9 @@ BaselineOfChessCoach >> baseline: spec [
 				package: 'ChessCoach-App'
 				with: [ spec requires: #( 'ChessCoach-LichessImport' ) ].
 
-			spec
-				package: 'ChessCoach-UI'
-				with: [ spec requires: #( 'ChessCoach-Core' 'Bloc' 'Toplo' ) ].
+			spec package: 'ChessCoach-UI' with: [
+				spec requires:
+					#( 'ChessCoach-Core' 'ChessCoach-App' 'Bloc' 'Toplo' ) ].
 
 			spec package: 'ChessCoach-Tests' with: [
 					spec requires:

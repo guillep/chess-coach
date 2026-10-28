@@ -11,40 +11,9 @@ Class {
 }
 
 { #category : 'helpers' }
-ChessCoachSessionTest >> gameNumber: i [
-	"A Lichess API game dictionary created at i seconds after the epoch"
-
-	^ Dictionary new
-		  at: 'id' put: 'g' , (i printPaddedWith: $0 to: 2);
-		  at: 'createdAt' put: i * 1000;
-		  at: 'status' put: 'mate';
-		  at: 'winner' put: 'white';
-		  at: 'players' put: (Dictionary new
-				   at: 'white' put: (Dictionary new
-						    at: 'user' put: (Dictionary new
-								     at: 'name' put: 'alice';
-								     yourself);
-						    yourself);
-				   at: 'black' put: (Dictionary new
-					    at: 'aiLevel' put: 3;
-					    yourself);
-				   yourself);
-		  at: 'pgn' put: '[White "alice"]
-[Black "Stockfish"]
-[Result "1-0"]
-
-1. e4 e5 1-0';
-		  yourself
-]
-
-{ #category : 'helpers' }
 ChessCoachSessionTest >> newSession [
 
-	^ ChessCoachSession importer: (LichessGameImporter
-			   oauthClient:
-			   (LichessOAuth2ClientStub onTokenFile: root / 'lichess-token')
-			   apiClient: api
-			   directory: root)
+	^ api newSessionOn: root
 ]
 
 { #category : 'running' }
@@ -52,8 +21,7 @@ ChessCoachSessionTest >> setUp [
 
 	super setUp.
 	root := FileSystem memory root.
-	api := LichessAPIClientStub new games:
-		       ((25 to: 1 by: -1) collect: [ :i | self gameNumber: i ]).
+	api := LichessAPIClientStub withGames: 25.
 	session := self newSession
 ]
 
@@ -123,6 +91,17 @@ ChessCoachSessionTest >> testLoadMoreGamesPagesBackwards [
 ]
 
 { #category : 'tests' }
+ChessCoachSessionTest >> testLoginRecordsUsernameInTokenFile [
+
+	self assert: session username isNil.
+	session login.
+	self assert: session username equals: 'tester'.
+	self assert: self newSession username equals: 'tester'.
+	session logout.
+	self assert: session username isNil
+]
+
+{ #category : 'tests' }
 ChessCoachSessionTest >> testLoginWritesTokenFile [
 
 	self assert: session login.
@@ -147,7 +126,7 @@ ChessCoachSessionTest >> testRefreshFetchesNewerGames [
 
 	session login.
 	session loadMoreGames.
-	api addNewestGame: (self gameNumber: 26).
+	api addNewestGame: (LichessAPIClientStub gameNumber: 26).
 	session refresh.
 	self assert: session games size equals: 21.
 	self assert: session games first gameId equals: 'g26'

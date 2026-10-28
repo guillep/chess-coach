@@ -8,8 +8,7 @@ Class {
 		'oauthClient',
 		'apiClient',
 		'fileStore',
-		'indexManager',
-		'username'
+		'indexManager'
 	],
 	#category : 'ChessCoach-LichessImport',
 	#package : 'ChessCoach-LichessImport'
@@ -118,12 +117,15 @@ LichessGameImporter >> isLoggedIn [
 
 { #category : 'oauth2' }
 LichessGameImporter >> login [
-	"Run the browser login. Answer whether it succeeded; false means cancelled or timed out."
+	"Run the browser login and record whose account it is.
+	Answer whether it succeeded; false means cancelled or timed out."
 
 	| token |
 	token := oauthClient authenticate.
 	apiClient accessToken: token.
-	^ token notNil
+	token ifNil: [ ^ false ].
+	oauthClient username: (apiClient fetchMe at: 'username').
+	^ true
 ]
 
 { #category : 'oauth2' }
@@ -131,8 +133,7 @@ LichessGameImporter >> logout [
 	"Forget the token; imported games stay on disk"
 
 	oauthClient logout.
-	apiClient accessToken: nil.
-	username := nil
+	apiClient accessToken: nil
 ]
 
 { #category : 'accessing' }
@@ -195,7 +196,7 @@ LichessGameImporter >> saveGameFromData: gameData [
 
 { #category : 'accessing' }
 LichessGameImporter >> username [
-	"The logged-in Lichess user's name, asked for once per login"
+	"The logged-in Lichess user's name, recorded at login; nil when logged out"
 
-	^ username ifNil: [ username := apiClient fetchMe at: 'username' ]
+	^ oauthClient username
 ]

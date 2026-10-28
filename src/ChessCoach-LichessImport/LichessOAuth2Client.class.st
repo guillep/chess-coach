@@ -11,7 +11,8 @@ Class {
 		'tokenExpiresAt',
 		'codeVerifier',
 		'tokenFile',
-		'authorizationCodeReceived'
+		'authorizationCodeReceived',
+		'username'
 	],
 	#category : 'ChessCoach-LichessImport',
 	#package : 'ChessCoach-LichessImport'
@@ -163,12 +164,13 @@ LichessOAuth2Client >> initializeWithTokenFile: aFileReference [
 
 { #category : 'persistence' }
 LichessOAuth2Client >> loadTokenFromFile [
-	"Load the access token from the token file, if there is one"
+	"Load the access token and username from the token file, if there is one"
 
 	| dict |
 	tokenFile exists ifFalse: [ ^ nil ].
 	dict := STON fromString: tokenFile contents.
 	accessToken := dict at: 'access_token' ifAbsent: [ nil ].
+	username := dict at: 'username' ifAbsent: [ nil ].
 	dict at: 'expires_at' ifPresent: [ :exp |
 		exp ifNotNil: [ tokenExpiresAt := DateAndTime fromString: exp ] ].
 	^ accessToken
@@ -176,10 +178,11 @@ LichessOAuth2Client >> loadTokenFromFile [
 
 { #category : 'persistence' }
 LichessOAuth2Client >> logout [
-	"Forget the access token and delete the token file"
+	"Forget the access token and username and delete the token file"
 
 	accessToken := nil.
 	tokenExpiresAt := nil.
+	username := nil.
 	tokenFile ensureDelete
 ]
 
@@ -200,13 +203,14 @@ LichessOAuth2Client >> requestAuthorizationURL [
 
 { #category : 'persistence' }
 LichessOAuth2Client >> saveTokenToFile [
-	"Save the access token for reuse. Do nothing when there is no token."
+	"Save the access token and username for reuse. Do nothing when there is no token."
 
 	| dict |
 	accessToken ifNil: [ ^ self ].
 	tokenFile parent ensureCreateDirectory.
 	dict := Dictionary new.
 	dict at: 'access_token' put: accessToken.
+	dict at: 'username' put: username.
 	dict
 		at: 'expires_at'
 		put: (tokenExpiresAt ifNotNil: [ tokenExpiresAt asString ]).
@@ -219,4 +223,19 @@ LichessOAuth2Client >> saveTokenToFile [
 LichessOAuth2Client >> tokenFile [
 
 	^ tokenFile
+]
+
+{ #category : 'accessing' }
+LichessOAuth2Client >> username [
+	"The Lichess account the token belongs to, saved with the token"
+
+	^ username
+]
+
+{ #category : 'accessing' }
+LichessOAuth2Client >> username: aString [
+	"Remember the account the token belongs to and save it with the token"
+
+	username := aString.
+	self saveTokenToFile
 ]

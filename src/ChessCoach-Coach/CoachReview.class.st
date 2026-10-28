@@ -14,7 +14,9 @@ Class {
 		'reviews',
 		'current',
 		'batchSize',
-		'depth'
+		'depth',
+		'changedBlock',
+		'momentClosedBlock'
 	],
 	#category : 'ChessCoach-Coach',
 	#package : 'ChessCoach-Coach'
@@ -47,20 +49,20 @@ CoachReview >> answerMoves: someUCIMoves [
 			CoachIllegalMove signal: move ] ].
 	self currentMoment answer:
 		(CoachAnswer question: question moves: someUCIMoves).
-	question kind = #expectedReply ifTrue: [ self askAboutCandidates ]
+	question kind = #expectedReply ifTrue: [ self askAboutCandidates ].
+	self changed
 ]
 
 { #category : 'answering' }
 CoachReview >> answerText: aString [
-	"Answer a written question; the answer is classified into taxonomy tags when the local LLM is reachable"
+	"Answer a written question at once; classifyPending tags it later"
 
 	| question |
 	question := self currentQuestion.
 	self assert: question expectsMoves not.
-	self currentMoment answer: (CoachAnswer
-			 question: question
-			 text: aString
-			 labels: (self classify: aString question: question))
+	self currentMoment answer:
+		(CoachAnswer question: question text: aString).
+	self changed
 ]
 
 { #category : 'converting' }
@@ -138,17 +140,40 @@ CoachReview >> batchSize: anInteger [
 	batchSize := anInteger
 ]
 
-{ #category : 'private - questions' }
-CoachReview >> classify: aString question: aCoachQuestion [
-	"The design keeps answers unclassified when Ollama is not running, so a connection failure is not an error here"
+{ #category : 'saving' }
+CoachReview >> changed [
+	"Every answer, tag change and move to the next moment is saved at once"
 
-	^ [
-		  classifier
-			  classify: aString
-			  question: aCoachQuestion text
-			  context: (self contextOf: self currentMoment) ]
-		  on: ConnectionTimedOut , NetworkError
-		  do: [ #(  ) ]
+	changedBlock value
+]
+
+{ #category : 'answering' }
+CoachReview >> classifyPending [
+	"Classify every written answer not classified yet. Slow (local LLM): call it off the UI thread.
+	The design keeps answers unclassified while Ollama is not running, so a connection failure stops this round without an error; the next call retries."
+
+	reviews do: [ :moment |
+			moment answers
+				reject: [ :each | each isClassified ]
+				thenDo: [ :answer |
+						| labels |
+						labels := [
+							          classifier
+								          classify: answer text
+								          question: answer question text
+								          context: (self contextOf: moment) ]
+							          on: NetworkError
+							          do: [ ^ self ].
+						answer classifiedAs: labels.
+						moment proposeLabels: labels.
+						self changed ] ]
+]
+
+{ #category : 'labels' }
+CoachReview >> confirmTag: aTagId of: aMomentReview [
+
+	aMomentReview confirmTag: aTagId.
+	self changed
 ]
 
 { #category : 'private - questions' }
@@ -182,6 +207,13 @@ CoachReview >> depth: anInteger [
 	"Engine depth used to evaluate my candidates"
 
 	depth := anInteger
+]
+
+{ #category : 'labels' }
+CoachReview >> dropTag: aTagId of: aMomentReview [
+
+	aMomentReview dropTag: aTagId.
+	self changed
 ]
 
 { #category : 'mistakes' }
@@ -258,7 +290,9 @@ CoachReview >> nextMoment [
 	"Leave the current moment once its reveal has been seen"
 
 	self assert: self currentMoment isRevealed.
-	current := current + 1
+	current := current + 1.
+	self changed.
+	momentClosedBlock value
 ]
 
 { #category : 'private - questions' }
@@ -387,5 +421,19 @@ CoachReview >> setGameId: anId game: aGame analysis: aGameAnalysis moments: some
 	reviews := OrderedCollection new.
 	current := 1.
 	batchSize := 5.
-	depth := 18
+	depth := 18.
+	changedBlock := [ ].
+	momentClosedBlock := [ ]
+]
+
+{ #category : 'saving' }
+CoachReview >> whenChangedDo: aBlock [
+
+	changedBlock := aBlock
+]
+
+{ #category : 'saving' }
+CoachReview >> whenMomentClosedDo: aBlock [
+
+	momentClosedBlock := aBlock
 ]

@@ -21,7 +21,10 @@ OllamaClientStub >> initialize [
 
 { #category : 'private' }
 OllamaClientStub >> post: aDictionary [
+	"Answer the canned reply; without one, behave like Ollama not running"
 
+	replyContent ifNil: [
+		^ ConnectionTimedOut signal: 'Ollama stub is offline' ].
 	requests add: aDictionary.
 	^ Dictionary new
 		  at: 'message' put: (Dictionary new

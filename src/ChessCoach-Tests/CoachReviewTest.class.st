@@ -18,7 +18,8 @@ CoachReviewTest >> answerFirstMoment: review [
 	review answerText: 'I wanted to attack f7'.
 	review answerMoves: #( 'h7h6' ).
 	[ review currentMoment isRevealed ] whileFalse: [
-		review answerText: 'I did not see it' ]
+		review answerText: 'I did not see it' ].
+	review classifyPending
 ]
 
 { #category : 'helpers' }
@@ -93,6 +94,31 @@ CoachReviewTest >> setUp [
 ]
 
 { #category : 'tests' }
+CoachReviewTest >> testClassificationWaitsForOllamaAndSavesEveryChange [
+
+	| review saves |
+	client replyContent: nil.
+	review := self newReview.
+	saves := 0.
+	review whenChangedDo: [ saves := saves + 1 ].
+	review reviewMore.
+	self answerFirstMoment: review.
+	self assert: saves equals: 6.
+	self assert: review currentMoment isClassifying.
+	self assert: review currentMoment labels isEmpty.
+	client replyContent:
+		'{"tags":[{"tag":"hope-chess","confidence":0.6}]}'.
+	review classifyPending.
+	self deny: review currentMoment isClassifying.
+	self
+		assert:
+		(review currentMoment labels collect: [ :each | each tagId ])
+			asArray
+		equals: #( 'hope-chess' ).
+	self assert: saves equals: 6 + 4
+]
+
+{ #category : 'tests' }
 CoachReviewTest >> testDialogue [
 
 	| review moment reveal |
@@ -127,6 +153,10 @@ CoachReviewTest >> testDialogue [
 		'You also considered d3, which was better. Why did you choose Ng5?'.
 	3 timesRepeat: [ review answerText: 'I did not see it' ].
 	self assert: moment isRevealed.
+	self assert: moment isClassifying.
+	self assert: moment labels isEmpty.
+	review classifyPending.
+	self deny: moment isClassifying.
 	reveal := review revealOf: moment.
 	self assert: (reveal at: 'bestLine') equals: #( 'd2d4' ).
 	self assert: (reveal at: 'expectedReply') equals: #( 'h7h6' ).
@@ -135,7 +165,7 @@ CoachReviewTest >> testDialogue [
 	self
 		assert: (moment labels collect: [ :each | each tagId ]) asArray
 		equals: #( 'missed-opponent-threat' ).
-	moment confirmTag: 'hope-chess'.
+	review confirmTag: 'hope-chess' of: moment.
 	review nextMoment.
 	self assert: review isFinished
 ]

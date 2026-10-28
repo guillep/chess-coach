@@ -181,7 +181,7 @@ ChessCoachSessionTest >> testRefreshFetchesNewerGames [
 { #category : 'tests' }
 ChessCoachSessionTest >> testReviewIsSavedAndFeedsTheMistakeDatabase [
 
-	| entry game engine review database |
+	| entry game engine review database restored |
 	session login.
 	session loadMoreGames.
 	entry := session games first.
@@ -203,14 +203,18 @@ ChessCoachSessionTest >> testReviewIsSavedAndFeedsTheMistakeDatabase [
 	review answerMoves: { game uciMoves second }.
 	[ review currentMoment isRevealed ] whileFalse: [
 		review answerText: 'I moved too fast' ].
-	review currentMoment confirmTag: 'no-blunder-check'.
-	session saveReview: review.
+	self assert: (session reviewFor: entry) currentMoment isRevealed.
+	review classifyPending.
+	review confirmTag: 'no-blunder-check' of: review currentMoment.
+	review nextMoment.
 	database := session mistakeDatabase.
 	self assert: database records size equals: 1.
 	self
 		assert: (database tagFrequencies at: 'no-blunder-check')
 		equals: 1.
-	self assert: (session reviewFor: entry) currentMoment isRevealed
+	restored := session reviewFor: entry.
+	self assert: restored reviews first labels first isConfirmed.
+	self deny: restored currentMoment ply = 1
 ]
 
 { #category : 'tests' }

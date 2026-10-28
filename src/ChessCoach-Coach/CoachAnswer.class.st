@@ -8,7 +8,8 @@ Class {
 		'question',
 		'moves',
 		'text',
-		'labels'
+		'labels',
+		'classified'
 	],
 	#category : 'ChessCoach-Coach',
 	#package : 'ChessCoach-Coach'
@@ -17,13 +18,15 @@ Class {
 { #category : 'instance creation' }
 CoachAnswer class >> fromDictionary: aDictionary [
 
-	^ self new
-		  setQuestion:
-		  (CoachQuestion fromDictionary: (aDictionary at: 'question'))
-		  moves: (aDictionary at: 'moves') asArray
-		  text: (aDictionary at: 'text')
-		  labels: ((aDictionary at: 'labels') collect: [ :each |
-				   MistakeLabel fromDictionary: each ]) asArray
+	^ (self new
+		   setQuestion:
+			   (CoachQuestion fromDictionary: (aDictionary at: 'question'))
+		   moves: (aDictionary at: 'moves') asArray
+		   text: (aDictionary at: 'text')
+		   labels: ((aDictionary at: 'labels') collect: [ :each |
+					    MistakeLabel fromDictionary: each ]) asArray)
+		  classified: (aDictionary at: 'classified' ifAbsent: [ true ]);
+		  yourself
 ]
 
 { #category : 'instance creation' }
@@ -34,6 +37,19 @@ CoachAnswer class >> question: aCoachQuestion moves: someUCIMoves [
 		  moves: someUCIMoves asArray
 		  text: nil
 		  labels: #(  )
+]
+
+{ #category : 'instance creation' }
+CoachAnswer class >> question: aCoachQuestion text: aString [
+	"A written answer waiting to be classified"
+
+	^ (self new
+		   setQuestion: aCoachQuestion
+		   moves: #(  )
+		   text: aString
+		   labels: #(  ))
+		  classified: false;
+		  yourself
 ]
 
 { #category : 'instance creation' }
@@ -54,7 +70,28 @@ CoachAnswer >> asDictionary [
 		  at: 'moves' put: moves copy;
 		  at: 'text' put: text;
 		  at: 'labels' put: (labels collect: [ :each | each asDictionary ]);
+		  at: 'classified' put: classified;
 		  yourself
+]
+
+{ #category : 'accessing' }
+CoachAnswer >> classified: aBoolean [
+
+	classified := aBoolean
+]
+
+{ #category : 'accessing' }
+CoachAnswer >> classifiedAs: someMistakeLabels [
+
+	labels := someMistakeLabels asArray.
+	classified := true
+]
+
+{ #category : 'testing' }
+CoachAnswer >> isClassified [
+	"Board answers need no classification; written ones do, once"
+
+	^ classified
 ]
 
 { #category : 'accessing' }
@@ -81,7 +118,8 @@ CoachAnswer >> setQuestion: aCoachQuestion moves: someUCIMoves text: aStringOrNi
 	question := aCoachQuestion.
 	moves := someUCIMoves.
 	text := aStringOrNil.
-	labels := someMistakeLabels
+	labels := someMistakeLabels.
+	classified := true
 ]
 
 { #category : 'accessing' }

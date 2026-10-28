@@ -311,7 +311,7 @@ ChessCoachSession >> refresh [
 
 { #category : 'coach' }
 ChessCoachSession >> reviewFor: aGameIndexEntry [
-	"The coach review of the game, continuing the saved one if any. Slow the first time (engine analysis): call it off the UI thread."
+	"The coach review of the game, continuing the saved one if any. It saves itself after every change and rebuilds the mistake database when a moment is closed. Slow the first time (engine analysis): call it off the UI thread."
 
 	| review file |
 	review := CoachReview
@@ -327,6 +327,8 @@ ChessCoachSession >> reviewFor: aGameIndexEntry [
 	file exists
 		ifTrue: [ review restoreFromJSON: file contents ]
 		ifFalse: [ review reviewMore ].
+	review whenChangedDo: [ self saveReviewFile: review ].
+	review whenMomentClosedDo: [ self saveReview: review ].
 	^ review
 ]
 
@@ -346,14 +348,20 @@ ChessCoachSession >> saveMarks: aCollection for: aGameIndexEntry [
 ChessCoachSession >> saveReview: aCoachReview [
 	"Save the review next to its game and rebuild the mistake database from all reviews"
 
-	(importer fileStore file: 'review.json' of: aCoachReview gameId)
-		ensureDelete;
-		writeStreamDo: [ :stream | stream nextPutAll: aCoachReview asJSON ].
+	self saveReviewFile: aCoachReview.
 	self mistakesFile
 		ensureDelete;
 		writeStreamDo: [ :stream |
 			stream nextPutAll: self rebuiltMistakeDatabase asJSON ].
 	self announceChanged
+]
+
+{ #category : 'private' }
+ChessCoachSession >> saveReviewFile: aCoachReview [
+
+	(importer fileStore file: 'review.json' of: aCoachReview gameId)
+		ensureDelete;
+		writeStreamDo: [ :stream | stream nextPutAll: aCoachReview asJSON ]
 ]
 
 { #category : 'marks' }

@@ -49,17 +49,9 @@ CoachMomentReview class >> ply: aPly color: aColor kinds: someKinds questions: s
 
 { #category : 'dialogue' }
 CoachMomentReview >> addAnswer: aCoachAnswer [
-	"Record aCoachAnswer and merge its labels into the proposed ones, keeping the highest confidence per tag"
 
 	answers add: aCoachAnswer.
-	aCoachAnswer labels do: [ :label |
-			(labels
-				 detect: [ :each | each tagId = label tagId ]
-				 ifNone: [ nil ])
-				ifNil: [ labels add: label ]
-				ifNotNil: [ :existing |
-						label confidence > existing confidence ifTrue: [
-							labels at: (labels indexOf: existing) put: label ] ] ]
+	self proposeLabels: aCoachAnswer labels
 ]
 
 { #category : 'dialogue' }
@@ -148,6 +140,13 @@ CoachMomentReview >> dropTag: aTagId [
 ]
 
 { #category : 'testing' }
+CoachMomentReview >> isClassifying [
+	"Whether some written answer still waits for the classifier"
+
+	^ answers anySatisfy: [ :each | each isClassified not ]
+]
+
+{ #category : 'testing' }
 CoachMomentReview >> isRevealed [
 	"No question left: the engine's view and the proposed tags can be shown"
 
@@ -184,6 +183,21 @@ CoachMomentReview >> pending [
 CoachMomentReview >> ply [
 
 	^ ply
+]
+
+{ #category : 'labels' }
+CoachMomentReview >> proposeLabels: someMistakeLabels [
+	"Merge someMistakeLabels into the proposed ones, keeping the highest confidence per tag and any confirmation"
+
+	someMistakeLabels do: [ :label |
+			(labels
+				 detect: [ :each | each tagId = label tagId ]
+				 ifNone: [ nil ])
+				ifNil: [ labels add: label ]
+				ifNotNil: [ :existing |
+						(existing isConfirmed not and: [
+							 label confidence > existing confidence ]) ifTrue: [
+							labels at: (labels indexOf: existing) put: label ] ] ]
 ]
 
 { #category : 'initialization' }

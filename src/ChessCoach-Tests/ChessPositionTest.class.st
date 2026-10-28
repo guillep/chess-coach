@@ -106,6 +106,28 @@ ChessPositionTest >> testPromotion [
 ]
 
 { #category : 'tests' }
+ChessPositionTest >> testSANForUCI [
+
+	| position |
+	position := ChessPosition initial.
+	self assert: (position sanForUCI: 'e2e4') equals: 'e4'.
+	self assert: (position sanForUCI: 'g1f3') equals: 'Nf3'.
+	position := position moves: #( 'e4' 'e5' 'Nf3' 'Nc6' 'Bc4' 'Nf6' ).
+	self assert: (position sanForUCI: 'e1g1') equals: 'O-O'.
+	self assert: (position sanForUCI: 'c4f7') equals: 'Bxf7+'.
+	self assert: (position sanForUCI: 'f3e5') equals: 'Nxe5'.
+	position := ChessPosition initial moves: #( 'f3' 'e5' 'g4' ).
+	self assert: (position sanForUCI: 'd8h4') equals: 'Qh4#'.
+	position := ChessPosition fromFEN: '4k3/8/8/8/8/8/4K3/R6R w - - 0 1'.
+	self assert: (position sanForUCI: 'a1d1') equals: 'Rad1'.
+	position := ChessPosition fromFEN: 'R7/8/7k/8/8/8/4K3/R7 w - - 0 1'.
+	self assert: (position sanForUCI: 'a1a5') equals: 'R1a5'.
+	position := ChessPosition fromFEN: '4k3/P7/8/8/8/8/8/4K3 w - - 0 1'.
+	self assert: (position sanForUCI: 'a7a8q') equals: 'a8=Q+'.
+	self should: [ position sanForUCI: 'e1e3' ] raise: Error
+]
+
+{ #category : 'tests' }
 ChessPositionTest >> testUnplayableMoveSignalsIllegalMove [
 
 	self

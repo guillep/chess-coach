@@ -230,6 +230,27 @@ ChessPosition >> colorOf: aPiece [
 		  ifFalse: [ #black ]
 ]
 
+{ #category : 'private - moving' }
+ChessPosition >> disambiguationFor: aLetter from: from to: to [
+	"File, rank or both of from, when another piece of the same kind could also legally move to to"
+
+	| others |
+	others := pieces keys select: [ :square |
+			          square ~= from and: [
+					          (pieces at: square)
+					          = (self pieceLetter: aLetter color: turn) and: [
+							          (self canMove: aLetter from: square to: to) and: [
+								          (self moveLeavesKingInCheckFrom: square to: to) not ] ] ] ].
+	others ifEmpty: [ ^ '' ].
+	(others noneSatisfy: [ :each |
+		 (self fileOf: each) = (self fileOf: from) ]) ifTrue: [
+		^ from first: 1 ].
+	(others noneSatisfy: [ :each |
+		 (self rankOf: each) = (self rankOf: from) ]) ifTrue: [
+		^ from last asString ].
+	^ from
+]
+
 { #category : 'accessing' }
 ChessPosition >> enPassantTarget [
 
@@ -293,6 +314,19 @@ ChessPosition >> fullmoveNumber [
 ChessPosition >> halfmoveClock [
 
 	^ halfMoveClock
+]
+
+{ #category : 'testing' }
+ChessPosition >> hasLegalMove [
+	"Whether the side to move has any legal move (false on checkmate and stalemate)"
+
+	| squares |
+	squares := (1 to: 8) flatCollect: [ :file |
+		           (1 to: 8) collect: [ :rank |
+			           self squareAtFile: file rank: rank ] ].
+	^ pieces keys anySatisfy: [ :from |
+			  (self colorOf: (pieces at: from)) = turn and: [
+				  squares anySatisfy: [ :to | self isLegalUCI: from , to ] ] ]
 ]
 
 { #category : 'initialization' }
@@ -554,6 +588,45 @@ ChessPosition >> postCopy [
 ChessPosition >> rankOf: square [
 
 	^ square second digitValue
+]
+
+{ #category : 'converting' }
+ChessPosition >> sanForUCI: aString [
+	"The SAN of the legal UCI move aString in this position, with + or # when it checks or mates"
+
+	| from to letter target capture san after |
+	(self isLegalUCI: aString) ifFalse: [
+		^ Error signal: 'Illegal move ' , aString ].
+	from := aString first: 2.
+	to := aString copyFrom: 3 to: 4.
+	letter := (self pieceAt: from) asUppercase.
+	target := self pieceAt: to.
+	(letter = 'K' and: [
+		 ((self fileOf: from) - (self fileOf: to)) abs = 2 ])
+		ifTrue: [
+				san := (self fileOf: to) = 7
+					       ifTrue: [ 'O-O' ]
+					       ifFalse: [ 'O-O-O' ] ]
+		ifFalse: [
+				letter = 'P'
+					ifTrue: [
+							capture := (self fileOf: from) ~= (self fileOf: to).
+							san := (capture
+								        ifTrue: [ (from first: 1) , 'x' ]
+								        ifFalse: [ '' ]) , to.
+							((self rankOf: to) = 1 or: [ (self rankOf: to) = 8 ]) ifTrue: [
+									san := san , '=' , (aString size = 5
+										        ifTrue: [ aString last asUppercase asString ]
+										        ifFalse: [ 'Q' ]) ] ]
+					ifFalse: [
+							san := letter
+							       , (self disambiguationFor: letter from: from to: to)
+							       , (target ifNil: [ '' ] ifNotNil: [ 'x' ]) , to ] ].
+	after := self move: san.
+	(after isKingInCheck: after turn) ifFalse: [ ^ san ].
+	^ san , (after hasLegalMove
+		   ifTrue: [ '+' ]
+		   ifFalse: [ '#' ])
 ]
 
 { #category : 'private - moving' }

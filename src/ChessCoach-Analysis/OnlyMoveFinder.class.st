@@ -58,9 +58,9 @@ OnlyMoveFinder >> moments [
 								   note:
 									   ('Only one good move: {1} ({2}); the next best, {3}, gives {4}'
 										    format: {
-												    before bestLine firstMove.
+												    (before sanOf: before bestLine firstMove).
 												    before bestLine scoreString.
-												    before lines second firstMove.
+												    (before sanOf: before lines second firstMove).
 												    before lines second scoreString })) ].
 				  moments ]
 ]

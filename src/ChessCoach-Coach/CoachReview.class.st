@@ -107,21 +107,26 @@ CoachReview >> askAboutCandidates [
 				 (candidates includes: line firstMove) not ]) ifTrue: [
 					questions add: (CoachQuestion
 							 kind: #whyNotConsidered
-							 text: 'You didn''t consider this move. Why?'
+							 text:
+							 'You didn''t consider ' , (before sanOf: line firstMove)
+							 , '. Why?'
 							 move: line firstMove) ] ].
 	moment candidateWinPercents keysAndValuesDo: [ :move :win |
 			(move ~= played and: [ win <= (best - 10) ]) ifTrue: [
 					questions add: (CoachQuestion
 							 kind: #whyBadCandidate
-							 text: 'This candidate was bad. Why did it look good?'
+							 text:
+							 (before sanOf: move)
+							 , ' was a bad candidate. Why did it look good?'
 							 move: move) ] ].
 	better := (moment candidateWinPercents associations reject: [ :each |
 		           each key = played ]) detectMax: [ :each | each value ].
 	(better notNil and: [ better value > playedWin ]) ifTrue: [
 			questions add: (CoachQuestion
 					 kind: #whyNotBetter
-					 text:
-					 'You considered this better move too. Why did you choose your move instead?'
+					 text: 'You also considered ' , (before sanOf: better key)
+						 , ', which was better. Why did you choose '
+						 , (before sanOf: played) , '?'
 					 move: better key) ].
 	moment ask: questions
 ]
@@ -157,7 +162,7 @@ CoachReview >> contextOf: aMomentReview [
 				  before fen.
 				  (game moves at: aMomentReview ply) san.
 				  (', ' join: aMomentReview kinds).
-				  before bestLine firstMove }
+				  (before sanOf: before bestLine firstMove) }
 ]
 
 { #category : 'navigating' }

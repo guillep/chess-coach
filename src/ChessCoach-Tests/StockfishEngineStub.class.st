@@ -15,6 +15,7 @@ Class {
 
 { #category : 'analysing' }
 StockfishEngineStub >> analyse: aFEN multiPV: lineCount depth: aDepth searchMoves: someUCIMoves [
+	"Lines start with a rook-pawn move of the side to move, legal in the opening positions the tests use"
 
 	analysedCount := analysedCount + 1.
 	someUCIMoves ifNotEmpty: [
@@ -24,10 +25,12 @@ StockfishEngineStub >> analyse: aFEN multiPV: lineCount depth: aDepth searchMove
 						  centipawns: (moveScores at: move ifAbsent: [ 0 ])
 						  sideToMove: #white ] ].
 	^ (scores at: aFEN ifAbsent: [ #( 0 ) ]) collect: [ :cp |
-		  EngineLine
-			  moves: #( 'a2a3' ) copy
-			  centipawns: cp
-			  sideToMove: #white ]
+			  EngineLine
+				  moves: ((aFEN substrings at: 2) = 'w'
+						   ifTrue: [ #( 'a2a3' ) ]
+						   ifFalse: [ #( 'a7a6' ) ]) copy
+				  centipawns: cp
+				  sideToMove: #white ]
 ]
 
 { #category : 'accessing' }

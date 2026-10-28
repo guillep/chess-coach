@@ -60,7 +60,7 @@ EvaluationJumpFinder >> noteBefore: before after: after for: aColor [
 				  ((after winPercentFor: aColor) printShowingDecimalPlaces: 0).
 				  before bestLine scoreString.
 				  after bestLine scoreString.
-				  before bestLine firstMove }
+				  (before sanOf: before bestLine firstMove) }
 ]
 
 { #category : 'initialization' }

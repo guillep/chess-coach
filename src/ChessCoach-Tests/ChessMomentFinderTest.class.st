@@ -7,7 +7,8 @@ Class {
 
 { #category : 'helpers' }
 ChessMomentFinderTest >> analysisWithWhiteCentipawns: lineScores [
-	"lineScores holds, per position from ply 0, the engine lines' scores in centipawns from White's point of view"
+	"lineScores holds, per position from ply 0, the engine lines' scores in centipawns from White's point of view.
+	Every line starts with a rook-pawn move, legal for the side to move."
 
 	^ GameAnalysis
 		  depth: 18
@@ -16,14 +17,16 @@ ChessMomentFinderTest >> analysisWithWhiteCentipawns: lineScores [
 					   ply := index - 1.
 					   PlyAnalysis
 						   ply: ply
-						   fen: '8/8/8/8/8/8/8/8 ' , (ply even
+						   fen: '4k3/p7/8/8/8/8/P7/4K3 ' , (ply even
 								    ifTrue: [ 'w' ]
 								    ifFalse: [ 'b' ]) , ' - - 0 1'
 						   lines: (scores collect: [ :cp |
-								    EngineLine
-									    moves: #( 'a2a3' )
-									    centipawns: cp
-									    sideToMove: #white ]) ])
+									    EngineLine
+										    moves: (ply even
+												     ifTrue: [ #( 'a2a3' ) ]
+												     ifFalse: [ #( 'a7a6' ) ])
+										    centipawns: cp
+										    sideToMove: #white ]) ])
 ]
 
 { #category : 'tests' }

@@ -64,6 +64,13 @@ PlyAnalysis >> ply [
 	^ ply
 ]
 
+{ #category : 'accessing' }
+PlyAnalysis >> sanOf: aUCIMove [
+	"aUCIMove, legal in this position, in SAN"
+
+	^ (ChessPosition fromFEN: fen) sanForUCI: aUCIMove
+]
+
 { #category : 'initialization' }
 PlyAnalysis >> setPly: aNumber fen: aFEN lines: aCollection [
 

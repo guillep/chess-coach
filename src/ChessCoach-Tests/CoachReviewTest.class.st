@@ -118,6 +118,13 @@ CoachReviewTest >> testDialogue [
 				(#whyNotConsidered -> 'd2d4').
 				(#whyNotConsidered -> 'b1c3').
 				(#whyNotBetter -> 'd2d3') }.
+	self
+		assert: moment pending first text
+		equals: 'You didn''t consider d4. Why?'.
+	self
+		assert: moment pending last text
+		equals:
+		'You also considered d3, which was better. Why did you choose Ng5?'.
 	3 timesRepeat: [ review answerText: 'I did not see it' ].
 	self assert: moment isRevealed.
 	reveal := review revealOf: moment.

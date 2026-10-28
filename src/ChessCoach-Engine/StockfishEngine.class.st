@@ -9,7 +9,8 @@ Class {
 	#instVars : [
 		'path',
 		'process',
-		'pending'
+		'pending',
+		'name'
 	],
 	#category : 'ChessCoach-Engine',
 	#package : 'ChessCoach-Engine'
@@ -78,7 +79,8 @@ StockfishEngine >> ensureStarted [
 	process run.
 	pending := ''.
 	self send: 'uci'.
-	self readLinesUntil: 'uciok'
+	(self readLinesUntil: 'uciok') do: [ :line |
+		(line beginsWith: 'id name ') ifTrue: [ name := line allButFirst: 8 ] ]
 ]
 
 { #category : 'private - io' }
@@ -179,4 +181,12 @@ StockfishEngine >> stop [
 		waitForExit;
 		closeAndCleanStreams.
 	process := nil
+]
+
+{ #category : 'running' }
+StockfishEngine >> version [
+	"The engine's name and version as it reports them over UCI (e.g. 'Stockfish 17'); starts it if needed"
+
+	self ensureStarted.
+	^ name
 ]

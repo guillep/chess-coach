@@ -34,3 +34,12 @@ AnswerClassifierTest >> testClassify [
 		(((request at: 'messages') last at: 'content') includesSubstring:
 			 'knight could fork')
 ]
+
+{ #category : 'tests' }
+AnswerClassifierTest >> testInstalledModels [
+
+	self
+		assert:
+		(OllamaClientStub new replyContent: '{}') installedModels asArray
+		equals: #( 'qwen2.5:7b-instruct' 'llama3.1:8b' )
+]

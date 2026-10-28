@@ -49,12 +49,30 @@ OllamaClient >> chatSystem: aSystemPrompt user: aUserPrompt schema: aJSONSchema 
 	^ STONJSON fromString: ((response at: 'message') at: 'content')
 ]
 
+{ #category : 'private' }
+OllamaClient >> get: aPath [
+
+	^ STONJSON fromString: (ZnClient new
+			   url: baseUrl , aPath;
+			   timeout: 10;
+			   enforceHttpSuccess: true;
+			   get)
+]
+
 { #category : 'initialization' }
 OllamaClient >> initialize [
 
 	super initialize.
 	baseUrl := 'http://localhost:11434'.
 	model := 'qwen2.5:7b-instruct'
+]
+
+{ #category : 'models' }
+OllamaClient >> installedModels [
+	"Names of the models pulled into this Ollama, e.g. qwen2.5:7b-instruct"
+
+	^ ((self get: '/api/tags') at: 'models') collect: [ :each |
+		  each at: 'name' ]
 ]
 
 { #category : 'accessing' }

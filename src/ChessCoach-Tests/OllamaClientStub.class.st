@@ -12,6 +12,23 @@ Class {
 	#package : 'ChessCoach-Tests'
 }
 
+{ #category : 'private' }
+OllamaClientStub >> get: aPath [
+
+	self assert: aPath = '/api/tags'.
+	replyContent ifNil: [
+		^ ConnectionTimedOut signal: 'Ollama stub is offline' ].
+	^ Dictionary new
+		  at: 'models' put: {
+				  (Dictionary new
+					   at: 'name' put: 'qwen2.5:7b-instruct';
+					   yourself).
+				  (Dictionary new
+					   at: 'name' put: 'llama3.1:8b';
+					   yourself) };
+		  yourself
+]
+
 { #category : 'initialization' }
 OllamaClientStub >> initialize [
 

@@ -60,3 +60,9 @@ StockfishEngineStub >> move: aUCIMove whiteCentipawns: aNumber [
 
 	moveScores at: aUCIMove put: aNumber
 ]
+
+{ #category : 'running' }
+StockfishEngineStub >> version [
+
+	^ 'Stockfish stub'
+]

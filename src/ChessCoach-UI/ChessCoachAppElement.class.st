@@ -7,8 +7,6 @@ Class {
 	#superclass : 'ToElement',
 	#instVars : [
 		'session',
-		'loginButton',
-		'cancelButton',
 		'refreshButton',
 		'loadMoreButton',
 		'userLabel',
@@ -23,7 +21,9 @@ Class {
 		'waitingLabel',
 		'dashboard',
 		'speedFilter',
-		'speedButtons'
+		'speedButtons',
+		'settingsButton',
+		'settingsElement'
 	],
 	#category : 'ChessCoach-UI-App',
 	#package : 'ChessCoach-UI',
@@ -105,11 +105,22 @@ ChessCoachAppElement >> analysisStateChangedOf: aGameIdOrNil [
 						 queue progress value }) ]
 ]
 
+{ #category : 'settings' }
+ChessCoachAppElement >> applyPieceSet [
+	"Every open board uses the piece set of the settings"
+
+	| pieceSet |
+	pieceSet := ChessPieceSet named: session settings pieceSet.
+	analysis ifNotNil: [ analysis boardElement pieceSet: pieceSet ].
+	coach ifNotNil: [ coach board pieceSet: pieceSet ]
+]
+
 { #category : 'accessing' }
 ChessCoachAppElement >> backgroundRunner: aBlock [
 	"aBlock receives the work block to run; tests pass [ :work | work value ]"
 
-	backgroundRunner := aBlock
+	backgroundRunner := aBlock.
+	settingsElement ifNotNil: [ settingsElement backgroundRunner: aBlock ]
 ]
 
 { #category : 'accessing' }
@@ -138,7 +149,7 @@ ChessCoachAppElement >> exitCoach [
 	waitingEntry := nil.
 	coach := nil.
 	session analysisQueue resume.
-	self showInPane: (analysis ifNil: [ dashboard ])
+	self showDefaultPane
 ]
 
 { #category : 'actions' }
@@ -195,18 +206,9 @@ ChessCoachAppElement >> loadMoreButton [
 
 { #category : 'accessing' }
 ChessCoachAppElement >> loginButton [
+	"Login/Logout lives in the settings page"
 
-	^ loginButton
-]
-
-{ #category : 'actions' }
-ChessCoachAppElement >> loginOrLogout [
-
-	session isLoggedIn ifTrue: [ ^ session logout ].
-	cancelButton visibility: BlVisibility visible.
-	self runInBackground: [
-			session login.
-			self inUIDo: [ cancelButton visibility: BlVisibility gone ] ]
+	^ settingsElement loginButton
 ]
 
 { #category : 'initialization' }
@@ -290,15 +292,6 @@ ChessCoachAppElement >> newTopBar [
 		       vFitContent;
 		       padding: (BlInsets all: 8);
 		       yourself.
-	loginButton := ToButton new
-		               labelText: 'Login';
-		               clickAction: [ self loginOrLogout ];
-		               yourself.
-	cancelButton := ToButton new
-		                labelText: 'Cancel';
-		                clickAction: [ session cancelLogin ];
-		                visibility: BlVisibility gone;
-		                yourself.
 	refreshButton := ToButton new
 		                 labelText: 'Refresh';
 		                 clickAction: [
@@ -308,13 +301,16 @@ ChessCoachAppElement >> newTopBar [
 		               labelText: 'Review with coach';
 		               clickAction: [ self openCoach ];
 		               yourself.
+	settingsButton := ToButton new
+		                  labelText: '⚙ Settings';
+		                  clickAction: [ self openSettings ];
+		                  yourself.
 	userLabel := ToLabel text: ''.
 	statusLabel := ToLabel text: ''.
 	bar
-		addChild: loginButton;
-		addChild: cancelButton;
 		addChild: refreshButton;
 		addChild: coachButton;
+		addChild: settingsButton;
 		addChild: userLabel;
 		addChild: statusLabel.
 	^ bar
@@ -355,6 +351,14 @@ ChessCoachAppElement >> openCoachOnGameId: aGameId [
 	gameList selecter selectIndex: index.
 	self selectedGameChanged.
 	self openCoach
+]
+
+{ #category : 'settings' }
+ChessCoachAppElement >> openSettings [
+
+	coach := nil.
+	waitingEntry := nil.
+	self showInPane: settingsElement
 ]
 
 { #category : 'accessing' }
@@ -425,7 +429,37 @@ ChessCoachAppElement >> session: aChessCoachSession [
 				self enqueueTask: (BlTaskAction new action: [
 						 self analysisStateChangedOf: announcement gameId ]) ]
 		for: self.
+	session announcer
+		when: ChessCoachSettingsChanged
+		do: [ :announcement |
+				announcement key = 'pieceSet' ifTrue: [
+					self enqueueTask:
+						(BlTaskAction new action: [ self applyPieceSet ]) ] ]
+		for: self.
+	settingsElement := SettingsElement new.
+	settingsElement backgroundRunner: backgroundRunner.
+	settingsElement session: session.
+	settingsElement whenClosedDo: [ self showDefaultPane ].
 	self updateFromSession
+]
+
+{ #category : 'accessing' }
+ChessCoachAppElement >> settingsButton [
+
+	^ settingsButton
+]
+
+{ #category : 'accessing' }
+ChessCoachAppElement >> settingsElement [
+
+	^ settingsElement
+]
+
+{ #category : 'settings' }
+ChessCoachAppElement >> showDefaultPane [
+	"The analysis of the selected game, or the mistakes dashboard"
+
+	self showInPane: (analysis ifNil: [ dashboard ])
 ]
 
 { #category : 'updating' }
@@ -433,7 +467,10 @@ ChessCoachAppElement >> showGame: aGame [
 
 	coach := nil.
 	waitingEntry := nil.
-	analysis ifNil: [ analysis := GameAnalysisElement new ].
+	analysis ifNil: [
+			analysis := GameAnalysisElement new.
+			analysis boardElement pieceSet:
+				(ChessPieceSet named: session settings pieceSet) ].
 	self showInPane: analysis.
 	analysis game: aGame
 ]
@@ -487,6 +524,8 @@ ChessCoachAppElement >> startCoachOn: aGameIndexEntry [
 			self inUIDo: [
 					coach := CoachElement new.
 					coach backgroundRunner: backgroundRunner.
+					coach board pieceSet:
+						(ChessPieceSet named: session settings pieceSet).
 					coach review: review.
 					coach whenExitDo: [ self exitCoach ].
 					self showInPane: coach ] ]
@@ -501,14 +540,11 @@ ChessCoachAppElement >> statusLabel [
 { #category : 'updating' }
 ChessCoachAppElement >> updateFromSession [
 
-	| loggedIn |
-	loggedIn := session isLoggedIn.
-	loginButton labelText: (loggedIn
-			 ifTrue: [ 'Logout' ]
-			 ifFalse: [ 'Login' ]).
 	refreshButton enabled: session canImport.
 	loadMoreButton enabled: session canImport.
-	userLabel text: (session username ifNil: [ '' ]).
+	userLabel text: (' · ' join: ({
+				  session username.
+				  session chessComUsername } reject: [ :each | each isNil ])).
 	session analysisQueue isRunning ifTrue: [
 		session analysisQueue enqueueUnanalysed ].
 	dashboard database: session mistakeDatabase.

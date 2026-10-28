@@ -13,7 +13,10 @@ Class {
 
 { #category : 'helpers' }
 ChessCoachAppElementTest >> click: anElement [
+	"Login lives in the settings page: open it when the button isn't shown"
 
+	anElement isAttachedToSceneGraph ifFalse: [
+		self click: app settingsButton ].
 	scripter testClick onChildFromBlock: [ :root | anElement ].
 	scripter syncContinue.
 	scripter pulse
@@ -171,6 +174,57 @@ ChessCoachAppElementTest >> testSelectingARowOpensItsAnalysis [
 	app gameList selecter selectIndex: 1.
 	scripter pulse.
 	self assert: (app analysis game metadata at: 'White') equals: 'alice'
+]
+
+{ #category : 'tests' }
+ChessCoachAppElementTest >> testSettingsPage [
+
+	| settings chessCom |
+	chessCom := ChessComAPIClientStub new.
+	chessCom
+		at: 'https://api.chess.com/pub/player/bob'
+		answer: (Dictionary new
+				 at: 'username' put: 'bob';
+				 yourself).
+	session chessComAPIClient: chessCom.
+	session analyser: (GameAnalyser engine: StockfishEngineStub new).
+	session classifier: (AnswerClassifier
+			 client: (OllamaClientStub new replyContent:
+					  '{"tags":[{"tag":"missed-opponent-threat","confidence":0.9}]}')
+			 taxonomy: MistakeTaxonomy default).
+	"The whole page fits without scrolling"
+	scripter space extent: 1200 @ 1200.
+	self click: app settingsButton.
+	settings := app settingsElement.
+	self assert: settings isAttachedToSceneGraph.
+	self assert: (settings texts includes: 'Depth: 18').
+	self click: (settings buttonLabeled: '+').
+	self assert: session settings gamesPerLoad equals: 30.
+	self assert: (settings texts includes: 'Games per Load more: 30').
+	self click: (settings buttonLabeled: 'Livius').
+	self assert: session settings pieceSet equals: 'Livius'.
+	self assert:
+		(settings previewBoard pieceSet isKindOf: LiviusPieceSet).
+	settings chessComField text: 'nobody'.
+	self click: (settings buttonLabeled: 'Validate').
+	self assert: (settings texts includes: '✗ no such Chess.com player').
+	self assert: session chessComUsername isNil.
+	settings chessComField text: 'Bob'.
+	"A second click on the same button right away would count as a double click"
+	settings validateChessCom.
+	scripter pulse.
+	self assert: session chessComUsername equals: 'Bob'.
+	self assert: app userLabel text asString equals: 'Bob'.
+	self click: (settings buttonLabeled: 'Test').
+	self assert: (settings texts includes: '✓ Stockfish stub').
+	self click: (settings buttonLabeled: 'Load models').
+	self assert: (settings texts includes: '2 models installed').
+	self click: (settings buttonLabeled: 'llama3.1:8b').
+	self assert: session settings ollamaModel equals: 'llama3.1:8b'.
+	self assert:
+		(settings texts includes: 'Validated only with qwen2.5:7b-instruct').
+	self click: (settings buttonLabeled: 'Close').
+	self assert: app dashboard isAttachedToSceneGraph
 ]
 
 { #category : 'tests' }

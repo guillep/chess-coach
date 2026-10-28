@@ -81,12 +81,14 @@ LichessAPIClient >> initialize [
 
 { #category : 'private' }
 LichessAPIClient >> userGamesUrl: username max: maxGames until: untilMillis since: sinceMillis [
+	"PGNs include [%clk] comments so the coach knows the time left on each move"
 
 	| url |
 	url := baseUrl asZnUrl / 'games' / 'user' / username.
 	url
 		queryAt: 'max' put: maxGames printString;
-		queryAt: 'pgnInJson' put: 'true'.
+		queryAt: 'pgnInJson' put: 'true';
+		queryAt: 'clocks' put: 'true'.
 	untilMillis ifNotNil: [
 		url queryAt: 'until' put: untilMillis printString ].
 	sinceMillis ifNotNil: [

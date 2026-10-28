@@ -14,7 +14,8 @@ Class {
 		'bestMove',
 		'winDrop',
 		'explanation',
-		'labels'
+		'labels',
+		'clock'
 	],
 	#category : 'ChessCoach-Core-Mistakes',
 	#package : 'ChessCoach-Core',
@@ -36,6 +37,7 @@ MistakeRecord class >> fromDictionary: aDictionary [
 		  explanation: (aDictionary at: 'explanation');
 		  labels: ((aDictionary at: 'labels') collect: [ :each |
 					   MistakeLabel fromDictionary: each ]) asArray;
+		  clock: (aDictionary at: 'clock' ifAbsent: [ nil ]);
 		  yourself
 ]
 
@@ -55,6 +57,7 @@ MistakeRecord >> asDictionary [
 		  at: 'explanation' put: explanation;
 		  at: 'labels'
 		  put: (labels collect: [ :each | each asDictionary ]) asArray;
+		  at: 'clock' put: clock;
 		  yourself
 ]
 
@@ -68,6 +71,19 @@ MistakeRecord >> bestMove [
 MistakeRecord >> bestMove: aUCIString [
 
 	bestMove := aUCIString
+]
+
+{ #category : 'accessing' }
+MistakeRecord >> clock [
+	"Seconds left on my clock after the move, or nil when the PGN had no clocks"
+
+	^ clock
+]
+
+{ #category : 'accessing' }
+MistakeRecord >> clock: aNumberOrNil [
+
+	clock := aNumberOrNil
 ]
 
 { #category : 'accessing' }

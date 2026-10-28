@@ -265,9 +265,10 @@ CoachReview >> isFinished [
 { #category : 'mistakes' }
 CoachReview >> mistakeRecordFor: aMomentReview [
 
-	| before after explanation |
+	| before after explanation move |
 	before := analysis atPly: aMomentReview ply - 1.
 	after := analysis atPly: aMomentReview ply.
+	move := game moves at: aMomentReview ply.
 	explanation := (aMomentReview answers
 		                detect: [ :each | each question kind = #why ]
 		                ifNone: [ nil ]) ifNotNil: [ :answer | answer text ].
@@ -283,6 +284,8 @@ CoachReview >> mistakeRecordFor: aMomentReview [
 			   - (after winPercentFor: aMomentReview color) max: 0);
 		  explanation: explanation;
 		  labels: aMomentReview labels asArray;
+		  clock: (move timestamp ifNotNil: [ :duration |
+					   duration asMilliSeconds / 1000.0 ]);
 		  yourself
 ]
 

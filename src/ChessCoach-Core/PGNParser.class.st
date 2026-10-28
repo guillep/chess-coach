@@ -9,49 +9,102 @@ Class {
 }
 
 { #category : 'parsing' }
-PGNParser >> braceDeltaFor: ch [
+PGNParser >> addMove: aToken number: aMoveNumber color: aColor to: aGame [
+	"Add the move, turning trailing !/? suffixes into NAGs"
 
-	ch = ${ ifTrue: [ ^ 1 ].
-	ch = $} ifTrue: [ ^ -1 ].
-	^ 0
+	| san suffix move |
+	san := aToken copyWithoutAll: '!?'.
+	suffix := aToken copyFrom: san size + 1 to: aToken size.
+	move := ChessMove new
+		        moveNumber: aMoveNumber
+		        color: aColor
+		        san: san
+		        timestamp: nil.
+	(self nagForSuffix: suffix) ifNotNil: [ :nag | move addNag: nag ].
+	aGame moves add: move.
+	^ move
 ]
 
 { #category : 'parsing' }
-PGNParser >> parenDeltaFor: ch [
+PGNParser >> comment: aString to: aChessMoveOrNil [
+	"Attach a comment to the preceding move: [%clk h:mm:ss] sets its clock, other [%...] commands are dropped, the rest is its text. Comments before the first move are ignored."
 
-	ch = $( ifTrue: [ ^ 1 ].
-	ch = $) ifTrue: [ ^ -1 ].
-	^ 0
+	| text |
+	aChessMoveOrNil ifNil: [ ^ self ].
+	text := String new writeStream.
+	(aString splitOn: $[) withIndexDo: [ :part :index |
+			index = 1
+				ifTrue: [ text nextPutAll: part ]
+				ifFalse: [
+						| command |
+						command := part copyUpTo: $].
+						(command beginsWith: '%clk ') ifTrue: [
+								aChessMoveOrNil timestamp:
+									(self durationFrom: (command allButFirst: 5) trimBoth) ].
+						(command beginsWith: '%') ifFalse: [
+								text
+									nextPut: $[;
+									nextPutAll: command;
+									nextPut: $] ].
+						text nextPutAll: (part copyAfter: $]) ] ].
+	aChessMoveOrNil addComment: (text contents substrings joinUsing: ' ')
+]
+
+{ #category : 'parsing' }
+PGNParser >> digitsIn: aStream [
+
+	^ String streamContents: [ :out |
+			  [ aStream atEnd not and: [ aStream peek isDigit ] ] whileTrue: [
+				  out nextPut: aStream next ] ]
+]
+
+{ #category : 'parsing' }
+PGNParser >> durationFrom: aClockString [
+	"h:mm:ss or h:mm:ss.f as in [%clk 0:02:59.4]"
+
+	| parts seconds |
+	parts := aClockString substrings: ':'.
+	seconds := parts
+		           inject: 0
+		           into: [ :total :each | total * 60 + each asNumber ].
+	^ Duration milliSeconds: (seconds * 1000) rounded
+]
+
+{ #category : 'parsing' }
+PGNParser >> isResult: aToken [
+
+	^ #( '1-0' '0-1' '1/2-1/2' '*' ) includes: aToken
+]
+
+{ #category : 'parsing' }
+PGNParser >> nagForSuffix: aString [
+	"The standard NAG of a move suffix, or nil when there is none"
+
+	^ #( '!' '?' '!!' '??' '!?' '?!' ) indexOf: aString ifAbsent: [ nil ]
 ]
 
 { #category : 'parsing' }
 PGNParser >> parse: aStringOrStream [
 
-	| input pgnGame lines headerDone movesText |
+	| input pgnGame headerDone movesText |
 	input := aStringOrStream isStream
 		         ifTrue: [ aStringOrStream upToEnd ]
 		         ifFalse: [ aStringOrStream asString ].
 	pgnGame := Game new.
-	lines := input lines.
 	headerDone := false.
 	movesText := String new writeStream.
-	lines do: [ :line |
+	input lines do: [ :line |
 			| trimmed |
 			trimmed := line trimBoth.
-			headerDone
+			(headerDone not and: [
+				 trimmed notEmpty and: [ trimmed first = $[ ] ])
+				ifTrue: [ self parseHeaderLine: trimmed into: pgnGame ]
 				ifFalse: [
-						(trimmed notEmpty and: [ trimmed first = $[ ])
-							ifTrue: [ self parseHeaderLine: trimmed into: pgnGame ]
-							ifFalse: [
-									headerDone := true.
-									movesText nextPutAll: line ] ]
-				ifTrue: [
+						trimmed ifNotEmpty: [ headerDone := true ].
 						movesText
-							nextPutAll: String lf;
-							nextPutAll: line ] ].
-	self
-		tokenizeText: (self stripAnnotations: movesText contents)
-		into: pgnGame.
+							nextPutAll: line;
+							nextPut: Character lf ] ].
+	self parseMoveText: movesText contents into: pgnGame.
 	^ pgnGame
 ]
 
@@ -71,128 +124,97 @@ PGNParser >> parseHeaderLine: trimmed into: pgnGame [
 ]
 
 { #category : 'parsing' }
-PGNParser >> skipNagIn: aString from: anIndex [
+PGNParser >> parseMoveText: aString into: aGame [
+	"One pass over the movetext. Comments ({...} and ; to end of line), [%clk] clocks and NAGs ($n, !, ?) go to the move before them; variations (...) are skipped."
 
-	| j |
-	j := anIndex.
-	[ j + 1 <= aString size and: [ (aString at: j + 1) isDigit ] ]
-		whileTrue: [ j := j + 1 ].
-	^ j
-]
-
-{ #category : 'parsing' }
-PGNParser >> skipToLineEndIn: aString from: anIndex [
-
-	| j |
-	j := anIndex.
-	[ j <= aString size and: [ (aString at: j) ~= Character lf ] ]
-		whileTrue: [ j := j + 1 ].
-	^ j
-]
-
-{ #category : 'parsing' }
-PGNParser >> stripAnnotations: aString [
-
-	| out braceDepth parenDepth i |
-	out := String new writeStream.
-	braceDepth := 0.
-	parenDepth := 0.
-	i := 1.
-	[ i <= aString size ] whileTrue: [
-			| ch isStart |
-			ch := aString at: i.
-			braceDepth > 0
-				ifTrue: [ braceDepth := braceDepth + (self braceDeltaFor: ch) ]
+	| stream moveNumber color last |
+	stream := ReadStream on: aString.
+	moveNumber := 1.
+	color := 'w'.
+	last := nil.
+	[ stream atEnd ] whileFalse: [
+			| ch |
+			ch := stream peek.
+			ch isSeparator
+				ifTrue: [ stream next ]
 				ifFalse: [
-						parenDepth > 0
-							ifTrue: [ parenDepth := parenDepth + (self parenDeltaFor: ch) ]
+						ch = ${
+							ifTrue: [
+									stream next.
+									self comment: (stream upTo: $}) to: last ]
 							ifFalse: [
-									ch = ${ ifTrue: [ braceDepth := 1 ].
-									ch = $( ifTrue: [ parenDepth := 1 ].
-									ch = $; ifTrue: [ i := self skipToLineEndIn: aString from: i ].
-									ch = $$ ifTrue: [ i := self skipNagIn: aString from: i ].
-									isStart := ch = ${ or: [
-										           ch = $( or: [ ch = $; or: [ ch = $$ ] ] ].
-									isStart ifFalse: [ out nextPut: ch ] ] ].
-			i := i + 1 ].
-	^ out contents
+									ch = $;
+										ifTrue: [
+												stream next.
+												self comment: (stream upTo: Character lf) to: last ]
+										ifFalse: [
+												ch = $(
+													ifTrue: [ self skipVariationIn: stream ]
+													ifFalse: [
+															ch = $$
+																ifTrue: [
+																		stream next.
+																		last ifNotNil: [
+																			last addNag: (self digitsIn: stream) asInteger ] ]
+																ifFalse: [
+																		| token |
+																		token := self tokenIn: stream.
+																		(self isResult: token)
+																			ifTrue: [
+																					(aGame metadata includesKey: 'Result') ifFalse: [
+																						aGame metadata at: 'Result' put: token ] ]
+																			ifFalse: [
+																					| san |
+																					san := token.
+																					(token notEmpty and: [ token first isDigit ])
+																						ifTrue: [
+																								moveNumber := (token copyUpTo: $.) asInteger
+																									              ifNil: [ moveNumber ].
+																								(token includes: $.) ifTrue: [
+																										color := (token includesSubstring: '...')
+																											         ifTrue: [ 'b' ]
+																											         ifFalse: [ 'w' ] ].
+																								san := token copyWithoutAll: '0123456789.'.
+																								(token beginsWith: 'O-O') ifTrue: [
+																									san := token ] ].
+																					san ifNotEmpty: [
+																							last := self
+																								        addMove: san
+																								        number: moveNumber
+																								        color: color
+																								        to: aGame.
+																							color = 'b' ifTrue: [
+																								moveNumber := moveNumber + 1 ].
+																							color := color = 'w'
+																								         ifTrue: [ 'b' ]
+																								         ifFalse: [ 'w' ] ] ] ] ] ] ] ] ]
 ]
 
 { #category : 'parsing' }
-PGNParser >> tokenizeText: text into: pgnGame [
+PGNParser >> skipVariationIn: aStream [
+	"Skip a (possibly nested) variation, including the comments inside it"
 
-	| moveNum seenW seenB |
-	moveNum := 0.
-	seenW := false.
-	seenB := false.
-	text lines do: [ :line |
-			| tokens |
-			tokens := line substrings.
-			tokens do: [ :t |
-					| token r |
-					token := t asString trimBoth.
-					token isEmpty ifFalse: [
-							r := self
-								     tokenizeToken: token
-								     into: pgnGame
-								     moveNumber: moveNum
-								     seenWhite: seenW
-								     seenBlack: seenB.
-							moveNum := r first.
-							seenW := r second.
-							seenB := r third ] ] ]
+	| depth |
+	depth := 0.
+	[ aStream atEnd ] whileFalse: [
+			| ch |
+			ch := aStream next.
+			ch = ${ ifTrue: [ aStream upTo: $} ].
+			ch = $( ifTrue: [ depth := depth + 1 ].
+			ch = $) ifTrue: [
+					depth := depth - 1.
+					depth = 0 ifTrue: [ ^ self ] ] ]
 ]
 
 { #category : 'parsing' }
-PGNParser >> tokenizeToken: token into: pgnGame moveNumber: moveNum seenWhite: seenWhite seenBlack: seenBlack [
+PGNParser >> tokenIn: aStream [
+	"A move, move number or result: up to a separator or the start of a comment, variation or NAG"
 
-	| isResult numStr isBlackMove num w b |
-	w := seenWhite.
-	b := seenBlack.
-	isResult := token = '1-0' or: [
-		            token = '0-1' or: [
-			            token = '1/2-1/2' or: [ token = '*' ] ] ].
-	isResult ifTrue: [
-			(pgnGame metadata includesKey: 'Result') ifFalse: [
-				pgnGame metadata at: 'Result' put: token ].
-			^ {
-				  moveNum.
-				  w.
-				  b } ].
-	(token includes: $.) ifTrue: [
-			numStr := token copyUpTo: $..
-			(numStr notEmpty and: [ numStr allSatisfy: [ :c | c isDigit ] ])
-				ifTrue: [
-						num := numStr asNumber.
-						isBlackMove := token includesSubstring: '...'.
-						^ {
-							  num.
-							  isBlackMove.
-							  false } ] ].
-	num := moveNum = 0
-		       ifTrue: [ 1 ]
-		       ifFalse: [ moveNum ].
-	(w and: [ b ]) ifTrue: [
-			num := num + 1.
-			w := false.
-			b := false ].
-	w
-		ifTrue: [
-				pgnGame moves add: (ChessMove new
-						 moveNumber: num
-						 color: 'b'
-						 san: token
-						 timestamp: nil).
-				b := true ]
-		ifFalse: [
-				pgnGame moves add: (ChessMove new
-						 moveNumber: num
-						 color: 'w'
-						 san: token
-						 timestamp: nil).
-				w := true ].
-	^ {
-		  num.
-		  w.
-		  b }
+	^ String streamContents: [ :out |
+			  [
+				  aStream atEnd or: [
+					  aStream peek isSeparator or: [ '{(;$)' includes: aStream peek ] ] ]
+				  whileFalse: [ out nextPut: aStream next ].
+			  (out contents isEmpty and: [ aStream atEnd not ]) ifTrue: [
+				  aStream next ] ]
 ]

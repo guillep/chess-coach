@@ -34,6 +34,12 @@ CoachReview class >> gameId: anId game: aGame analysis: aGameAnalysis moments: s
 		  classifier: anAnswerClassifier
 ]
 
+{ #category : 'accessing' }
+CoachReview >> analysis [
+
+	^ analysis
+]
+
 { #category : 'answering' }
 CoachReview >> answerMoves: someUCIMoves [
 	"Answer a board question with the moves I marked"
@@ -214,6 +220,12 @@ CoachReview >> dropTag: aTagId of: aMomentReview [
 
 	aMomentReview dropTag: aTagId.
 	self changed
+]
+
+{ #category : 'accessing' }
+CoachReview >> game [
+
+	^ game
 ]
 
 { #category : 'mistakes' }

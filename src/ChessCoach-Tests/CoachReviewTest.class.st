@@ -81,7 +81,9 @@ CoachReviewTest >> setUp [
 											              (self line: 'b1c3' whiteCentipawns: 40) } ]
 								              ifFalse: [
 										              { (self
-											               line: 'a2a3'
+											               line: (ply even
+													                ifTrue: [ 'a2a3' ]
+													                ifFalse: [ 'a7a6' ])
 											               whiteCentipawns: (ply = 7
 													                ifTrue: [ -150 ]
 													                ifFalse: [ 50 ])) } ]) ]).

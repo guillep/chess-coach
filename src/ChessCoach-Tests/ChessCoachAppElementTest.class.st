@@ -50,6 +50,47 @@ ChessCoachAppElementTest >> setUp [
 ]
 
 { #category : 'tests' }
+ChessCoachAppElementTest >> testCoachWaitsForTheAnalysisThenOpensAndExits [
+
+	| queue engine |
+	self click: app loginButton.
+	self click: app loadMoreButton.
+	engine := StockfishEngineStub new.
+	session analyser: (GameAnalyser engine: engine).
+	session explorer: LichessExplorerClientStub new.
+	session classifier: (AnswerClassifier
+			 client: (OllamaClientStub new replyContent: '{"tags":[]}')
+			 taxonomy: MistakeTaxonomy default).
+	queue := AnalysisQueue
+		         session: session
+		         analyser: (GameAnalyser engine: engine).
+	session analysisQueue: queue.
+	session mark: app gameList dataAccessor second ply: 1 note: nil.
+	scripter pulse.
+	app gameList selecter selectIndex: 2.
+	scripter pulse.
+	self click: app coachButton.
+	self assert: app coach isNil description: 'waits'.
+	self
+		assert: queue pendingGameIds first
+		equals: app gameList dataAccessor second gameId.
+	queue runNext.
+	scripter
+		pulse;
+		pulse.
+	self assert: app coach notNil description: 'opened'.
+	self assert: queue isPaused description: 'paused'.
+	self assert: app coach review currentMoment ply equals: 1.
+	self assert: app coach isAttachedToSceneGraph description: 'shown'.
+	self click: app coach exitButton.
+	self assert: app coach isNil description: 'exited'.
+	self deny: queue isPaused.
+	self
+		assert: app analysis isAttachedToSceneGraph
+		description: 'analysis back'
+]
+
+{ #category : 'tests' }
 ChessCoachAppElementTest >> testLichessErrorIsShownInline [
 
 	self click: app loginButton.

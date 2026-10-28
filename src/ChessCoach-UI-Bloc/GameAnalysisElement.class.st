@@ -87,7 +87,9 @@ GameAnalysisElement >> initialize [
 			c horizontal exact: 200.
 			c vertical matchParent ].
 	self addChild: boardElement.
-	self addChild: scrollableMoves
+	self addChild: scrollableMoves.
+	"Bloc defers the request until the element is added to a space, so arrow keys work as soon as the view opens"
+	moveList requestFocus
 ]
 
 { #category : 'accessing' }

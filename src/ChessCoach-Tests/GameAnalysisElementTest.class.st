@@ -6,6 +6,38 @@ Class {
 }
 
 { #category : 'tests' }
+GameAnalysisElementTest >> testArrowKeysStepThroughPositions [
+
+	| analysis scripter |
+	analysis := GameAnalysisElement fromPGN: '1. e4 e5 2. Nf3'.
+	scripter := BlDevScripter new.
+	scripter element: analysis.
+	scripter requestFocus onChildFromBlock: [ :element |
+		analysis moveList ].
+	scripter keyClick: KeyboardKey right.
+	scripter syncPlay.
+	self
+		assert: analysis chessPosition fen
+		equals:
+		'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1'
+]
+
+{ #category : 'tests' }
+GameAnalysisElementTest >> testArrowKeysWorkWithoutClickingFirst [
+
+	| analysis scripter |
+	analysis := GameAnalysisElement fromPGN: '1. e4 e5 2. Nf3'.
+	scripter := BlDevScripter new.
+	scripter element: analysis.
+	scripter keyClick: KeyboardKey right.
+	scripter syncPlay.
+	self
+		assert: analysis chessPosition fen
+		equals:
+		'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1'
+]
+
+{ #category : 'tests' }
 GameAnalysisElementTest >> testBoardStaysSquareAndListIsFixedWidth [
 
 	| analysis |

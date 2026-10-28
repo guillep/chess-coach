@@ -130,10 +130,11 @@ MoveListElement >> buildUI [
 
 { #category : 'accessing' }
 MoveListElement >> game: aGame [
+	"Show aGame with no move selected (ply 0)"
 
 	game := aGame.
-	self rebuildMoves.
-	^ self
+	selectedMoveIndex := 0.
+	self rebuildMoves
 ]
 
 { #category : 'selection' }
@@ -156,7 +157,7 @@ MoveListElement >> initialize [
 	super initialize.
 	game := nil.
 	announcer := Announcer new.
-	selectedMoveIndex := nil.
+	selectedMoveIndex := 0.
 	layoutMode := #compact.
 	moveElements := Dictionary new.
 	rigidMoveElements := Dictionary new.
@@ -165,7 +166,22 @@ MoveListElement >> initialize [
 			c horizontal matchParent.
 			c vertical matchParent ].
 	self buildUI.
-	^ self
+	self initializeShortcuts
+]
+
+{ #category : 'initialization' }
+MoveListElement >> initializeShortcuts [
+	"Arrow keys step through the moves. Clicking anywhere in the list (including on a move) gives it the keyboard focus"
+
+	self addShortcut: (BlShortcutWithAction new
+			 combination: BlKeyCombination arrowRight;
+			 action: [ self selectNextMove ]).
+	self addShortcut: (BlShortcutWithAction new
+			 combination: BlKeyCombination arrowLeft;
+			 action: [ self selectPreviousMove ]).
+	self
+		addEventHandlerOn: BlClickEvent
+		do: [ :event | self requestFocus ]
 ]
 
 { #category : 'accessing' }
@@ -207,14 +223,26 @@ MoveListElement >> rebuildMoves [
 
 { #category : 'selection' }
 MoveListElement >> selectMoveAt: anIndex [
+	"Select the move at anIndex (a ply); 0 means no move, i.e. the initial position"
 
 	selectedMoveIndex := anIndex.
 	self highlightSelected.
 	announcer announce: (MoveSelectedAnnouncement new
 			 moveIndex: anIndex;
 			 game: game;
-			 yourself).
-	^ self
+			 yourself)
+]
+
+{ #category : 'selection' }
+MoveListElement >> selectNextMove [
+
+	self selectMoveAt: (selectedMoveIndex + 1 min: game moves size)
+]
+
+{ #category : 'selection' }
+MoveListElement >> selectPreviousMove [
+
+	self selectMoveAt: (selectedMoveIndex - 1 max: 0)
 ]
 
 { #category : 'accessing' }

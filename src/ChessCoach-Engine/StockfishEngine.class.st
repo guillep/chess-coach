@@ -126,6 +126,21 @@ StockfishEngine >> parseInfo: aString sideToMove: aColor into: linesByRank [
 			 EngineLine moves: moves centipawns: scoreValue sideToMove: aColor ])
 ]
 
+{ #category : 'accessing' }
+StockfishEngine >> path [
+
+	^ path
+]
+
+{ #category : 'accessing' }
+StockfishEngine >> path: aFileReference [
+	"Use another Stockfish binary; a running process is stopped and the next analysis starts the new one"
+
+	path = aFileReference ifTrue: [ ^ self ].
+	self stop.
+	path := aFileReference
+]
+
 { #category : 'private - io' }
 StockfishEngine >> readLinesUntil: aPrefix [
 	"Answer Stockfish's output lines up to and including the first one starting with aPrefix"

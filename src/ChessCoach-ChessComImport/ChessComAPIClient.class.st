@@ -44,3 +44,17 @@ ChessComAPIClient >> initialize [
 	super initialize.
 	baseUrl := 'https://api.chess.com/pub'
 ]
+
+{ #category : 'fetching' }
+ChessComAPIClient >> playerExists: aUsername [
+	"Chess.com answers 404 for unknown players; that is the 'no' of this question, other failures are errors"
+
+	^ [
+		  self getJSON: baseUrl , '/player/' , aUsername asLowercase.
+		  true ]
+		  on: ZnHttpUnsuccessful
+		  do: [ :error |
+				  (error response notNil and: [ error response code = 404 ])
+					  ifFalse: [ error pass ].
+				  false ]
+]

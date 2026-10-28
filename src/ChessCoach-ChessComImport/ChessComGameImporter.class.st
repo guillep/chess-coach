@@ -23,6 +23,12 @@ ChessComGameImporter class >> apiClient: aChessComAPIClient fileStore: aGameFile
 		  indexManager: aGameIndexManager
 ]
 
+{ #category : 'accessing' }
+ChessComGameImporter >> apiClient [
+
+	^ apiClient
+]
+
 { #category : 'private' }
 ChessComGameImporter >> gameIdOf: gameData [
 	"chesscom-<number> from the game URL, so ids never clash with Lichess ones"
@@ -31,14 +37,20 @@ ChessComGameImporter >> gameIdOf: gameData [
 ]
 
 { #category : 'private' }
-ChessComGameImporter >> importArchive: anArchiveUrl [
-	"Import the standard-chess games of one archive that are not in the index yet"
+ChessComGameImporter >> importArchive: anArchiveUrl upTo: aCount [
+	"Import the newest aCount standard-chess games of one archive that are not in the index yet"
 
-	^ (apiClient gamesInArchive: anArchiveUrl)
-		  select: [ :gameData |
-				  (gameData at: 'rules' ifAbsent: [ 'chess' ]) = 'chess' and: [
-					  (indexManager index findById: (self gameIdOf: gameData)) isNil ] ]
-		  thenCollect: [ :gameData | self saveGameFromData: gameData ]
+	| missing |
+	missing := ((apiClient gamesInArchive: anArchiveUrl) select: [
+			            :gameData |
+			            (gameData at: 'rules' ifAbsent: [ 'chess' ]) = 'chess'
+				            and: [
+				            (indexManager index findById:
+					             (self gameIdOf: gameData)) isNil ] ]) asArray sort: [
+		           :a
+		           :b | (a at: 'end_time') > (b at: 'end_time') ].
+	^ (missing first: (aCount min: missing size)) collect: [ :gameData |
+		  self saveGameFromData: gameData ]
 ]
 
 { #category : 'importing' }
@@ -48,18 +60,20 @@ ChessComGameImporter >> importNewerGames [
 	| archives |
 	archives := apiClient archivesOf: self username.
 	archives ifEmpty: [ ^ #(  ) ].
-	^ self importArchive: archives first
+	^ self importArchive: archives first upTo: SmallInteger maxVal
 ]
 
 { #category : 'importing' }
-ChessComGameImporter >> importOlderGames [
-	"Import the newest monthly archive that still has games I don't have. Answer the new entries."
+ChessComGameImporter >> importOlderGames: aCount [
+	"Import up to aCount games I don't have yet, newest first, walking back through the monthly archives. Answer the new entries."
 
+	| entries |
+	entries := OrderedCollection new.
 	(apiClient archivesOf: self username) do: [ :archive |
-			| entries |
-			entries := self importArchive: archive.
-			entries ifNotEmpty: [ ^ entries ] ].
-	^ #(  )
+			entries addAll:
+				(self importArchive: archive upTo: aCount - entries size).
+			entries size >= aCount ifTrue: [ ^ entries asArray ] ].
+	^ entries asArray
 ]
 
 { #category : 'accessing' }

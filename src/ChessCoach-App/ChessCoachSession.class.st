@@ -11,7 +11,8 @@ Class {
 		'explorer',
 		'classifier',
 		'analysisQueue',
-		'chessComImporter'
+		'chessComImporter',
+		'settings'
 	],
 	#category : 'ChessCoach-App',
 	#package : 'ChessCoach-App'
@@ -53,10 +54,11 @@ ChessCoachSession >> analyse: aGameIndexEntry with: aGameAnalyser onProgress: aB
 
 { #category : 'moments' }
 ChessCoachSession >> analyser [
-	"Analyses games with Stockfish unless another analyser was set"
+	"Analyses games with Stockfish as the settings say, unless another analyser was set"
 
 	^ analyser ifNil: [
-		  analyser := GameAnalyser engine: StockfishEngine default ]
+			  analyser := self configure:
+				              (GameAnalyser engine: StockfishEngine default) ]
 ]
 
 { #category : 'moments' }
@@ -92,9 +94,8 @@ ChessCoachSession >> analysisQueue [
 			  analysisQueue := AnalysisQueue
 				                   session: self
 				                   analyser:
-					                   ((GameAnalyser engine: StockfishEngine default)
-						                    depth: self analyser depth;
-						                    yourself) ]
+				                   (self configure:
+					                    (GameAnalyser engine: StockfishEngine default)) ]
 ]
 
 { #category : 'moments' }
@@ -168,11 +169,14 @@ ChessCoachSession >> chessComUsername: aStringOrNil [
 
 { #category : 'coach' }
 ChessCoachSession >> classifier [
-	"Classifies my answers with the local Ollama model unless another classifier was set"
+	"Classifies my answers with the Ollama model of the settings, unless another classifier was set"
 
 	^ classifier ifNil: [
 			  classifier := AnswerClassifier
-				                client: OllamaClient new
+				                client: (OllamaClient new
+						                 baseUrl: self settings ollamaUrl;
+						                 model: self settings ollamaModel;
+						                 yourself)
 				                taxonomy: MistakeTaxonomy default ]
 ]
 
@@ -180,6 +184,17 @@ ChessCoachSession >> classifier [
 ChessCoachSession >> classifier: anAnswerClassifier [
 
 	classifier := anAnswerClassifier
+]
+
+{ #category : 'settings' }
+ChessCoachSession >> configure: aGameAnalyser [
+	"Give aGameAnalyser the depth, MultiPV and Stockfish path of the settings"
+
+	aGameAnalyser
+		depth: self settings depth;
+		multiPV: self settings multiPV.
+	aGameAnalyser engine path: self settings stockfishPath.
+	^ aGameAnalyser
 ]
 
 { #category : 'moments' }
@@ -235,12 +250,14 @@ ChessCoachSession >> initializeWithImporter: aLichessGameImporter [
 
 { #category : 'moments' }
 ChessCoachSession >> isAnalysed: aGameIndexEntry [
-	"Whether a stored analysis exists at the analyser's depth"
+	"Whether a stored analysis exists at the analyser's depth and MultiPV"
 
-	| file |
+	| file analysis |
 	file := self analysisFileFor: aGameIndexEntry.
-	^ file exists and: [
-		  (GameAnalysis fromJSON: file contents) depth = self analyser depth ]
+	file exists ifFalse: [ ^ false ].
+	analysis := GameAnalysis fromJSON: file contents.
+	^ analysis depth = self analyser depth and: [
+		  analysis multiPV = self analyser multiPV ]
 ]
 
 { #category : 'testing' }
@@ -251,11 +268,14 @@ ChessCoachSession >> isLoggedIn [
 
 { #category : 'games' }
 ChessCoachSession >> loadMoreGames [
-	"Download older games: a page from Lichess when logged in, a month from Chess.com when its username is set"
+	"Download older games, as many per site as the settings say: from Lichess when logged in, from Chess.com when its username is set"
 
-	self isLoggedIn ifTrue: [ importer importOlderGames ].
+	self isLoggedIn ifTrue: [
+			importer
+				pageSize: self settings gamesPerLoad;
+				importOlderGames ].
 	self chessComUsername ifNotNil: [
-		self chessComImporter importOlderGames ].
+		self chessComImporter importOlderGames: self settings gamesPerLoad ].
 	self announceChanged
 ]
 
@@ -389,6 +409,9 @@ ChessCoachSession >> reviewFor: aGameIndexEntry [
 		          moments: (self momentsFor: aGameIndexEntry)
 		          engine: self analyser engine
 		          classifier: self classifier.
+	review
+		batchSize: self settings momentsPerRound;
+		depth: self settings depth.
 	file := importer fileStore
 		        file: 'review.json'
 		        of: aGameIndexEntry gameId.
@@ -432,6 +455,35 @@ ChessCoachSession >> saveReviewFile: aCoachReview [
 		writeStreamDo: [ :stream | stream nextPutAll: aCoachReview asJSON ]
 ]
 
+{ #category : 'settings' }
+ChessCoachSession >> settingChanged: aKey [
+	"Apply a changed setting to the engines and the classifier already created, then announce it"
+
+	(#( 'depth' 'multiPV' 'stockfishPath' ) includes: aKey) ifTrue: [
+			{
+				self analyser.
+				self analysisQueue analyser } do: [ :each | self configure: each ].
+			self analysisQueue invalidate ].
+	(#( 'ollamaUrl' 'ollamaModel' ) includes: aKey) ifTrue: [
+			self classifier client
+				baseUrl: self settings ollamaUrl;
+				model: self settings ollamaModel ].
+	announcer announce: (ChessCoachSettingsChanged new
+			 key: aKey;
+			 yourself)
+]
+
+{ #category : 'settings' }
+ChessCoachSession >> settings [
+	"My preferences, in settings.json next to the games"
+
+	^ settings ifNil: [
+			  settings := ChessCoachSettings onFile:
+				              importer fileStore baseDirectory / 'settings.json'.
+			  settings whenChangedDo: [ :key | self settingChanged: key ].
+			  settings ]
+]
+
 { #category : 'marks' }
 ChessCoachSession >> unmark: aGameIndexEntry ply: aPly [
 
@@ -445,4 +497,14 @@ ChessCoachSession >> unmark: aGameIndexEntry ply: aPly [
 ChessCoachSession >> username [
 
 	^ importer username
+]
+
+{ #category : 'chess.com' }
+ChessCoachSession >> validateChessComUsername: aString [
+	"Remember aString as my Chess.com username if Chess.com knows it; answer whether it does"
+
+	(self chessComImporter apiClient playerExists: aString trimBoth)
+		ifFalse: [ ^ false ].
+	self chessComUsername: aString trimBoth.
+	^ true
 ]

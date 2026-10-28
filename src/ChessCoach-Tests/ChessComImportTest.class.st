@@ -51,6 +51,7 @@ ChessComImportTest >> setUp [
 	super setUp.
 	session := (LichessAPIClientStub withGames: 0) newSessionOn:
 		           FileSystem memory root.
+	session settings at: 'gamesPerLoad' put: 2.
 	api := ChessComAPIClientStub new.
 	base := 'https://api.chess.com/pub/player/bob/games/'.
 	api at: base , 'archives' answer: (Dictionary new

@@ -6,7 +6,8 @@ Class {
 	#superclass : 'Object',
 	#instVars : [
 		'depth',
-		'plies'
+		'plies',
+		'multiPV'
 	],
 	#category : 'ChessCoach-Analysis',
 	#package : 'ChessCoach-Analysis'
@@ -24,10 +25,12 @@ GameAnalysis class >> fromJSON: aString [
 
 	| dictionary |
 	dictionary := STONJSON fromString: aString.
-	^ self
-		  depth: (dictionary at: 'depth')
-		  plies: ((dictionary at: 'plies') collect: [ :each |
-				   PlyAnalysis fromDictionary: each ])
+	^ (self
+		   depth: (dictionary at: 'depth')
+		   plies: ((dictionary at: 'plies') collect: [ :each |
+					    PlyAnalysis fromDictionary: each ]))
+		  multiPV: (dictionary at: 'multiPV' ifAbsent: [ 3 ]);
+		  yourself
 ]
 
 { #category : 'converting' }
@@ -35,6 +38,7 @@ GameAnalysis >> asJSON [
 
 	^ STONJSON toString: (Dictionary new
 			   at: 'depth' put: depth;
+			   at: 'multiPV' put: self multiPV;
 			   at: 'plies' put: (plies collect: [ :each | each asDictionary ]);
 			   yourself)
 ]
@@ -57,6 +61,19 @@ GameAnalysis >> moveCount [
 	"Number of half-moves analysed"
 
 	^ plies size - 1
+]
+
+{ #category : 'accessing' }
+GameAnalysis >> multiPV [
+	"How many engine lines were asked per position (analyses saved before this was recorded used 3)"
+
+	^ multiPV ifNil: [ 3 ]
+]
+
+{ #category : 'accessing' }
+GameAnalysis >> multiPV: anInteger [
+
+	multiPV := anInteger
 ]
 
 { #category : 'initialization' }

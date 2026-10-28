@@ -38,6 +38,12 @@ Player answer: {3}' format: {
 				   confidence: (each at: 'confidence') ]) asArray
 ]
 
+{ #category : 'accessing' }
+AnswerClassifier >> client [
+
+	^ client
+]
+
 { #category : 'private' }
 AnswerClassifier >> schema [
 	"JSON schema restricting the reply to known taxonomy tags."

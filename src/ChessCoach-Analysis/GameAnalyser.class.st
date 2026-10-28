@@ -33,21 +33,23 @@ GameAnalyser >> analyse: aGame onProgress: aBlock [
 
 	| total |
 	total := aGame moves size + 1.
-	^ GameAnalysis
-		  depth: depth
-		  plies: ((0 to: aGame moves size) collect: [ :ply |
-					   | fen analysis |
-					   fen := (aGame positionAfterPly: ply) fen.
-					   analysis := PlyAnalysis
-						               ply: ply
-						               fen: fen
-						               lines:
-						               (engine
-							                analyse: fen
-							                multiPV: multiPV
-							                depth: depth).
-					   aBlock value: ply + 1 value: total.
-					   analysis ])
+	^ (GameAnalysis
+		   depth: depth
+		   plies: ((0 to: aGame moves size) collect: [ :ply |
+						    | fen analysis |
+						    fen := (aGame positionAfterPly: ply) fen.
+						    analysis := PlyAnalysis
+							                ply: ply
+							                fen: fen
+							                lines:
+								                (engine
+									                 analyse: fen
+									                 multiPV: multiPV
+									                 depth: depth).
+						    aBlock value: ply + 1 value: total.
+						    analysis ]))
+		  multiPV: multiPV;
+		  yourself
 ]
 
 { #category : 'accessing' }
@@ -66,6 +68,18 @@ GameAnalyser >> depth: aNumber [
 GameAnalyser >> engine [
 
 	^ engine
+]
+
+{ #category : 'accessing' }
+GameAnalyser >> engine: aStockfishEngine [
+
+	engine := aStockfishEngine
+]
+
+{ #category : 'accessing' }
+GameAnalyser >> multiPV [
+
+	^ multiPV
 ]
 
 { #category : 'accessing' }

@@ -25,6 +25,12 @@ AnalysisQueue class >> session: aChessCoachSession analyser: aGameAnalyser [
 	^ self new setSession: aChessCoachSession analyser: aGameAnalyser
 ]
 
+{ #category : 'accessing' }
+AnalysisQueue >> analyser [
+
+	^ analyser
+]
+
 { #category : 'private' }
 AnalysisQueue >> announce: aGameIdOrNil [
 
@@ -47,6 +53,14 @@ AnalysisQueue >> enqueueUnanalysed [
 						ifTrue: [ mutex critical: [ ready add: id ] ]
 						ifFalse: [ mutex critical: [ pending add: id ] ] ] ].
 	self announce: nil
+]
+
+{ #category : 'queueing' }
+AnalysisQueue >> invalidate [
+	"The analysis settings changed: games analysed before are queued again (newest first)"
+
+	mutex critical: [ ready removeAll ].
+	self enqueueUnanalysed
 ]
 
 { #category : 'testing' }

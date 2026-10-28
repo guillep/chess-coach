@@ -8,7 +8,8 @@ Class {
 		'oauthClient',
 		'apiClient',
 		'fileStore',
-		'indexManager'
+		'indexManager',
+		'pageSize'
 	],
 	#category : 'ChessCoach-LichessImport',
 	#package : 'ChessCoach-LichessImport'
@@ -166,8 +167,15 @@ LichessGameImporter >> ownGames [
 
 { #category : 'accessing' }
 LichessGameImporter >> pageSize [
+	"Games per request (Load more)"
 
-	^ 20
+	^ pageSize ifNil: [ 20 ]
+]
+
+{ #category : 'accessing' }
+LichessGameImporter >> pageSize: anInteger [
+
+	pageSize := anInteger
 ]
 
 { #category : 'private' }

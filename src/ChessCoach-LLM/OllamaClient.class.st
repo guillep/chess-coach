@@ -13,6 +13,12 @@ Class {
 }
 
 { #category : 'accessing' }
+OllamaClient >> baseUrl [
+
+	^ baseUrl
+]
+
+{ #category : 'accessing' }
 OllamaClient >> baseUrl: aString [
 
 	baseUrl := aString
@@ -49,6 +55,12 @@ OllamaClient >> initialize [
 	super initialize.
 	baseUrl := 'http://localhost:11434'.
 	model := 'qwen2.5:7b-instruct'
+]
+
+{ #category : 'accessing' }
+OllamaClient >> model [
+
+	^ model
 ]
 
 { #category : 'accessing' }

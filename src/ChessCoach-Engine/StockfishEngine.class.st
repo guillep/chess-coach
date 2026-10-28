@@ -32,7 +32,18 @@ StockfishEngine class >> path: aFileReference [
 
 { #category : 'analysing' }
 StockfishEngine >> analyse: aFEN multiPV: lineCount depth: aDepth [
-	"Answer up to lineCount EngineLines for the position, best first.
+	"Answer up to lineCount EngineLines for the position, best first."
+
+	^ self
+		  analyse: aFEN
+		  multiPV: lineCount
+		  depth: aDepth
+		  searchMoves: #(  )
+]
+
+{ #category : 'analysing' }
+StockfishEngine >> analyse: aFEN multiPV: lineCount depth: aDepth searchMoves: someUCIMoves [
+	"Answer up to lineCount EngineLines for the position, best first, considering only someUCIMoves (all moves when empty).
 	A checkmated or stalemated position gets a single line without moves."
 
 	| sideToMove linesByRank |
@@ -42,7 +53,9 @@ StockfishEngine >> analyse: aFEN multiPV: lineCount depth: aDepth [
 		              ifFalse: [ #black ].
 	self send: 'setoption name MultiPV value ' , lineCount printString.
 	self send: 'position fen ' , aFEN.
-	self send: 'go depth ' , aDepth printString.
+	self send: 'go depth ' , aDepth printString , (someUCIMoves
+			 ifEmpty: [ '' ]
+			 ifNotEmpty: [ ' searchmoves ' , (' ' join: someUCIMoves) ]).
 	linesByRank := Dictionary new.
 	(self readLinesUntil: 'bestmove') do: [ :line |
 		self parseInfo: line sideToMove: sideToMove into: linesByRank ].

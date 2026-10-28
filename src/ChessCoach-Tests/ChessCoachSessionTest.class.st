@@ -179,6 +179,41 @@ ChessCoachSessionTest >> testRefreshFetchesNewerGames [
 ]
 
 { #category : 'tests' }
+ChessCoachSessionTest >> testReviewIsSavedAndFeedsTheMistakeDatabase [
+
+	| entry game engine review database |
+	session login.
+	session loadMoreGames.
+	entry := session games first.
+	game := session gameFor: entry.
+	engine := StockfishEngineStub new.
+	engine at: (game positionAfterPly: 0) fen whiteCentipawns: #( 50 ).
+	engine at: (game positionAfterPly: 1) fen whiteCentipawns: #( -400 ).
+	session analyser: (GameAnalyser engine: engine).
+	session explorer: LichessExplorerClientStub new.
+	session classifier: (AnswerClassifier
+			 client: (OllamaClientStub new replyContent:
+					  '{"tags":[{"tag":"no-blunder-check","confidence":0.8}]}')
+			 taxonomy: MistakeTaxonomy default).
+	session mark: entry ply: 1 note: 'felt wrong'.
+	review := session reviewFor: entry.
+	self assert: review currentMoment ply equals: 1.
+	review answerMoves: #(  ).
+	review answerText: 'It looked natural'.
+	review answerMoves: { game uciMoves second }.
+	[ review currentMoment isRevealed ] whileFalse: [
+		review answerText: 'I moved too fast' ].
+	review currentMoment confirmTag: 'no-blunder-check'.
+	session saveReview: review.
+	database := session mistakeDatabase.
+	self assert: database records size equals: 1.
+	self
+		assert: (database tagFrequencies at: 'no-blunder-check')
+		equals: 1.
+	self assert: (session reviewFor: entry) currentMoment isRevealed
+]
+
+{ #category : 'tests' }
 ChessCoachSessionTest >> testStartsLoggedOutWithNoGames [
 
 	self deny: session isLoggedIn.

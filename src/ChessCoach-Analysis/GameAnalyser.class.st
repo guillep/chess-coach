@@ -48,6 +48,12 @@ GameAnalyser >> depth: aNumber [
 ]
 
 { #category : 'accessing' }
+GameAnalyser >> engine [
+
+	^ engine
+]
+
+{ #category : 'accessing' }
 GameAnalyser >> multiPV: aNumber [
 
 	multiPV := aNumber

@@ -6,16 +6,23 @@ Class {
 	#superclass : 'StockfishEngine',
 	#instVars : [
 		'scores',
-		'analysedCount'
+		'analysedCount',
+		'moveScores'
 	],
 	#category : 'ChessCoach-Tests',
 	#package : 'ChessCoach-Tests'
 }
 
 { #category : 'analysing' }
-StockfishEngineStub >> analyse: aFEN multiPV: lineCount depth: aDepth [
+StockfishEngineStub >> analyse: aFEN multiPV: lineCount depth: aDepth searchMoves: someUCIMoves [
 
 	analysedCount := analysedCount + 1.
+	someUCIMoves ifNotEmpty: [
+			^ someUCIMoves asArray collect: [ :move |
+					  EngineLine
+						  moves: { move }
+						  centipawns: (moveScores at: move ifAbsent: [ 0 ])
+						  sideToMove: #white ] ].
 	^ (scores at: aFEN ifAbsent: [ #( 0 ) ]) collect: [ :cp |
 		  EngineLine
 			  moves: #( 'a2a3' ) copy
@@ -40,5 +47,13 @@ StockfishEngineStub >> initialize [
 
 	super initialize.
 	scores := Dictionary new.
+	moveScores := Dictionary new.
 	analysedCount := 0
+]
+
+{ #category : 'accessing' }
+StockfishEngineStub >> move: aUCIMove whiteCentipawns: aNumber [
+	"Score answered for aUCIMove when it is analysed with searchmoves"
+
+	moveScores at: aUCIMove put: aNumber
 ]

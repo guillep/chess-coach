@@ -8,7 +8,8 @@ Class {
 		'importer',
 		'announcer',
 		'analyser',
-		'explorer'
+		'explorer',
+		'classifier'
 	],
 	#category : 'ChessCoach-App',
 	#package : 'ChessCoach-App'
@@ -84,6 +85,22 @@ ChessCoachSession >> announcer [
 ChessCoachSession >> cancelLogin [
 
 	importer cancelLogin
+]
+
+{ #category : 'coach' }
+ChessCoachSession >> classifier [
+	"Classifies my answers with the local Ollama model unless another classifier was set"
+
+	^ classifier ifNil: [
+			  classifier := AnswerClassifier
+				                client: OllamaClient new
+				                taxonomy: MistakeTaxonomy default ]
+]
+
+{ #category : 'coach' }
+ChessCoachSession >> classifier: anAnswerClassifier [
+
+	classifier := anAnswerClassifier
 ]
 
 { #category : 'moments' }
@@ -176,6 +193,21 @@ ChessCoachSession >> marksFor: aGameIndexEntry [
 	^ STONJSON fromString: file contents
 ]
 
+{ #category : 'coach' }
+ChessCoachSession >> mistakeDatabase [
+	"My mistakes from all finished reviews"
+
+	^ self mistakesFile exists
+		  ifTrue: [ MistakeDatabase fromJSON: self mistakesFile contents ]
+		  ifFalse: [ MistakeDatabase withRecords: #(  ) ]
+]
+
+{ #category : 'private' }
+ChessCoachSession >> mistakesFile [
+
+	^ importer fileStore baseDirectory / 'mistakes.json'
+]
+
 { #category : 'moments' }
 ChessCoachSession >> momentsFor: aGameIndexEntry [
 	"The game's interesting moments, sorted by ply. Slow the first time (engine analysis): call it off the UI thread."
@@ -213,12 +245,44 @@ ChessCoachSession >> myColorsIn: aGame [
 	^ colors ifEmpty: [ #( #white #black ) ]
 ]
 
+{ #category : 'private' }
+ChessCoachSession >> rebuiltMistakeDatabase [
+	"The reviews are the source of truth: collect the mistakes saved in every games/<id>.review.json"
+
+	^ MistakeDatabase withRecords:
+		  ((importer fileStore baseDirectory / 'games' filesMatching:
+			    '*.review.json') flatCollect: [ :file |
+				   ((STONJSON fromString: file contents) at: 'mistakes') collect: [
+					   :each | MistakeRecord fromDictionary: each ] ])
+]
+
 { #category : 'games' }
 ChessCoachSession >> refresh [
 	"Download games newer than the newest stored one"
 
 	importer importNewerGames.
 	self announceChanged
+]
+
+{ #category : 'coach' }
+ChessCoachSession >> reviewFor: aGameIndexEntry [
+	"The coach review of the game, continuing the saved one if any. Slow the first time (engine analysis): call it off the UI thread."
+
+	| review file |
+	review := CoachReview
+		          gameId: aGameIndexEntry gameId
+		          game: (self gameFor: aGameIndexEntry)
+		          analysis: (self analysisFor: aGameIndexEntry)
+		          moments: (self momentsFor: aGameIndexEntry)
+		          engine: self analyser engine
+		          classifier: self classifier.
+	file := importer fileStore
+		        file: 'review.json'
+		        of: aGameIndexEntry gameId.
+	file exists
+		ifTrue: [ review restoreFromJSON: file contents ]
+		ifFalse: [ review reviewMore ].
+	^ review
 ]
 
 { #category : 'private' }
@@ -230,6 +294,20 @@ ChessCoachSession >> saveMarks: aCollection for: aGameIndexEntry [
 				stream nextPutAll: (STONJSON toString:
 								 (aCollection asArray sort: [ :a :b |
 										  (a at: 'ply') < (b at: 'ply') ])) ].
+	self announceChanged
+]
+
+{ #category : 'coach' }
+ChessCoachSession >> saveReview: aCoachReview [
+	"Save the review next to its game and rebuild the mistake database from all reviews"
+
+	(importer fileStore file: 'review.json' of: aCoachReview gameId)
+		ensureDelete;
+		writeStreamDo: [ :stream | stream nextPutAll: aCoachReview asJSON ].
+	self mistakesFile
+		ensureDelete;
+		writeStreamDo: [ :stream |
+			stream nextPutAll: self rebuiltMistakeDatabase asJSON ].
 	self announceChanged
 ]
 

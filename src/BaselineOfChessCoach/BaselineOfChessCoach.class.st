@@ -50,9 +50,15 @@ BaselineOfChessCoach >> baseline: spec [
 					spec requires:
 						#( 'ChessCoach-Core' 'ChessCoach-Engine' 'ChessCoach-LichessImport' ) ].
 
+			spec
+				package: 'ChessCoach-Coach'
+				with: [
+				spec requires: #( 'ChessCoach-Analysis' 'ChessCoach-LLM' ) ].
+
 			spec package: 'ChessCoach-App' with: [
 					spec requires:
-						#( 'ChessCoach-LichessImport' 'ChessCoach-Analysis' ) ].
+						#( 'ChessCoach-LichessImport' 'ChessCoach-Analysis'
+						   'ChessCoach-Coach' ) ].
 
 			spec package: 'ChessCoach-UI' with: [
 				spec requires:
@@ -62,6 +68,6 @@ BaselineOfChessCoach >> baseline: spec [
 					spec requires:
 						#( 'ChessCoach-Core' 'ChessCoach-FileStorage'
 						   'ChessCoach-LichessImport' 'ChessCoach-Engine'
-						   'ChessCoach-LLM' 'ChessCoach-Analysis' 'ChessCoach-App'
-						   'ChessCoach-UI' ) ] ]
+						   'ChessCoach-LLM' 'ChessCoach-Analysis' 'ChessCoach-Coach'
+						   'ChessCoach-App' 'ChessCoach-UI' ) ] ]
 ]

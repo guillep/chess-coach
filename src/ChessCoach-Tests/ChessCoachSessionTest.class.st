@@ -122,6 +122,52 @@ ChessCoachSessionTest >> testLogoutDeletesTokenAndKeepsGames [
 ]
 
 { #category : 'tests' }
+ChessCoachSessionTest >> testMomentsCombineEngineFindingsAndMarks [
+
+	| entry game engine moments |
+	session login.
+	session loadMoreGames.
+	entry := session games first.
+	game := session gameFor: entry.
+	engine := StockfishEngineStub new.
+	engine at: (game positionAfterPly: 0) fen whiteCentipawns: #( 50 ).
+	engine at: (game positionAfterPly: 1) fen whiteCentipawns: #( -400 ).
+	engine at: (game positionAfterPly: 2) fen whiteCentipawns: #( -400 ).
+	session analyser: (GameAnalyser engine: engine).
+	session explorer: LichessExplorerClientStub new.
+	session mark: entry ply: 2 note: 'my idea'.
+	session mark: entry ply: 1 note: 'felt wrong'.
+	moments := session momentsFor: entry.
+	self
+		assert: (moments collect: [ :each | each ply ]) asArray
+		equals: #( 1 2 ).
+	self assert: (moments first kinds includesAll: #( #blunder #marked )).
+	self assert: (moments first notes includes: 'felt wrong').
+	self assert: moments second isMarked.
+	self assert: engine analysedCount equals: 3.
+	session momentsFor: entry.
+	self assert: engine analysedCount equals: 3
+]
+
+{ #category : 'tests' }
+ChessCoachSessionTest >> testMyColorsComeFromMyUsername [
+
+	session login.
+	self
+		assert: (session myColorsIn: (PGNParser new parse: '[White "alice"]
+[Black "Tester"]
+
+1. e4'))
+		equals: #( #black ).
+	self
+		assert: (session myColorsIn: (PGNParser new parse: '[White "alice"]
+[Black "bob"]
+
+1. e4'))
+		equals: #( #white #black )
+]
+
+{ #category : 'tests' }
 ChessCoachSessionTest >> testRefreshFetchesNewerGames [
 
 	session login.
@@ -137,4 +183,21 @@ ChessCoachSessionTest >> testStartsLoggedOutWithNoGames [
 
 	self deny: session isLoggedIn.
 	self assert: session games isEmpty
+]
+
+{ #category : 'tests' }
+ChessCoachSessionTest >> testUnmarkRemovesAMark [
+
+	| entry |
+	session login.
+	session loadMoreGames.
+	entry := session games first.
+	session mark: entry ply: 2 note: ''.
+	session mark: entry ply: 1 note: 'x'.
+	session unmark: entry ply: 2.
+	self
+		assert:
+			((session marksFor: entry) collect: [ :each | each at: 'ply' ])
+				asArray
+		equals: #( 1 )
 ]

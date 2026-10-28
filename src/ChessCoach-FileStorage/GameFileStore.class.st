@@ -28,6 +28,13 @@ GameFileStore >> baseDirectory [
 	^ baseDirectory
 ]
 
+{ #category : 'accessing' }
+GameFileStore >> file: aSuffix of: gameId [
+	"A companion file of the game, such as games/<id>.analysis.json"
+
+	^ baseDirectory / 'games' / (gameId , '.' , aSuffix)
+]
+
 { #category : 'private' }
 GameFileStore >> gameFilePath: gameId [
 

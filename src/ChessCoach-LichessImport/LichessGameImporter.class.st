@@ -52,6 +52,15 @@ LichessGameImporter >> cancelLogin [
 ]
 
 { #category : 'accessing' }
+LichessGameImporter >> explorerClient [
+	"An opening explorer client using my token, caching answers next to the games"
+
+	^ LichessExplorerClient
+		  accessToken: oauthClient accessToken
+		  cacheDirectory: fileStore baseDirectory / 'explorer-cache'
+]
+
+{ #category : 'accessing' }
 LichessGameImporter >> fileStore [
 
 	^ fileStore

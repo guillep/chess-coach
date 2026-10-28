@@ -23,6 +23,10 @@ BaselineOfChessCoach >> baseline: spec [
 				with: [
 				spec repository: 'github://pharo-graphics/Toplo:v0.10.0/src' ].
 
+			spec baseline: 'OSSubprocess' with: [
+					spec repository:
+						'github://pharo-contributions/OSSubprocess:v2.0.1/repository' ].
+
 			spec package: 'ChessCoach-Core'.
 
 			spec
@@ -35,8 +39,16 @@ BaselineOfChessCoach >> baseline: spec [
 				spec requires: #( 'ChessCoach-Core' 'ChessCoach-FileStorage' ) ].
 
 			spec
-				package: 'ChessCoach-App'
-				with: [ spec requires: #( 'ChessCoach-LichessImport' ) ].
+				package: 'ChessCoach-Engine'
+				with: [ spec requires: #( 'OSSubprocess' ) ].
+
+			spec package: 'ChessCoach-Analysis' with: [
+					spec requires:
+						#( 'ChessCoach-Core' 'ChessCoach-Engine' 'ChessCoach-LichessImport' ) ].
+
+			spec package: 'ChessCoach-App' with: [
+					spec requires:
+						#( 'ChessCoach-LichessImport' 'ChessCoach-Analysis' ) ].
 
 			spec package: 'ChessCoach-UI' with: [
 				spec requires:
@@ -45,5 +57,6 @@ BaselineOfChessCoach >> baseline: spec [
 			spec package: 'ChessCoach-Tests' with: [
 					spec requires:
 						#( 'ChessCoach-Core' 'ChessCoach-FileStorage'
-						   'ChessCoach-LichessImport' 'ChessCoach-App' 'ChessCoach-UI' ) ] ]
+						   'ChessCoach-LichessImport' 'ChessCoach-Engine'
+						   'ChessCoach-Analysis' 'ChessCoach-App' 'ChessCoach-UI' ) ] ]
 ]

@@ -20,7 +20,8 @@ Class {
 		'coachButton',
 		'coach',
 		'waitingEntry',
-		'waitingLabel'
+		'waitingLabel',
+		'dashboard'
 	],
 	#category : 'ChessCoach-UI-App',
 	#package : 'ChessCoach-UI',
@@ -122,25 +123,32 @@ ChessCoachAppElement >> coachButton [
 	^ coachButton
 ]
 
+{ #category : 'accessing' }
+ChessCoachAppElement >> dashboard [
+
+	^ dashboard
+]
+
 { #category : 'coach' }
 ChessCoachAppElement >> exitCoach [
-	"Back to the analysis of the selected game; the background analysis resumes"
+	"Back to the analysis of the selected game (or the dashboard); the background analysis resumes"
 
 	waitingEntry := nil.
 	coach := nil.
 	session analysisQueue resume.
-	analysis
-		ifNil: [
-				self showInPane: (ToEmpty new
-						 labelText: 'Select a game';
-						 yourself) ]
-		ifNotNil: [ self showInPane: analysis ]
+	self showInPane: (analysis ifNil: [ dashboard ])
 ]
 
 { #category : 'accessing' }
 ChessCoachAppElement >> gameList [
 
 	^ gameList
+]
+
+{ #category : 'private' }
+ChessCoachAppElement >> games [
+
+	^ gameList dataAccessor asArray
 ]
 
 { #category : 'private' }
@@ -192,13 +200,18 @@ ChessCoachAppElement >> loginOrLogout [
 
 { #category : 'initialization' }
 ChessCoachAppElement >> newAnalysisPane [
+	"The right pane starts on the mistakes dashboard (the landing)"
 
+	dashboard := MistakesDashboardElement new.
+	dashboard whenRecordSelectedDo: [ :record |
+		self openCoachOnGameId: record gameId ].
+	dashboard whenStartRequestedDo: [
+			self games ifNotEmpty: [ :entries |
+				self openCoachOnGameId: entries first gameId ] ].
 	^ ToElement new
 		  layout: BlFrameLayout new;
 		  matchParent;
-		  addChild: (ToEmpty new
-				   labelText: 'Select a game';
-				   yourself);
+		  addChild: dashboard;
 		  yourself
 ]
 
@@ -296,6 +309,18 @@ ChessCoachAppElement >> openCoach [
 					  clickAction: [ self exitCoach ];
 					  yourself);
 			 yourself)
+]
+
+{ #category : 'coach' }
+ChessCoachAppElement >> openCoachOnGameId: aGameId [
+	"Select the game in the list and review it with the coach"
+
+	| index |
+	index := self games findFirst: [ :each | each gameId = aGameId ].
+	index = 0 ifTrue: [ ^ self ].
+	gameList selecter selectIndex: index.
+	self selectedGameChanged.
+	self openCoach
 ]
 
 { #category : 'accessing' }
@@ -433,6 +458,7 @@ ChessCoachAppElement >> updateFromSession [
 	userLabel text: (session username ifNil: [ '' ]).
 	session analysisQueue isRunning ifTrue: [
 		session analysisQueue enqueueUnanalysed ].
+	dashboard database: session mistakeDatabase.
 	gameList dataAccessor removeAll.
 	gameList dataAccessor addAll: session games
 ]

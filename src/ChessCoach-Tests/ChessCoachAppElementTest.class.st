@@ -102,6 +102,27 @@ ChessCoachAppElementTest >> testLogoutKeepsGamesListed [
 ]
 
 { #category : 'tests' }
+ChessCoachAppElementTest >> testRowsShowTheAnalysisState [
+
+	| queue first |
+	self click: app loginButton.
+	self click: app loadMoreButton.
+	queue := AnalysisQueue
+		         session: session
+		         analyser: (GameAnalyser engine: StockfishEngineStub new).
+	session analysisQueue: queue.
+	queue enqueueUnanalysed.
+	scripter pulse.
+	first := app gameList dataAccessor first.
+	self assert: ((app rowTextFor: first) beginsWith: '⏳ ').
+	queue runNext.
+	scripter pulse.
+	self assert: ((app rowTextFor: first) beginsWith: '✓ ').
+	self assert:
+		((app rowTextFor: app gameList dataAccessor second) beginsWith: '⏳ ')
+]
+
+{ #category : 'tests' }
 ChessCoachAppElementTest >> testSelectingARowOpensItsAnalysis [
 
 	self click: app loginButton.

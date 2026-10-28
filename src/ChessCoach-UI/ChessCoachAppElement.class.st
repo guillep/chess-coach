@@ -39,7 +39,11 @@ ChessCoachAppElement class >> openOn: aChessCoachSession [
 	space title: 'Chess Coach'.
 	space extent: 1200 @ 760.
 	space root addChild: app.
+	space
+		addEventHandlerOn: BlSpaceClosedEvent
+		do: [ :event | aChessCoachSession analysisQueue stop ].
 	space show.
+	app startBackgroundAnalysis.
 	^ app
 ]
 
@@ -56,6 +60,31 @@ ChessCoachAppElement >> analysis [
 	"The analysis of the selected game, or nil before one is selected"
 
 	^ analysis
+]
+
+{ #category : 'private' }
+ChessCoachAppElement >> analysisMarkFor: aGameIndexEntry [
+	"A prefix showing the background analysis state of the game"
+
+	| queue state |
+	queue := session analysisQueue.
+	state := queue stateOf: aGameIndexEntry.
+	state = #ready ifTrue: [ ^ '✓ ' ].
+	state = #queued ifTrue: [ ^ '⏳ ' ].
+	state = #analysing ifTrue: [
+			^ queue progress ifNil: [ '⚙ ' ] ifNotNil: [ :progress |
+					  '⚙ ' , progress key printString , '/'
+					  , progress value printString , ' ' ] ].
+	^ ''
+]
+
+{ #category : 'analysis queue' }
+ChessCoachAppElement >> analysisStateChangedOf: aGameIdOrNil [
+	"Redraw the row of the game whose analysis state changed (every row when nil)"
+
+	gameList dataAccessor withIndexDo: [ :entry :index |
+			(aGameIdOrNil isNil or: [ entry gameId = aGameIdOrNil ]) ifTrue: [
+				gameList dataAccessor at: index put: entry ] ]
 ]
 
 { #category : 'accessing' }
@@ -207,6 +236,7 @@ ChessCoachAppElement >> rowTextFor: aGameIndexEntry [
 
 	^ String streamContents: [ :stream |
 			  stream
+				  nextPutAll: (self analysisMarkFor: aGameIndexEntry);
 				  nextPutAll: (' – ' join: aGameIndexEntry players);
 				  nextPutAll: ', ';
 				  nextPutAll: aGameIndexEntry result;
@@ -247,6 +277,12 @@ ChessCoachAppElement >> session: aChessCoachSession [
 				self enqueueTask:
 					(BlTaskAction new action: [ self updateFromSession ]) ]
 		for: self.
+	session announcer
+		when: AnalysisQueueChanged
+		do: [ :announcement |
+				self enqueueTask: (BlTaskAction new action: [
+						 self analysisStateChangedOf: announcement gameId ]) ]
+		for: self.
 	self updateFromSession
 ]
 
@@ -258,6 +294,15 @@ ChessCoachAppElement >> showGame: aGame [
 			analysisPane removeChildren.
 			analysisPane addChild: analysis ].
 	analysis game: aGame
+]
+
+{ #category : 'analysis queue' }
+ChessCoachAppElement >> startBackgroundAnalysis [
+	"Queue every unanalysed game and analyse them in the background; rows show their state"
+
+	session analysisQueue
+		enqueueUnanalysed;
+		start
 ]
 
 { #category : 'accessing' }
@@ -277,6 +322,8 @@ ChessCoachAppElement >> updateFromSession [
 	refreshButton enabled: loggedIn.
 	loadMoreButton enabled: loggedIn.
 	userLabel text: (session username ifNil: [ '' ]).
+	session analysisQueue isRunning ifTrue: [
+		session analysisQueue enqueueUnanalysed ].
 	gameList dataAccessor removeAll.
 	gameList dataAccessor addAll: session games
 ]

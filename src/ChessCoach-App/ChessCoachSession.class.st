@@ -9,7 +9,8 @@ Class {
 		'announcer',
 		'analyser',
 		'explorer',
-		'classifier'
+		'classifier',
+		'analysisQueue'
 	],
 	#category : 'ChessCoach-App',
 	#package : 'ChessCoach-App'
@@ -36,6 +37,20 @@ ChessCoachSession class >> onDirectory: aFileReference [
 ]
 
 { #category : 'moments' }
+ChessCoachSession >> analyse: aGameIndexEntry with: aGameAnalyser onProgress: aBlock [
+	"Analyse the game with aGameAnalyser and store the result next to its PGN"
+
+	| analysis |
+	analysis := aGameAnalyser
+		            analyse: (self gameFor: aGameIndexEntry)
+		            onProgress: aBlock.
+	(self analysisFileFor: aGameIndexEntry)
+		ensureDelete;
+		writeStreamDo: [ :stream | stream nextPutAll: analysis asJSON ].
+	^ analysis
+]
+
+{ #category : 'moments' }
 ChessCoachSession >> analyser [
 	"Analyses games with Stockfish unless another analyser was set"
 
@@ -49,22 +64,42 @@ ChessCoachSession >> analyser: aGameAnalyser [
 	analyser := aGameAnalyser
 ]
 
+{ #category : 'private' }
+ChessCoachSession >> analysisFileFor: aGameIndexEntry [
+
+	^ importer fileStore file: 'analysis.json' of: aGameIndexEntry gameId
+]
+
 { #category : 'moments' }
 ChessCoachSession >> analysisFor: aGameIndexEntry [
 	"The engine analysis of the game, computed once per depth and kept next to its PGN"
 
-	| file analysis |
-	file := importer fileStore
-		        file: 'analysis.json'
-		        of: aGameIndexEntry gameId.
-	file exists ifTrue: [
-			analysis := GameAnalysis fromJSON: file contents.
-			analysis depth = self analyser depth ifTrue: [ ^ analysis ] ].
-	analysis := self analyser analyse: (self gameFor: aGameIndexEntry).
-	file
-		ensureDelete;
-		writeStreamDo: [ :stream | stream nextPutAll: analysis asJSON ].
-	^ analysis
+	(self isAnalysed: aGameIndexEntry) ifTrue: [
+			^ GameAnalysis fromJSON:
+				  (self analysisFileFor: aGameIndexEntry) contents ].
+	^ self
+		  analyse: aGameIndexEntry
+		  with: self analyser
+		  onProgress: [ :done :total |  ]
+]
+
+{ #category : 'moments' }
+ChessCoachSession >> analysisQueue [
+	"Background analysis with its own Stockfish, so the coach's engine stays free"
+
+	^ analysisQueue ifNil: [
+			  analysisQueue := AnalysisQueue
+				                   session: self
+				                   analyser:
+					                   ((GameAnalyser engine: StockfishEngine default)
+						                    depth: self analyser depth;
+						                    yourself) ]
+]
+
+{ #category : 'moments' }
+ChessCoachSession >> analysisQueue: anAnalysisQueue [
+
+	analysisQueue := anAnalysisQueue
 ]
 
 { #category : 'private' }
@@ -135,6 +170,16 @@ ChessCoachSession >> initializeWithImporter: aLichessGameImporter [
 
 	importer := aLichessGameImporter.
 	announcer := Announcer new
+]
+
+{ #category : 'moments' }
+ChessCoachSession >> isAnalysed: aGameIndexEntry [
+	"Whether a stored analysis exists at the analyser's depth"
+
+	| file |
+	file := self analysisFileFor: aGameIndexEntry.
+	^ file exists and: [
+		  (GameAnalysis fromJSON: file contents) depth = self analyser depth ]
 ]
 
 { #category : 'testing' }

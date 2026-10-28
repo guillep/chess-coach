@@ -24,15 +24,30 @@ GameAnalyser class >> engine: anEngine [
 { #category : 'analysing' }
 GameAnalyser >> analyse: aGame [
 
+	^ self analyse: aGame onProgress: [ :done :total |  ]
+]
+
+{ #category : 'analysing' }
+GameAnalyser >> analyse: aGame onProgress: aBlock [
+	"aBlock receives the number of positions analysed so far and the total, after each one"
+
+	| total |
+	total := aGame moves size + 1.
 	^ GameAnalysis
 		  depth: depth
 		  plies: ((0 to: aGame moves size) collect: [ :ply |
-					   | fen |
+					   | fen analysis |
 					   fen := (aGame positionAfterPly: ply) fen.
-					   PlyAnalysis
-						   ply: ply
-						   fen: fen
-						   lines: (engine analyse: fen multiPV: multiPV depth: depth) ])
+					   analysis := PlyAnalysis
+						               ply: ply
+						               fen: fen
+						               lines:
+						               (engine
+							                analyse: fen
+							                multiPV: multiPV
+							                depth: depth).
+					   aBlock value: ply + 1 value: total.
+					   analysis ])
 ]
 
 { #category : 'accessing' }

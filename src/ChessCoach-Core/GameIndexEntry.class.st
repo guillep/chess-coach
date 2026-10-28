@@ -12,7 +12,8 @@ Class {
 		'players',
 		'result',
 		'date',
-		'createdAt'
+		'createdAt',
+		'speed'
 	],
 	#category : 'ChessCoach-Core',
 	#package : 'ChessCoach-Core'
@@ -79,4 +80,17 @@ GameIndexEntry >> result [
 GameIndexEntry >> source [
 
 	^ source
+]
+
+{ #category : 'accessing' }
+GameIndexEntry >> speed [
+	"ultraBullet, bullet, blitz, rapid, classical or correspondence; nil for entries indexed before speeds were recorded"
+
+	^ speed
+]
+
+{ #category : 'accessing' }
+GameIndexEntry >> speed: aString [
+
+	speed := aString
 ]

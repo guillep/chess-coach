@@ -9,6 +9,26 @@ Class {
 	#package : 'ChessCoach-Core'
 }
 
+{ #category : 'time control' }
+Game class >> speedForTimeControl: aString [
+	"The speed of a PGN TimeControl, as Lichess counts it: estimated duration = base + 40 × increment.
+	'-' (Lichess) and 'moves/seconds' such as '1/259200' (Chess.com daily) are correspondence."
+
+	| parts estimate |
+	(aString isEmptyOrNil or: [
+		 aString = '-' or: [ aString includes: $/ ] ]) ifTrue: [
+		^ 'correspondence' ].
+	parts := aString substrings: '+'.
+	estimate := parts first asInteger + (40 * (parts size > 1
+		              ifTrue: [ parts second asInteger ]
+		              ifFalse: [ 0 ])).
+	estimate < 30 ifTrue: [ ^ 'ultraBullet' ].
+	estimate < 180 ifTrue: [ ^ 'bullet' ].
+	estimate < 480 ifTrue: [ ^ 'blitz' ].
+	estimate < 1500 ifTrue: [ ^ 'rapid' ].
+	^ 'classical'
+]
+
 { #category : 'positions' }
 Game >> initialPosition [
 	"Honour the PGN FEN header for games that do not start from the standard position"
@@ -45,6 +65,14 @@ Game >> positionAfterPly: aNumber [
 
 	^ self initialPosition moves:
 		  ((moves first: aNumber) collect: [ :move | move san ])
+]
+
+{ #category : 'accessing' }
+Game >> speed [
+	"ultraBullet, bullet, blitz, rapid, classical or correspondence, from the TimeControl header"
+
+	^ self class speedForTimeControl:
+		  (metadata at: 'TimeControl' ifAbsent: [ nil ])
 ]
 
 { #category : 'positions' }

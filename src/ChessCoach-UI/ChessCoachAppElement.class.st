@@ -453,8 +453,8 @@ ChessCoachAppElement >> updateFromSession [
 	loginButton labelText: (loggedIn
 			 ifTrue: [ 'Logout' ]
 			 ifFalse: [ 'Login' ]).
-	refreshButton enabled: loggedIn.
-	loadMoreButton enabled: loggedIn.
+	refreshButton enabled: session canImport.
+	loadMoreButton enabled: session canImport.
 	userLabel text: (session username ifNil: [ '' ]).
 	session analysisQueue isRunning ifTrue: [
 		session analysisQueue enqueueUnanalysed ].

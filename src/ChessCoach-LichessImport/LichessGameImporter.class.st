@@ -91,7 +91,7 @@ LichessGameImporter >> importNewerGames [
 	"Import games created after the newest one we have (at most one page). Answer the new entries."
 
 	| games |
-	games := self games.
+	games := self ownGames.
 	games ifEmpty: [ ^ self importOlderGames ].
 	^ self importGamesUntil: nil since: games first createdAt + 1
 ]
@@ -101,11 +101,17 @@ LichessGameImporter >> importOlderGames [
 	"Import the page of games created before the oldest one we have. Answer the new entries."
 
 	| games |
-	games := self games.
+	games := self ownGames.
 	^ self
 		  importGamesUntil:
 		  (games ifEmpty: [ nil ] ifNotEmpty: [ games last createdAt - 1 ])
 		  since: nil
+]
+
+{ #category : 'accessing' }
+LichessGameImporter >> indexManager [
+
+	^ indexManager
 ]
 
 { #category : 'initialization' }
@@ -149,6 +155,13 @@ LichessGameImporter >> logout [
 LichessGameImporter >> oauthClient [
 
 	^ oauthClient
+]
+
+{ #category : 'accessing' }
+LichessGameImporter >> ownGames [
+	"My Lichess games' index entries, newest first (the index may also hold games from other sites)"
+
+	^ self games select: [ :each | each source = 'lichess' ]
 ]
 
 { #category : 'accessing' }
@@ -200,6 +213,7 @@ LichessGameImporter >> saveGameFromData: gameData [
 			   put:
 				   (DateAndTime fromUnixTime: createdAt // 1000) asDate yyyymmdd;
 			   at: 'createdAt' put: createdAt;
+			   at: 'speed' put: (gameData at: 'speed' ifAbsent: [ nil ]);
 			   yourself)
 ]
 

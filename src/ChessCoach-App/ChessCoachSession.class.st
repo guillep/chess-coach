@@ -10,7 +10,8 @@ Class {
 		'analyser',
 		'explorer',
 		'classifier',
-		'analysisQueue'
+		'analysisQueue',
+		'chessComImporter'
 	],
 	#category : 'ChessCoach-App',
 	#package : 'ChessCoach-App'
@@ -116,10 +117,53 @@ ChessCoachSession >> announcer [
 	^ announcer
 ]
 
+{ #category : 'games' }
+ChessCoachSession >> canImport [
+	"Whether some site is set up to download games from"
+
+	^ self isLoggedIn or: [ self chessComUsername notNil ]
+]
+
 { #category : 'login' }
 ChessCoachSession >> cancelLogin [
 
 	importer cancelLogin
+]
+
+{ #category : 'chess.com' }
+ChessCoachSession >> chessComAPIClient: aChessComAPIClient [
+	"Use another Chess.com client (tests use a stub)"
+
+	chessComImporter := ChessComGameImporter
+		                    apiClient: aChessComAPIClient
+		                    fileStore: importer fileStore
+		                    indexManager: importer indexManager
+]
+
+{ #category : 'chess.com' }
+ChessCoachSession >> chessComImporter [
+	"Imports my Chess.com games into the same files and index as the Lichess games"
+
+	^ chessComImporter ifNil: [
+			  chessComImporter := ChessComGameImporter
+				                      apiClient: ChessComAPIClient new
+				                      fileStore: importer fileStore
+				                      indexManager: importer indexManager ]
+]
+
+{ #category : 'chess.com' }
+ChessCoachSession >> chessComUsername [
+	"My Chess.com username, or nil when I haven't set one"
+
+	^ self chessComImporter username
+]
+
+{ #category : 'chess.com' }
+ChessCoachSession >> chessComUsername: aStringOrNil [
+	"Chess.com's game data is public, so a username is all it takes; nil forgets it"
+
+	self chessComImporter username: aStringOrNil.
+	self announceChanged
 ]
 
 { #category : 'coach' }
@@ -165,6 +209,23 @@ ChessCoachSession >> games [
 	^ importer games
 ]
 
+{ #category : 'games' }
+ChessCoachSession >> gamesWithSpeed: aSpeedOrNil [
+	"Stored games of one speed (bullet, blitz, …), newest first; all of them when nil.
+	Entries indexed before speeds were recorded get theirs from the PGN once, and the index is saved."
+
+	| games backfilled |
+	aSpeedOrNil ifNil: [ ^ self games ].
+	games := self games.
+	backfilled := false.
+	games do: [ :entry |
+			entry speed ifNil: [
+					entry speed: (self gameFor: entry) speed.
+					backfilled := true ] ].
+	backfilled ifTrue: [ importer indexManager saveIndexToDisk ].
+	^ games select: [ :entry | entry speed = aSpeedOrNil ]
+]
+
 { #category : 'initialization' }
 ChessCoachSession >> initializeWithImporter: aLichessGameImporter [
 
@@ -190,9 +251,11 @@ ChessCoachSession >> isLoggedIn [
 
 { #category : 'games' }
 ChessCoachSession >> loadMoreGames [
-	"Download the page of games older than the oldest stored one"
+	"Download older games: a page from Lichess when logged in, a month from Chess.com when its username is set"
 
-	importer importOlderGames.
+	self isLoggedIn ifTrue: [ importer importOlderGames ].
+	self chessComUsername ifNotNil: [
+		self chessComImporter importOlderGames ].
 	self announceChanged
 ]
 
@@ -277,16 +340,19 @@ ChessCoachSession >> momentsFor: aGameIndexEntry [
 
 { #category : 'moments' }
 ChessCoachSession >> myColorsIn: aGame [
-	"The colors I played, by my Lichess username; both when I'm not a player of aGame"
+	"The colors I played, by my Lichess or Chess.com username; both when I'm not a player of aGame"
 
-	| colors |
+	| names colors |
+	names := {
+		         self username.
+		         self chessComUsername } reject: [ :each | each isNil ].
 	colors := #( #white #black ) select: [ :color |
 			          (aGame metadata
 				           at: color asString capitalized
 				           ifAbsent: [ nil ])
 				          ifNil: [ false ]
 				          ifNotNil: [ :name |
-				          name sameAs: (self username ifNil: [ '' ]) ] ].
+				          names anySatisfy: [ :each | name sameAs: each ] ] ].
 	^ colors ifEmpty: [ #( #white #black ) ]
 ]
 
@@ -303,9 +369,11 @@ ChessCoachSession >> rebuiltMistakeDatabase [
 
 { #category : 'games' }
 ChessCoachSession >> refresh [
-	"Download games newer than the newest stored one"
+	"Download games newer than the newest stored one, from every site set up"
 
-	importer importNewerGames.
+	self isLoggedIn ifTrue: [ importer importNewerGames ].
+	self chessComUsername ifNotNil: [
+		self chessComImporter importNewerGames ].
 	self announceChanged
 ]
 

@@ -26,15 +26,17 @@ GameIndexManager >> addGameEntry: entryDict [
 { #category : 'private' }
 GameIndexManager >> entryFromDictionary: entryDict [
 
-	^ GameIndexEntry new
-		  gameId: (entryDict at: 'gameId')
-		  filepath: (entryDict at: 'filepath')
-		  dateImported: (entryDict at: 'dateImported')
-		  source: (entryDict at: 'source')
-		  players: (entryDict at: 'players' ifAbsent: [ #(  ) ])
-		  result: (entryDict at: 'result' ifAbsent: [ '' ])
-		  date: (entryDict at: 'date' ifAbsent: [ '' ])
-		  createdAt: (entryDict at: 'createdAt' ifAbsent: [ 0 ])
+	^ (GameIndexEntry new
+		   gameId: (entryDict at: 'gameId')
+		   filepath: (entryDict at: 'filepath')
+		   dateImported: (entryDict at: 'dateImported')
+		   source: (entryDict at: 'source')
+		   players: (entryDict at: 'players' ifAbsent: [ #(  ) ])
+		   result: (entryDict at: 'result' ifAbsent: [ '' ])
+		   date: (entryDict at: 'date' ifAbsent: [ '' ])
+		   createdAt: (entryDict at: 'createdAt' ifAbsent: [ 0 ]))
+		  speed: (entryDict at: 'speed' ifAbsent: [ nil ]);
+		  yourself
 ]
 
 { #category : 'accessing' }
@@ -85,6 +87,7 @@ GameIndexManager >> saveIndexToDisk [
 					 at: 'result' put: entry result;
 					 at: 'date' put: entry date;
 					 at: 'createdAt' put: entry createdAt;
+					 at: 'speed' put: entry speed;
 					 yourself ]) asArray.
 	(fileStore baseDirectory / 'index.json')
 		ensureDelete;

@@ -40,20 +40,9 @@ LichessExplorerClient class >> ratingBucketsAround: aRating [
 
 { #category : 'parameters' }
 LichessExplorerClient class >> speedForTimeControl: aString [
-	"Lichess's speed for a PGN TimeControl like '180+2': estimated duration = base + 40 × increment"
+	"Lichess's speed for a PGN TimeControl like '180+2'"
 
-	| parts estimate |
-	(aString isEmptyOrNil or: [ aString = '-' ]) ifTrue: [
-		^ 'correspondence' ].
-	parts := aString substrings: '+'.
-	estimate := parts first asInteger + (40 * (parts size > 1
-		              ifTrue: [ parts second asInteger ]
-		              ifFalse: [ 0 ])).
-	estimate < 30 ifTrue: [ ^ 'ultraBullet' ].
-	estimate < 180 ifTrue: [ ^ 'bullet' ].
-	estimate < 480 ifTrue: [ ^ 'blitz' ].
-	estimate < 1500 ifTrue: [ ^ 'rapid' ].
-	^ 'classical'
+	^ Game speedForTimeControl: aString
 ]
 
 { #category : 'private' }

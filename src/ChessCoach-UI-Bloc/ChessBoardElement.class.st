@@ -5,8 +5,6 @@ Class {
 	#name : 'ChessBoardElement',
 	#superclass : 'BlElement',
 	#instVars : [
-		'selectedSquare',
-		'highlightedSquares',
 		'squares',
 		'pieceElements',
 		'pieceSet',
@@ -55,19 +53,6 @@ ChessBoardElement >> chessPosition: aChessPosition [
 
 	chessPosition := aChessPosition.
 	self redrawPieces
-]
-
-{ #category : 'rendering' }
-ChessBoardElement >> displayBoard [
-	"Render the chess board (8x8 grid with pieces). TODO: Implement rendering with Bloc"
-
-	^ self
-]
-
-{ #category : 'action' }
-ChessBoardElement >> highlightSquares: squareList [
-
-	highlightedSquares := squareList
 ]
 
 { #category : 'initialization' }
@@ -144,12 +129,6 @@ ChessBoardElement >> redrawPieces [
 									               ifFalse: [ #black ])))).
 			(squares at: (self squareIndexOf: square)) addChild: element.
 			pieceElements at: square put: element ]
-]
-
-{ #category : 'action' }
-ChessBoardElement >> selectSquare: squareCoordinates [
-
-	selectedSquare := squareCoordinates
 ]
 
 { #category : 'private' }

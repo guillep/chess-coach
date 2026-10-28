@@ -41,61 +41,14 @@ MoveListElement >> applyLayout [
 	^ self
 ]
 
-{ #category : 'building' }
-MoveListElement >> buildRigid [
-
-	| moves |
-	game ifNil: [ ^ self ].
-	moves := game moves ifNil: [ #(  ) ].
-	0 to: moves size - 1 by: 2 do: [ :i |
-			| m1 m2 |
-			m1 := moves at: i + 1 ifAbsent: [ nil ].
-			m2 := moves at: i + 2 ifAbsent: [ nil ].
-			m1 ifNotNil: [
-					| e1 idx1 |
-					idx1 := i + 1.
-					e1 := BlTextElement new text: (m1 san ifNil: [ '' ]) asRopedText.
-					e1 constraintsDo: [ :c |
-							c horizontal matchParent.
-							c vertical fitContent ].
-					e1 margin: (BlInsets all: 4).
-					e1 padding: (BlInsets all: 2).
-					[ e1 when: BlClickEvent do: [ :ev | self selectMoveAt: idx1 ] ]
-						on: Error
-						do: [
-								e1
-									addEventHandlerOn: BlClickEvent
-									do: [ :ev | self selectMoveAt: idx1 ] ].
-					rigidContainer ifNotNil: [ rigidContainer addChild: e1 ].
-					rigidMoveElements at: idx1 put: e1 ].
-			m2 ifNotNil: [
-					| e2 idx2 |
-					idx2 := i + 2.
-					e2 := BlTextElement new text: (m2 san ifNil: [ '' ]) asRopedText.
-					e2 constraintsDo: [ :c |
-							c horizontal matchParent.
-							c vertical fitContent ].
-					e2 margin: (BlInsets all: 4).
-					e2 padding: (BlInsets all: 2).
-					[ e2 when: BlClickEvent do: [ :ev | self selectMoveAt: idx2 ] ]
-						on: Error
-						do: [
-								e2
-									addEventHandlerOn: BlClickEvent
-									do: [ :ev | self selectMoveAt: idx2 ] ].
-					rigidContainer ifNotNil: [ rigidContainer addChild: e2 ].
-					rigidMoveElements at: idx2 put: e2 ] ].
-	^ self
-]
-
 { #category : 'initialization' }
 MoveListElement >> buildUI [
 
-	| h |
+	| header |
 	self removeChildren.
-	h := BlElement new.
-	h layout: BlLinearLayout horizontal.
-	h constraintsDo: [ :c |
+	header := BlElement new.
+	header layout: BlLinearLayout horizontal.
+	header constraintsDo: [ :c |
 			c horizontal matchParent.
 			c vertical fitContent ].
 	toggleButton := BlTextElement new text: 'Rigid' asRopedText.
@@ -104,14 +57,11 @@ MoveListElement >> buildUI [
 			c vertical fitContent ].
 	toggleButton margin: (BlInsets all: 4).
 	toggleButton padding: (BlInsets all: 4).
-	[ toggleButton when: BlClickEvent do: [ :e | self toggleLayout ] ]
-		on: Error
-		do: [
-				toggleButton
-					addEventHandlerOn: BlClickEvent
-					do: [ :e | self toggleLayout ] ].
-	h addChild: toggleButton.
-	self addChild: h.
+	toggleButton
+		addEventHandlerOn: BlClickEvent
+		do: [ :event | self toggleLayout ].
+	header addChild: toggleButton.
+	self addChild: header.
 	compactContainer := BlElement new.
 	compactContainer layout: BlFlowLayout horizontal.
 	compactContainer constraintsDo: [ :c |
@@ -124,8 +74,7 @@ MoveListElement >> buildUI [
 			c vertical matchParent ].
 	self addChild: compactContainer.
 	self addChild: rigidContainer.
-	self applyLayout.
-	^ self
+	self applyLayout
 ]
 
 { #category : 'accessing' }
@@ -191,34 +140,40 @@ MoveListElement >> layoutMode [
 ]
 
 { #category : 'building' }
+MoveListElement >> newMoveElementFor: aMove at: anIndex [
+
+	^ BlTextElement new
+		  text: aMove san asRopedText;
+		  margin: (BlInsets all: 4);
+		  padding: (BlInsets all: 2);
+		  addEventHandlerOn: BlClickEvent
+		  do: [ :event | self selectMoveAt: anIndex ];
+		  yourself
+]
+
+{ #category : 'building' }
 MoveListElement >> rebuildMoves [
 
-	compactContainer ifNotNil: [ compactContainer removeChildren ].
-	rigidContainer ifNotNil: [ rigidContainer removeChildren ].
+	compactContainer removeChildren.
+	rigidContainer removeChildren.
 	moveElements := Dictionary new.
 	rigidMoveElements := Dictionary new.
-	game ifNil: [ ^ self ].
-	(game moves ifNil: [ #(  ) ]) doWithIndex: [ :move :idx |
-			| elem |
-			elem := BlTextElement new.
-			elem text: (move san ifNil: [ '' ]) asRopedText.
-			elem constraintsDo: [ :c |
+	game moves doWithIndex: [ :move :index |
+			| compact rigid |
+			compact := self newMoveElementFor: move at: index.
+			compact constraintsDo: [ :c |
 					c horizontal fitContent.
 					c vertical fitContent ].
-			elem margin: (BlInsets all: 4).
-			elem padding: (BlInsets all: 2).
-			[ elem when: BlClickEvent do: [ :e | self selectMoveAt: idx ] ]
-				on: Error
-				do: [
-						elem
-							addEventHandlerOn: BlClickEvent
-							do: [ :e | self selectMoveAt: idx ] ].
-			compactContainer ifNotNil: [ compactContainer addChild: elem ].
-			moveElements at: idx put: elem ].
-	self buildRigid.
+			compactContainer addChild: compact.
+			moveElements at: index put: compact.
+			rigid := self newMoveElementFor: move at: index.
+			rigid constraintsDo: [ :c |
+					c horizontal matchParent.
+					c vertical fitContent ].
+			rigidContainer addChild: rigid.
+			rigidMoveElements at: index put: rigid ].
 	self applyLayout.
-	self highlightSelected.
-	^ self
+	self highlightSelected
 ]
 
 { #category : 'selection' }

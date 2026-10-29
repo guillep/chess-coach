@@ -215,22 +215,6 @@ CoachElementTest >> testMarkingWithTheKeyboard [
 ]
 
 { #category : 'tests' }
-CoachElementTest >> testQuotesAreTypedOnce [
-	"Typed one key at a time, as a person does: the editor only closes a symbol typed alone"
-
-	coach continueReview.
-	scripter pulse.
-	coach answerField requestFocus.
-	scripter pulse.
-	'it''s "fine" (ok)' do: [ :each | scripter type: each asString ].
-	scripter syncContinue.
-	scripter pulse.
-	self
-		assert: coach answerField text asString
-		equals: 'it''s "fine" (ok)'
-]
-
-{ #category : 'tests' }
 CoachElementTest >> testRefreshKeepsTheAnswerBeingTyped [
 
 	coach continueReview.

@@ -167,14 +167,6 @@ ChessCoachWidgets class >> primaryButton: aString icon: anIconName do: aBlock [
 ]
 
 { #category : 'building' }
-ChessCoachWidgets class >> prose: anAlbumElement [
-	"anAlbumElement (a ToAlbum or ToTextField) for prose: quotes and brackets are typed as is, not closed as in code"
-
-	anAlbumElement editor surroundMap: AlbTextEditorSurroundMap new.
-	^ anAlbumElement
-]
-
-{ #category : 'building' }
 ChessCoachWidgets class >> scrollable: anElement [
 	"anElement in a vertically scrollable area filling its parent, with a scrollbar along its right side"
 

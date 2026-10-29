@@ -206,6 +206,21 @@ CoachElementTest >> testMarkingWithTheKeyboard [
 ]
 
 { #category : 'tests' }
+CoachElementTest >> testRefreshKeepsTheAnswerBeingTyped [
+
+	coach continueReview.
+	scripter pulse.
+	coach answerField text: 'I was looking at'.
+	coach refresh.
+	scripter pulse.
+	self
+		assert: coach answerField text asString
+		equals: 'I was looking at'.
+	self answer: 'The bishop'.
+	self assert: coach answerField isNil
+]
+
+{ #category : 'tests' }
 CoachElementTest >> testReport [
 
 	coach continueReview.

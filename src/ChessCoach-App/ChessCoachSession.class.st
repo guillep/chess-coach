@@ -259,15 +259,30 @@ ChessCoachSession >> finishMarking: aCoachReview of: aGameIndexEntry [
 
 { #category : 'coach' }
 ChessCoachSession >> finishMarking: aCoachReview of: aGameIndexEntry onProgress: aBlock [
-	"End the marking pass: merge my marks with the heuristic moments, and plan the moments that fit the time box if there is one. aBlock receives (plies done, total) while the game is analysed. Answer the sentences explaining heuristics that could not run. Slow when the game is not analysed yet: call it off the UI thread."
+	"See finishMarking:of:onProgress:onStep:"
 
-	| problems analysis |
+	^ self
+		  finishMarking: aCoachReview
+		  of: aGameIndexEntry
+		  onProgress: aBlock
+		  onStep: [ :description |  ]
+]
+
+{ #category : 'coach' }
+ChessCoachSession >> finishMarking: aCoachReview of: aGameIndexEntry onProgress: aBlock onStep: aStepBlock [
+	"End the marking pass: merge my marks with the heuristic moments, and plan the moments that fit the time box if there is one. aBlock receives (plies done, total) while the game is analysed; aStepBlock receives a description of each later step. Answer the sentences explaining heuristics that could not run. Slow when the game is not analysed yet: call it off the UI thread."
+
+	| problems analysis moments |
 	problems := OrderedCollection new.
 	analysis := self analysisFor: aGameIndexEntry onProgress: aBlock.
-	aCoachReview finishMarkingWith: analysis moments: (self
-			 momentsFor: aGameIndexEntry
-			 marks: aCoachReview marks
-			 problems: problems).
+	aStepBlock value: ((explorer notNil or: [ self isLoggedIn ])
+			 ifTrue: [ 'Comparing your opening with the Lichess database…' ]
+			 ifFalse: [ 'Finding the important moments…' ]).
+	moments := self
+		           momentsFor: aGameIndexEntry
+		           marks: aCoachReview marks
+		           problems: problems.
+	aCoachReview finishMarkingWith: analysis moments: moments.
 	aCoachReview planWith: self reviewTimes.
 	^ problems
 ]

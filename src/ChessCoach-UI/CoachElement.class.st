@@ -25,7 +25,9 @@ Class {
 		'walking',
 		'noteField',
 		'addingTag',
-		'replay'
+		'replay',
+		'draft',
+		'draftQuestion'
 	],
 	#category : 'ChessCoach-UI-Coach',
 	#package : 'ChessCoach-UI',
@@ -472,7 +474,7 @@ CoachElement >> buildTagsOf: aMomentReview [
 
 { #category : 'building' }
 CoachElement >> buildTextAnswer [
-	"Quick answers that fit the question; clicking one adds it to the field"
+	"Quick answers that fit the question; clicking one adds it to the field. The field starts with the draft of this question, if any."
 
 	| chips |
 	chips := ToElement new
@@ -485,9 +487,13 @@ CoachElement >> buildTextAnswer [
 					 labelText: each;
 					 clickAction: [ self addQuickAnswer: each ];
 					 yourself) ].
+	draftQuestion == review currentQuestion ifFalse: [
+			draftQuestion := review currentQuestion.
+			draft := '' ].
 	answerField := ToAlbum new
 		               hMatchParent;
 		               height: 100;
+		               text: draft;
 		               yourself.
 	currentZone
 		addChild: chips;
@@ -609,6 +615,7 @@ CoachElement >> describeMoves: someUCIMoves in: aCoachQuestion [
 CoachElement >> doneMarking [
 	"Merge my marks with the heuristic moments (analysing the game if needed, with its progress), then walk through the moments"
 
+	busy ifNotNil: [ ^ self ].
 	self
 		busy: 'Finding the important moments…'
 		while: [
@@ -616,12 +623,11 @@ CoachElement >> doneMarking [
 					finishMarking: review
 					of: entry
 					onProgress: [ :done :total |
-							self inUIDo: [
-									busy ifNotNil: [
-											busy := 'Analysing the game… move {1} of {2}' format: {
-													        (done + 1 // 2).
-													        (total + 1 // 2) }.
-											self updateCurrentZone ] ] ] ]
+							self showBusy:
+								('Analysing the game… move {1} of {2}' format: {
+										 (done + 1 // 2).
+										 (total + 1 // 2) }) ]
+					onStep: [ :description | self showBusy: description ] ]
 		then: [ :problems |
 				self continueReview.
 				problems ifNotEmpty: [
@@ -981,6 +987,16 @@ CoachElement >> session: aChessCoachSession entry: aGameIndexEntry review: aCoac
 	self refresh
 ]
 
+{ #category : 'private' }
+CoachElement >> showBusy: aString [
+	"From a background process: show aString as the progress of the running work"
+
+	self inUIDo: [
+			busy ifNotNil: [
+					busy := aString.
+					self updateCurrentZone ] ]
+]
+
 { #category : 'actions' }
 CoachElement >> showMoment: aMomentReview [
 	"Look at one moment: its history and reveal when reviewed, a button to review it otherwise"
@@ -1079,6 +1095,8 @@ CoachElement >> submitText [
 	| text |
 	text := answerField text asString trimBoth.
 	text ifEmpty: [ ^ self ].
+	answerField text: ''.
+	draftQuestion := nil.
 	review answerText: text.
 	self refresh.
 	self
@@ -1153,7 +1171,9 @@ CoachElement >> updateBoard [
 
 { #category : 'updating' }
 CoachElement >> updateCurrentZone [
+	"Rebuild the panel below the history. The answer being typed is kept as a draft of its question, so that a refresh (a classification finishing, a progress update) doesn't empty the field."
 
+	answerField ifNotNil: [ draft := answerField text asString ].
 	currentZone removeChildren.
 	answerField := nil.
 	noteField := nil.

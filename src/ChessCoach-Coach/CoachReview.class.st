@@ -125,31 +125,35 @@ CoachReview >> asJSON [
 
 { #category : 'private - questions' }
 CoachReview >> askAboutCandidates [
-	"Evaluate my candidates with the engine and ask about good moves I missed, bad candidates and better alternatives. Without Stockfish there is nothing to compare with."
+	"Evaluate my candidates with the engine and ask about good moves I missed, bad candidates and better alternatives. The played move's win % comes from the stored analysis, so the engine only runs for my other candidates. Without Stockfish there is nothing to compare with."
 
-	| moment before played candidates best playedWin questions better |
+	| moment before played others best playedWin questions better |
 	self hasEngine ifFalse: [ ^ self ].
 	moment := self currentMoment.
 	before := analysis atPly: moment ply - 1.
 	played := game uciMoves at: moment ply.
-	candidates := ((moment answerTo: #candidates) moves copyWith: played)
-		              asSet asArray.
-	(engine
-		 analyse: before fen
-		 multiPV: candidates size
-		 depth: depth
-		 searchMoves: candidates) do: [ :line |
-			moment
-				candidate: line firstMove
-				winPercent: (line winPercentFor: moment color) ].
+	others := ((moment answerTo: #candidates) moves reject: [ :each |
+		           each = played ]) asSet asArray.
+	moment
+		candidate: played
+		winPercent:
+		((analysis atPly: moment ply) winPercentFor: moment color).
+	others ifNotEmpty: [
+			(engine
+				 analyse: before fen
+				 multiPV: others size
+				 depth: depth
+				 searchMoves: others) do: [ :line |
+					moment
+						candidate: line firstMove
+						winPercent: (line winPercentFor: moment color) ] ].
 	best := before winPercentFor: moment color.
-	playedWin := moment candidateWinPercents
-		             at: played
-		             ifAbsent: [ best ].
+	playedWin := moment candidateWinPercents at: played.
 	questions := OrderedCollection new.
 	before lines do: [ :line |
 			((line winPercentFor: moment color) >= (best - 10) and: [
-				 (candidates includes: line firstMove) not ]) ifTrue: [
+				 line firstMove ~= played and: [
+					 (others includes: line firstMove) not ] ]) ifTrue: [
 					questions add: (CoachQuestion
 							 kind: #whyNotConsidered
 							 text:

@@ -7,7 +7,8 @@ Class {
 	#instVars : [
 		'tagId',
 		'confidence',
-		'confirmed'
+		'confirmed',
+		'rejected'
 	],
 	#category : 'ChessCoach-Core-Mistakes',
 	#package : 'ChessCoach-Core',
@@ -17,10 +18,14 @@ Class {
 { #category : 'instance creation' }
 MistakeLabel class >> fromDictionary: aDictionary [
 
-	^ self new
-		  setTagId: (aDictionary at: 'tag')
-		  confidence: (aDictionary at: 'confidence')
-		  confirmed: (aDictionary at: 'confirmed')
+	| label |
+	label := self new
+		         setTagId: (aDictionary at: 'tag')
+		         confidence: (aDictionary at: 'confidence')
+		         confirmed: (aDictionary at: 'confirmed').
+	(aDictionary at: 'rejected' ifAbsent: [ false ]) ifTrue: [
+		label reject ].
+	^ label
 ]
 
 { #category : 'instance creation' }
@@ -36,6 +41,7 @@ MistakeLabel >> asDictionary [
 		  at: 'tag' put: tagId;
 		  at: 'confidence' put: confidence;
 		  at: 'confirmed' put: confirmed;
+		  at: 'rejected' put: rejected;
 		  yourself
 ]
 
@@ -47,8 +53,10 @@ MistakeLabel >> confidence [
 
 { #category : 'actions' }
 MistakeLabel >> confirm [
+	"I agree with the tag: it counts as a mistake"
 
-	confirmed := true
+	confirmed := true.
+	rejected := false
 ]
 
 { #category : 'testing' }
@@ -57,12 +65,27 @@ MistakeLabel >> isConfirmed [
 	^ confirmed
 ]
 
+{ #category : 'testing' }
+MistakeLabel >> isRejected [
+
+	^ rejected
+]
+
+{ #category : 'actions' }
+MistakeLabel >> reject [
+	"I disagree with the proposed tag: it stays visible but doesn't count"
+
+	confirmed := false.
+	rejected := true
+]
+
 { #category : 'initialization' }
 MistakeLabel >> setTagId: anId confidence: aNumber confirmed: aBoolean [
 
 	tagId := anId.
 	confidence := aNumber.
-	confirmed := aBoolean
+	confirmed := aBoolean.
+	rejected := false
 ]
 
 { #category : 'accessing' }

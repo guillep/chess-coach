@@ -81,13 +81,16 @@ CoachReview >> answerMoves: someUCIMoves [
 
 { #category : 'answering' }
 CoachReview >> answerText: aString [
-	"Answer a written question at once; classifyPending tags it later"
+	"Answer a written question at once; classifyPending tags it later. Answers about a found only move are not classified: there is no mistake."
 
-	| question |
+	| question answer |
 	question := self currentQuestion.
 	self assert: question expectsMoves not.
-	self currentMoment answer:
-		((CoachAnswer question: question text: aString)
+	answer := self currentMoment isSuccess
+		          ifTrue: [
+		          CoachAnswer question: question text: aString labels: #(  ) ]
+		          ifFalse: [ CoachAnswer question: question text: aString ].
+	self currentMoment answer: (answer
 			 seconds: self takeAnswerSeconds;
 			 yourself).
 	self changed
@@ -380,6 +383,7 @@ CoachReview >> marks [
 
 { #category : 'mistakes' }
 CoachReview >> mistakeRecordFor: aMomentReview [
+	"Rejected tags are left out"
 
 	| before after explanation move |
 	before := analysis atPly: aMomentReview ply - 1.
@@ -399,7 +403,7 @@ CoachReview >> mistakeRecordFor: aMomentReview [
 		  winDrop: ((before winPercentFor: aMomentReview color)
 			   - (after winPercentFor: aMomentReview color) max: 0);
 		  explanation: explanation;
-		  labels: aMomentReview labels asArray;
+		  labels: aMomentReview countedLabels asArray;
 		  clock: (move timestamp ifNotNil: [ :duration |
 					   duration asMilliSeconds / 1000.0 ]);
 		  yourself
@@ -690,6 +694,13 @@ CoachReview >> timeBox [
 CoachReview >> timeBox: minutes [
 
 	timeBox := minutes
+]
+
+{ #category : 'labels' }
+CoachReview >> toggleTag: aTagId of: aMomentReview [
+
+	aMomentReview toggleTag: aTagId.
+	self changed
 ]
 
 { #category : 'timing' }

@@ -68,7 +68,11 @@ CoachElementTest >> testAWholeMoment [
 	coach continueReview.
 	scripter pulse.
 	self assert: review currentQuestion kind equals: #whatDidYouSee.
+	self assert: (self zoneTexts includes: 'I calculated the line').
 	self answer: 'The bishop'.
+	self assert:
+		(self zoneTexts includes: 'Well found: no mistake to tag.').
+	self assert: review moments first labels isEmpty.
 	coach nextMoment.
 	scripter pulse.
 	self assert: (coach header text asString includesSubstring:
@@ -89,6 +93,13 @@ CoachElementTest >> testAWholeMoment [
 	coach submitMoves.
 	scripter pulse.
 	self assert: (self zoneTexts includes: 'Why did you play Ng5?').
+	self assert: (self zoneTexts includes: 'It looked natural').
+	self deny: (self zoneTexts includes: 'I didn''t see it').
+	coach addQuickAnswer: 'It looked natural'.
+	coach addQuickAnswer: 'Intuition'.
+	self
+		assert: coach answerField text asString
+		equals: 'It looked natural. Intuition'.
 	self answer: 'I wanted to attack f7'.
 	self assert: (coach history children anySatisfy: [ :each |
 			 each text asString = '→ I wanted to attack f7' ]).
@@ -99,19 +110,25 @@ CoachElementTest >> testAWholeMoment [
 	scripter pulse.
 	self assert:
 		(self zoneTexts includes: 'You didn''t consider d4. Why?').
+	self assert: (self zoneTexts includes: 'I didn''t see it').
 	self
 		assert: (self arrowsOfStyle: #subject) asArray
 		equals: #( 'd2d4' ).
 	3 timesRepeat: [ self answer: 'I did not see it' ].
 	self assert: review currentMoment isRevealed.
-	self assert: (self zoneTexts includes: 'Engine line: d4').
-	self assert:
-		(self zoneTexts includes: 'missed-opponent-threat (70%)').
+	self assert: (self zoneTexts includes: 'Engine line (+0.50): d4').
+	self assert: (self zoneTexts includes:
+			 '[x] Missed opponent threat · perception (70%)').
 	self
 		assert: (self arrowsOfStyle: #engine) asArray
 		equals: #( 'd2d4' ).
-	coach confirmTag: 'missed-opponent-threat'.
-	self assert: (self zoneTexts includes: '✓ missed-opponent-threat').
+	coach toggleTag: 'missed-opponent-threat'.
+	self assert: (self zoneTexts includes:
+			 '[ ] Missed opponent threat · perception (70%)').
+	self assert: review mistakeRecords first labels isEmpty.
+	coach toggleTag: 'missed-opponent-threat'.
+	self assert:
+		(self zoneTexts includes: '[x] Missed opponent threat · perception').
 	coach nextMoment.
 	scripter pulse.
 	self assert: coach mode equals: #summary.

@@ -38,6 +38,13 @@ MistakeTag >> id [
 	^ id
 ]
 
+{ #category : 'accessing' }
+MistakeTag >> name [
+	"A readable name: 'line-too-short' is 'Line too short'"
+
+	^ (id copyReplaceAll: '-' with: ' ') capitalized
+]
+
 { #category : 'printing' }
 MistakeTag >> printOn: aStream [
 

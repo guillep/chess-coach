@@ -23,7 +23,8 @@ Class {
 		'shownPly',
 		'shownMoment',
 		'walking',
-		'noteField'
+		'noteField',
+		'addingTag'
 	],
 	#category : 'ChessCoach-UI-Coach',
 	#package : 'ChessCoach-UI',
@@ -38,6 +39,17 @@ CoachElement class >> session: aChessCoachSession entry: aGameIndexEntry review:
 		  entry: aGameIndexEntry
 		  review: aCoachReview;
 		  yourself
+]
+
+{ #category : 'actions' }
+CoachElement >> addQuickAnswer: aString [
+	"Append aString to what is already written"
+
+	| text |
+	text := answerField text asString trimBoth.
+	answerField text: (text isEmpty
+			 ifTrue: [ aString ]
+			 ifFalse: [ text , '. ' , aString ])
 ]
 
 { #category : 'accessing' }
@@ -176,27 +188,38 @@ CoachElement >> buildMoment [
 	question expectsMoves
 		ifTrue: [ self buildBoardAnswer ]
 		ifFalse: [ self buildTextAnswer ].
-	message ifNotNil: [ currentZone addChild: (ToLabel text: message) ].
-	currentZone addChild: (self button: 'Stop' do: [ self stop ])
+	message ifNotNil: [ currentZone addChild: (self paragraph: message) ].
+	currentZone addChild: (self row: {
+				 (self button: 'Stop' do: [ self stop ]).
+				 (self button: 'Pause' do: [ self pause ]) })
 ]
 
 { #category : 'building' }
 CoachElement >> buildReveal [
 
-	| reveal before after |
+	| reveal before after line |
 	reveal := review revealOf: shownMoment.
 	before := self positionBefore: shownMoment.
 	after := game positionAfterPly: shownMoment ply.
-	currentZone addChild:
-		(self paragraph: ('Win chance: {1}% → {2}%' format: {
-					  ((reveal at: 'winBefore') printShowingDecimalPlaces: 0).
-					  ((reveal at: 'winAfter') printShowingDecimalPlaces: 0) })).
+	line := (review analysis atPly: shownMoment ply - 1) bestLine.
+	currentZone addChild: ((self paragraph:
+				  ('Win chance: {1}% before your move, {2}% after it' format: {
+							   ((reveal at: 'winBefore') printShowingDecimalPlaces: 0).
+							   ((reveal at: 'winAfter') printShowingDecimalPlaces: 0) }))
+			 tooltipString:
+				 'Your chance of winning, from the engine evaluation (Lichess formula: +1.00 is about 59%, +3.00 about 75%). It shows how much a move changes the game better than pawns do.';
+			 yourself).
+	(reveal at: 'candidates') ifNotEmpty: [
+			currentZone addChild:
+				(self paragraph: 'Your candidates (win chance after each):') ].
 	(reveal at: 'candidates') keysAndValuesDo: [ :move :win |
 			currentZone addChild: (self paragraph: ('  {1}: {2}%' format: {
 							  (before sanForUCI: move).
 							  (win printShowingDecimalPlaces: 0) })) ].
-	currentZone addChild: (self paragraph: 'Engine line: '
-			 , (self lineInSAN: (reveal at: 'bestLine') from: before)).
+	currentZone addChild:
+		(self paragraph: ('Engine line ({1}): {2}' format: {
+					  line scoreString.
+					  (self lineInSAN: (reveal at: 'bestLine') from: before) })).
 	(reveal at: 'engineReply') ifNotNil: [ :reply |
 			currentZone addChild: (self paragraph:
 					 ('Engine''s reply: {1} · you expected: {2}' format: {
@@ -215,7 +238,8 @@ CoachElement >> buildReveal [
 				  ifTrue: [
 						  {
 							  (self button: 'Next moment' do: [ self nextMoment ]).
-							  (self button: 'Stop' do: [ self stop ]) } ]
+							  (self button: 'Stop' do: [ self stop ]).
+							  (self button: 'Pause' do: [ self pause ]) } ]
 				  ifFalse: [
 				  { (self button: 'Back to list' do: [ self backToList ]) } ]))
 ]
@@ -244,34 +268,74 @@ CoachElement >> buildSummary [
 ]
 
 { #category : 'building' }
-CoachElement >> buildTagsOf: aMomentReview [
+CoachElement >> buildTagPickerFor: aMomentReview [
+	"Every tag not proposed yet, by category, with its description as tooltip"
 
-	currentZone addChild: (self paragraph: 'Tags:').
+	| taxonomy proposed |
+	taxonomy := MistakeTaxonomy default.
+	proposed := aMomentReview labels collect: [ :each | each tagId ].
+	(taxonomy tags collect: [ :each | each category ]) asSet asArray sort
+		do: [ :category |
+				currentZone addChild: (self paragraph: category capitalized , ':').
+				currentZone addChild: (self row: ((taxonomy tags select: [ :tag |
+							   tag category = category and: [
+								   (proposed includes: tag id) not ] ]) collect: [ :tag |
+								  (self button: tag name do: [
+											   addingTag := false.
+											   self toggleTag: tag id ])
+									  tooltipString: tag description;
+									  yourself ])) ].
+	currentZone addChild: (self button: 'Cancel' do: [
+				 addingTag := false.
+				 self refresh ])
+]
+
+{ #category : 'building' }
+CoachElement >> buildTagsOf: aMomentReview [
+	"Each proposed tag is a toggle: [x] counts as a mistake, [ ] doesn't. The tag's description is its tooltip. When time trouble counts, it is shown as the main cause."
+
+	| taxonomy labels |
+	aMomentReview isSuccess ifTrue: [
+			^ currentZone addChild:
+				  (self paragraph: 'Well found: no mistake to tag.') ].
+	taxonomy := MistakeTaxonomy default.
+	currentZone addChild: (self paragraph:
+			 'Tags: [x] counts as a mistake, [ ] doesn''t. Click to change; hover for help.').
 	aMomentReview isClassifying ifTrue: [
 		currentZone addChild: (self paragraph: '  classifying…') ].
-	aMomentReview labels do: [ :label |
-			currentZone addChild: (ToElement new
-					 layout: (BlLinearLayout horizontal cellSpacing: 6);
-					 hMatchParent;
-					 vFitContent;
-					 addChild: (ToLabel text: (label isConfirmed
-									   ifTrue: [ '✓ ' , label tagId ]
-									   ifFalse: [
-											   label tagId , ' ('
-											   , (label confidence * 100) rounded printString , '%)' ]));
-					 addChild: (ToButton new
-							  labelText: 'Confirm';
-							  clickAction: [ self confirmTag: label tagId ];
-							  yourself);
-					 addChild: (ToButton new
-							  labelText: 'Drop';
-							  clickAction: [ self dropTag: label tagId ];
-							  yourself);
-					 yourself) ]
+	labels := aMomentReview labels asArray sort: [ :a :b |
+			          a tagId = 'clock-management' or: [
+				          b tagId ~= 'clock-management' and: [
+					          a confidence >= b confidence ] ] ].
+	(aMomentReview countedLabels anySatisfy: [ :each |
+		 each tagId = 'clock-management' ]) ifTrue: [
+			currentZone addChild: (self paragraph:
+					 'Time trouble looks like the main cause; the other tags may matter less.') ].
+	labels do: [ :label |
+			| tag |
+			tag := taxonomy tagAt: label tagId.
+			currentZone addChild: ((self
+					  button: (label isRejected
+							   ifTrue: [ '[ ] ' ]
+							   ifFalse: [ '[x] ' ]) , tag name , ' · ' , tag category
+						  , (label isConfirmed
+								   ifTrue: [ '' ]
+								   ifFalse: [
+									   ' (' , (label confidence * 100) rounded printString , '%)' ])
+					  do: [ self toggleTag: label tagId ])
+					 tooltipString: tag description;
+					 yourself) ].
+	addingTag == true
+		ifTrue: [ self buildTagPickerFor: aMomentReview ]
+		ifFalse: [
+				currentZone addChild: (self button: 'Add a tag' do: [
+							 addingTag := true.
+							 self refresh ]) ]
 ]
 
 { #category : 'building' }
 CoachElement >> buildTextAnswer [
+	"Quick answers that fit the question; clicking one adds it to the field"
 
 	| chips |
 	chips := ToElement new
@@ -279,10 +343,10 @@ CoachElement >> buildTextAnswer [
 		         hMatchParent;
 		         vFitContent;
 		         yourself.
-	self quickAnswers do: [ :each |
+	(self quickAnswersFor: review currentQuestion) do: [ :each |
 			chips addChild: (ToButton new
 					 labelText: each;
-					 clickAction: [ answerField text: each ];
+					 clickAction: [ self addQuickAnswer: each ];
 					 yourself) ].
 	answerField := ToAlbum new
 		               hMatchParent;
@@ -343,13 +407,6 @@ CoachElement >> button: aString do: aBlock [
 		  labelText: aString;
 		  clickAction: aBlock;
 		  yourself
-]
-
-{ #category : 'actions' }
-CoachElement >> confirmTag: aTagId [
-
-	review confirmTag: aTagId of: shownMoment.
-	self refresh
 ]
 
 { #category : 'actions' }
@@ -422,13 +479,6 @@ CoachElement >> doneMarking [
 				problems ifNotEmpty: [
 						message := ' ' join: problems.
 						self refresh ] ]
-]
-
-{ #category : 'actions' }
-CoachElement >> dropTag: aTagId [
-
-	review dropTag: aTagId of: shownMoment.
-	self refresh
 ]
 
 { #category : 'private' }
@@ -632,6 +682,15 @@ CoachElement >> paragraph: aString [
 		  yourself
 ]
 
+{ #category : 'actions' }
+CoachElement >> pause [
+	"Close the review; everything is saved, and it continues from the list next time"
+
+	walking := false.
+	review leaveMoment.
+	exitBlock value
+]
+
 { #category : 'private' }
 CoachElement >> playedMove [
 
@@ -645,10 +704,23 @@ CoachElement >> positionBefore: aMomentReview [
 ]
 
 { #category : 'private' }
-CoachElement >> quickAnswers [
+CoachElement >> quickAnswersFor: aCoachQuestion [
+	"Answers that fit the question: why I played a move, why I missed another, or what I saw"
 
-	^ #( 'I didn''t see it' 'I saw it but miscalculated'
-	     'No time' 'Intuition' )
+	| kind |
+	kind := aCoachQuestion kind.
+	kind = #whyNotConsidered ifTrue: [
+			^ #( 'I didn''t see it' 'I saw it but thought it was worse'
+			     'I saw it but miscalculated it'
+			     'No time' ) ].
+	kind = #whyBadCandidate ifTrue: [
+			^ #( 'I miscalculated it' 'I missed the reply' 'I didn''t check it'
+			     'No time' ) ].
+	kind = #whatDidYouSee ifTrue: [
+			^ #( 'I calculated the line' 'It was the only move that didn''t lose'
+			     'Intuition' ) ].
+	^ #( 'It looked natural' 'I calculated it and it looked good'
+	     'Intuition' 'No time' )
 ]
 
 { #category : 'updating' }
@@ -814,6 +886,13 @@ CoachElement >> submitText [
 	self
 		runInBackground: [ review classifyPending ]
 		then: [ self refresh ]
+]
+
+{ #category : 'actions' }
+CoachElement >> toggleTag: aTagId [
+
+	review toggleTag: aTagId of: shownMoment.
+	self refresh
 ]
 
 { #category : 'actions' }

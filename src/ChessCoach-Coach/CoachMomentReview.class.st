@@ -142,6 +142,13 @@ CoachMomentReview >> confirmTag: aTagId [
 		confirm
 ]
 
+{ #category : 'labels' }
+CoachMomentReview >> countedLabels [
+	"The tags that count as my mistakes: proposed or confirmed, not rejected"
+
+	^ labels reject: [ :each | each isRejected ]
+]
+
 { #category : 'dialogue' }
 CoachMomentReview >> currentQuestion [
 
@@ -186,6 +193,14 @@ CoachMomentReview >> isStarted [
 	"Whether the coach has asked anything about this moment yet"
 
 	^ answers notEmpty or: [ pending notEmpty ]
+]
+
+{ #category : 'testing' }
+CoachMomentReview >> isSuccess [
+	"A found only move and nothing else: there is no mistake to tag"
+
+	^ kinds notEmpty and: [
+		  kinds allSatisfy: [ :each | each = #onlyMoveFound ] ]
 ]
 
 { #category : 'accessing' }
@@ -288,6 +303,18 @@ CoachMomentReview >> setPly: aPly color: aColor kinds: someKinds [
 	score := 0.
 	winDrop := 0.
 	seconds := 0
+]
+
+{ #category : 'labels' }
+CoachMomentReview >> toggleTag: aTagId [
+	"A counted tag stops counting; a rejected one, or one not proposed, counts and is confirmed"
+
+	(labels detect: [ :each | each tagId = aTagId ] ifNone: [ nil ])
+		ifNil: [ self confirmTag: aTagId ]
+		ifNotNil: [ :label |
+				label isRejected
+					ifTrue: [ label confirm ]
+					ifFalse: [ label reject ] ]
 ]
 
 { #category : 'accessing' }

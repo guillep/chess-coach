@@ -613,6 +613,21 @@ ChessCoachAppElementTest >> testTheGameListScrollbarIsBesideTheRows [
 ]
 
 { #category : 'tests' }
+ChessCoachAppElementTest >> testTheGameTableKeepsItsColumnsWhenFirstShownFromAnotherPage [
+	"The app opens on Stats when there are reviewed mistakes: the table is first laid out in a hidden tab"
+
+	| statsApp statsScripter lefts |
+	statsApp := ChessCoachAppElement session: session.
+	statsApp showPage: #Stats.
+	statsScripter := self scripterOn: statsApp.
+	statsApp showPage: #Games.
+	4 timesRepeat: [ statsScripter pulse ].
+	lefts := statsApp gameTable header cellContainers collect: [ :each |
+		         each bounds inSpace left ].
+	self assert: lefts asSet size equals: lefts size
+]
+
+{ #category : 'tests' }
 ChessCoachAppElementTest >> testUnexpectedErrorIsShownAndLogged [
 
 	self click: app loginButton.

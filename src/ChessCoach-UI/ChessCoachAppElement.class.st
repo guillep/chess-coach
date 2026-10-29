@@ -372,7 +372,8 @@ ChessCoachAppElement >> newDashboard [
 
 { #category : 'initialization' }
 ChessCoachAppElement >> newGameTable [
-	"A Toplo table of the games: one column per field, sorted by clicking the arrow in its header, and a coach icon on reviewed games"
+	"A Toplo table of the games: one column per field, sorted by clicking the arrow in its header, and a coach icon on reviewed games.
+	After each header layout, column widths lost while the page was hidden are restored, in a task so the layout isn't changed while it runs (see restoreGameColumnWidths)"
 
 	gameTable := ToTableElement new
 		             useScrollbar: true;
@@ -418,6 +419,11 @@ ChessCoachAppElement >> newGameTable [
 												  tooltipText: 'Reviewed with the coach';
 												  yourself) ] ];
 				 yourself) }.
+	gameTable header
+		addEventHandlerOn: BlElementLayoutComputedEvent
+		do: [ :event |
+				gameTable enqueueTask:
+					(BlTaskAction new action: [ self restoreGameColumnWidths ]) ].
 	gameList := gameTable list.
 	gameList
 		addEventHandlerOn: ToListPrimarySelectionChangedEvent
@@ -736,6 +742,21 @@ ChessCoachAppElement >> playThrough: aGameIndexEntry [
 ChessCoachAppElement >> refreshButton [
 
 	^ refreshButton
+]
+
+{ #category : 'private' }
+ChessCoachAppElement >> restoreGameColumnWidths [
+	"Workaround: a Toplo table laid out in a hidden tab records 0 as its column widths (upstream/toplo-table-in-hidden-tab-repro.st). Once the table is shown, give each header cell its column's width again and let the rows follow"
+
+	| containers |
+	gameTable width > 0 ifFalse: [ ^ self ].
+	containers := gameTable header cellContainers.
+	(containers anySatisfy: [ :each | each width = 0 ]) ifFalse: [
+		^ self ].
+	containers
+		with: gameTable columns
+		do: [ :container :column | container updateWidthWith: column width ].
+	gameTable list recordCellsWidth
 ]
 
 { #category : 'private' }

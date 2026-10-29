@@ -403,9 +403,9 @@ ChessCoachSessionTest >> testReviewedGameIds [
 ChessCoachSessionTest >> testShutDownStopsTheScheduledChecks [
 
 	session startScheduledChecks.
+	self assert: session scheduler isRunning.
 	session shutDown.
-	self deny: (Process allInstances anySatisfy: [ :each |
-			 each name = 'Chess Coach scheduler' and: [ each isTerminated not ] ])
+	self deny: session scheduler isRunning
 ]
 
 { #category : 'tests' }

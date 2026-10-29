@@ -434,13 +434,9 @@ ChessCoachAppElement >> newGameTable [
 
 { #category : 'initialization' }
 ChessCoachAppElement >> newGamesPage [
-	"A title, a bar with the speed filters, the Not reviewed filter, Refresh and Load more; below it the game table and the selected game"
+	"A bar with the speed filters, the Not reviewed filter, Refresh and Load more; below it the game table and the selected game"
 
-	| title bar body |
-	title := ChessCoachWidgets
-		         pageTitle: 'Games'
-		         subtitle:
-		         'Your downloaded games. Pick one to see it, or start a new analysis with the coach.'.
+	| bar body |
 	notReviewedButton := ToToggleButton new
 		                     labelText: 'Not reviewed';
 		                     tooltipString:
@@ -483,10 +479,16 @@ ChessCoachAppElement >> newGamesPage [
 		        addChild: analysisPane;
 		        yourself.
 	self showDefaultPane.
-	^ ChessCoachWidgets page: {
-			  title.
-			  bar.
-			  body }
+	^ ChessCoachWidgets
+		  page: 'Games'
+		  subtitle:
+		  'Your downloaded games. Pick one to see it, or start a new analysis with the coach.'
+		  body: (ToElement new
+				   layout: BlLinearLayout vertical;
+				   matchParent;
+				   addChild: bar;
+				   addChild: body;
+				   yourself)
 ]
 
 { #category : 'initialization' }

@@ -88,6 +88,15 @@ ChessCoachWidgets class >> page: someElements [
 ]
 
 { #category : 'building' }
+ChessCoachWidgets class >> page: aTitle subtitle: aSubtitle body: anElement [
+	"Every page: the same margins, its title on top (it doesn't scroll) and anElement filling the rest"
+
+	^ self page: {
+			  (self pageTitle: aTitle subtitle: aSubtitle).
+			  anElement }
+]
+
+{ #category : 'building' }
 ChessCoachWidgets class >> pageTitle: aTitle subtitle: aSubtitle [
 	"The title on top of a page, in a larger font, with one line of context"
 

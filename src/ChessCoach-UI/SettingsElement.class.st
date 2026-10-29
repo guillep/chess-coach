@@ -61,13 +61,9 @@ SettingsElement >> build [
 		           layout: (BlLinearLayout vertical cellSpacing: 12);
 		           hMatchParent;
 		           vFitContent;
-		           padding: (BlInsets all: 16);
+		           padding: (BlInsets right: 16);
 		           yourself.
 	content
-		addChild: (widgets
-				 pageTitle: 'Settings'
-				 subtitle:
-					 'Accounts, the board, the engine and the coach model. Every change is saved at once.');
 		addChild: (ToButton new
 				 labelText: 'Run setup again';
 				 clickAction: [ setupBlock value ];
@@ -138,7 +134,11 @@ SettingsElement >> build [
 							               beMultiLine;
 							               hMatchParent;
 							               yourself) }).
-	self addChild: (widgets scrollable: content).
+	self addChild: (widgets
+			 page: 'Settings'
+			 subtitle:
+			 'Accounts, the board, the engine and the coach model. Every change is saved at once.'
+			 body: (widgets scrollable: content)).
 	self updateAccounts.
 	self updateNumbers.
 	self updateAppTheme.

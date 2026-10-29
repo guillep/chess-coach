@@ -124,6 +124,26 @@ ChessCoachAppElementTest >> testCoachAndPlayThroughOpenInClosableTabs [
 ]
 
 { #category : 'tests' }
+ChessCoachAppElementTest >> testEveryPageTitleIsAtTheSamePlace [
+	"The page titles, not the tab labels with the same text (those sit lower, under their icons)"
+
+	| places |
+	places := #( #Stats #Games #Settings ) collect: [ :page |
+			          | title |
+			          app showPage: page.
+			          scripter pulse.
+			          scripter pulse.
+			          app space root allChildrenBreadthFirstDo: [ :each |
+					          ((each isKindOf: ToLabel) and: [
+							           each text asString = page asString and: [
+								           each isAttachedToSceneGraph and: [
+									           each bounds inSpace top < 40 ] ] ]) ifTrue: [
+						          title := each ] ].
+			          title bounds inSpace topLeft ].
+	self assert: places asSet size = 1 description: places printString
+]
+
+{ #category : 'tests' }
 ChessCoachAppElementTest >> testGamesListedWhileOnStatsShowLater [
 	"As at startup with reviews: the list is filled while the app is on Stats, then the Games page is opened"
 

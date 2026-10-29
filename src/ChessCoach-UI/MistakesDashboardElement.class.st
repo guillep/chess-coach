@@ -227,11 +227,15 @@ MistakesDashboardElement >> initialize [
 		        layout: (BlLinearLayout vertical cellSpacing: 10);
 		        hMatchParent;
 		        vFitContent;
-		        padding: (BlInsets all: 16);
+		        padding: (BlInsets right: 16);
 		        addChild: content;
 		        addChild: detail;
 		        yourself.
-	self addChild: (ChessCoachWidgets scrollable: page).
+	self addChild: (ChessCoachWidgets
+			 page: 'Stats'
+			 subtitle:
+			 'Your typical mistakes and how long your reviews take, from every review with the coach.'
+			 body: (ChessCoachWidgets scrollable: page)).
 	self rebuild
 ]
 
@@ -240,10 +244,6 @@ MistakesDashboardElement >> rebuild [
 
 	content removeChildren.
 	detail removeChildren.
-	content addChild: (ChessCoachWidgets
-			 pageTitle: 'Stats'
-			 subtitle:
-			 'Your typical mistakes and how long your reviews take, from every review with the coach.').
 	content addChild: (ChessCoachWidgets
 			 speedBar: speed
 			 do: [ :each | self chooseSpeed: each ]).

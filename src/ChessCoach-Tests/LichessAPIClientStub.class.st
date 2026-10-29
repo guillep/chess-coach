@@ -99,3 +99,9 @@ LichessAPIClientStub >> newSessionOn: aFileReference [
 			   apiClient: self
 			   directory: aFileReference)
 ]
+
+{ #category : 'fetching' }
+LichessAPIClientStub >> playerExists: aUsername [
+
+	^ #( 'tester' 'alice' ) includes: aUsername asLowercase
+]

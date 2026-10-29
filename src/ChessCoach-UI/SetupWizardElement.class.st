@@ -182,7 +182,7 @@ SetupWizardElement >> showStep [
 				buildSection: #accounts
 				title: 'Your accounts'
 				text:
-				'Set at least one account to download your games. Chess.com only needs your username; Lichess opens a browser to log in.' ].
+				'Set your Lichess and/or Chess.com username to download your games; both sites publish them. Logging in to Lichess is optional: it adds opening statistics.' ].
 	kind = #stockfish ifTrue: [
 			self
 				buildSection: #stockfish

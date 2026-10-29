@@ -66,6 +66,23 @@ ChessCoachAppElementTest >> testLichessErrorIsShownInline [
 ]
 
 { #category : 'tests' }
+ChessCoachAppElementTest >> testLichessUsernameInSettings [
+
+	| settings |
+	app showPage: #Settings.
+	scripter pulse.
+	settings := app settingsElement.
+	self deny: app loadMoreButton isEnabled.
+	settings lichessField text: 'alice'.
+	settings validateLichess.
+	scripter pulse.
+	self assert: session username equals: 'alice'.
+	self deny: session isLoggedIn.
+	self assert: (settings texts includes: 'OK: alice').
+	self assert: app loadMoreButton isEnabled
+]
+
+{ #category : 'tests' }
 ChessCoachAppElementTest >> testLoadMoreAddsRows [
 
 	self click: app loginButton.

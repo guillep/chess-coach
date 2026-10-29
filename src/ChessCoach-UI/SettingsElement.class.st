@@ -21,7 +21,9 @@ Class {
 		'modelsZone',
 		'llmStatus',
 		'multiPVNote',
-		'setupBlock'
+		'setupBlock',
+		'lichessField',
+		'lichessUserStatus'
 	],
 	#category : 'ChessCoach-UI-App',
 	#package : 'ChessCoach-UI',
@@ -153,6 +155,14 @@ SettingsElement >> forgetChessCom [
 	chessComStatus text: ''
 ]
 
+{ #category : 'actions' }
+SettingsElement >> forgetLichess [
+
+	session lichessUsername: nil.
+	lichessField text: ''.
+	lichessUserStatus text: ''
+]
+
 { #category : 'building' }
 SettingsElement >> heading: aString [
 
@@ -193,9 +203,20 @@ SettingsElement >> initialize [
 	self matchParent
 ]
 
+{ #category : 'accessing' }
+SettingsElement >> lichessField [
+
+	^ lichessField
+]
+
 { #category : 'building' }
 SettingsElement >> lichessRow [
+	"The username is enough to download games; logging in is optional and only enables the opening statistics"
 
+	lichessField := ToTextField new
+		                width: 180;
+		                yourself.
+	lichessUserStatus := ToLabel new.
 	lichessStatus := ToLabel new.
 	loginButton := ToButton new
 		               labelText: 'Login';
@@ -206,11 +227,29 @@ SettingsElement >> lichessRow [
 		                clickAction: [ session cancelLogin ];
 		                visibility: BlVisibility gone;
 		                yourself.
-	^ self row: {
-			  (ToLabel text: 'Lichess:').
-			  lichessStatus.
-			  loginButton.
-			  cancelButton }
+	^ ToElement new
+		  layout: (BlLinearLayout vertical cellSpacing: 6);
+		  hMatchParent;
+		  vFitContent;
+		  addChild: (self row: {
+						   (ToLabel text: 'Lichess user:').
+						   lichessField.
+						   (ToButton new
+							    labelText: 'Validate';
+							    clickAction: [ self validateLichess ];
+							    yourself).
+						   (ToButton new
+							    labelText: 'Forget';
+							    clickAction: [ self forgetLichess ];
+							    yourself).
+						   lichessUserStatus });
+		  addChild: (self row: {
+					   (ToLabel text:
+						    'Lichess login (optional, for opening statistics):').
+					   lichessStatus.
+					   loginButton.
+					   cancelButton });
+		  yourself
 ]
 
 { #category : 'actions' }
@@ -489,11 +528,15 @@ SettingsElement >> updateAccounts [
 	| loggedIn |
 	loggedIn := session isLoggedIn.
 	lichessStatus text: (loggedIn
-			 ifTrue: [ 'connected as ' , (session username ifNil: [ '?' ]) ]
+			 ifTrue: [ 'connected' ]
 			 ifFalse: [ 'not connected' ]).
 	loginButton labelText: (loggedIn
 			 ifTrue: [ 'Logout' ]
 			 ifFalse: [ 'Login' ]).
+	session username ifNotNil: [ :name |
+			lichessField text asString isEmpty ifTrue: [
+				lichessField text: name ].
+			lichessUserStatus text: 'OK: ' , name ].
 	session chessComUsername ifNotNil: [ :name |
 			chessComField text asString isEmpty ifTrue: [
 				chessComField text: name ].
@@ -559,6 +602,22 @@ SettingsElement >> validateChessCom [
 						 ifTrue: [ 'OK: ' , name ]
 						 ifFalse: [ 'Not found: no such Chess.com player' ]) ]
 		showingErrorsIn: chessComStatus
+]
+
+{ #category : 'actions' }
+SettingsElement >> validateLichess [
+
+	| name |
+	name := lichessField text asString trimBoth.
+	name ifEmpty: [ ^ self ].
+	lichessUserStatus text: 'checking…'.
+	self
+		inBackground: [ session validateLichessUsername: name ]
+		then: [ :exists |
+				lichessUserStatus text: (exists
+						 ifTrue: [ 'OK: ' , name ]
+						 ifFalse: [ 'Not found: no such Lichess player' ]) ]
+		showingErrorsIn: lichessUserStatus
 ]
 
 { #category : 'accessing' }

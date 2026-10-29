@@ -127,9 +127,9 @@ ChessCoachSession >> announcer [
 
 { #category : 'games' }
 ChessCoachSession >> canImport [
-	"Whether some site is set up to download games from"
+	"Whether some site is set up to download games from: a Lichess or Chess.com username"
 
-	^ self isLoggedIn or: [ self chessComUsername notNil ]
+	^ self username notNil or: [ self chessComUsername notNil ]
 ]
 
 { #category : 'coach' }
@@ -313,11 +313,19 @@ ChessCoachSession >> isLoggedIn [
 	^ importer isLoggedIn
 ]
 
+{ #category : 'accessing' }
+ChessCoachSession >> lichessUsername: aStringOrNil [
+	"Lichess games are public, so a username is enough to download them; nil forgets it"
+
+	importer username: aStringOrNil.
+	self announceChanged
+]
+
 { #category : 'games' }
 ChessCoachSession >> loadMoreGames [
-	"Download older games, as many per site as the settings say: from Lichess when logged in, from Chess.com when its username is set"
+	"Download older games, as many per site as the settings say, from every site with a username"
 
-	self isLoggedIn ifTrue: [
+	self username ifNotNil: [
 			importer
 				pageSize: self settings gamesPerLoad;
 				importOlderGames ].
@@ -539,9 +547,9 @@ ChessCoachSession >> rebuiltMistakeDatabase [
 
 { #category : 'games' }
 ChessCoachSession >> refresh [
-	"Download games newer than the newest stored one, from every site set up"
+	"Download games newer than the newest stored one, from every site with a username"
 
-	self isLoggedIn ifTrue: [ importer importNewerGames ].
+	self username ifNotNil: [ importer importNewerGames ].
 	self chessComUsername ifNotNil: [
 		self chessComImporter importNewerGames ].
 	self announceChanged
@@ -646,6 +654,16 @@ ChessCoachSession >> validateChessComUsername: aString [
 	(self chessComImporter apiClient playerExists: aString trimBoth)
 		ifFalse: [ ^ false ].
 	self chessComUsername: aString trimBoth.
+	^ true
+]
+
+{ #category : 'accessing' }
+ChessCoachSession >> validateLichessUsername: aString [
+	"Remember aString as my Lichess username if Lichess knows it; answer whether it does"
+
+	(importer apiClient playerExists: aString trimBoth) ifFalse: [
+		^ false ].
+	self lichessUsername: aString trimBoth.
 	^ true
 ]
 

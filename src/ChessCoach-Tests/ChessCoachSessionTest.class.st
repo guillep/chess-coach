@@ -77,6 +77,22 @@ ChessCoachSessionTest >> testLichessErrorReachesCaller [
 ]
 
 { #category : 'tests' }
+ChessCoachSessionTest >> testLichessUsernameIsEnoughToLoadGames [
+
+	self deny: session canImport.
+	self deny: (session validateLichessUsername: 'nobody').
+	self assert: session username isNil.
+	self assert: (session validateLichessUsername: 'alice').
+	self deny: session isLoggedIn.
+	self assert: session canImport.
+	session loadMoreGames.
+	self assert: session games size equals: 20.
+	session lichessUsername: nil.
+	self deny: session canImport.
+	self assert: session games size equals: 20
+]
+
+{ #category : 'tests' }
 ChessCoachSessionTest >> testLoadMoreGamesPagesBackwards [
 
 	session login.
@@ -92,13 +108,15 @@ ChessCoachSessionTest >> testLoadMoreGamesPagesBackwards [
 
 { #category : 'tests' }
 ChessCoachSessionTest >> testLoginRecordsUsernameInTokenFile [
+	"Logging out keeps the username: it is enough to download games"
 
 	self assert: session username isNil.
 	session login.
 	self assert: session username equals: 'tester'.
 	self assert: self newSession username equals: 'tester'.
 	session logout.
-	self assert: session username isNil
+	self deny: session isLoggedIn.
+	self assert: session username equals: 'tester'
 ]
 
 { #category : 'tests' }

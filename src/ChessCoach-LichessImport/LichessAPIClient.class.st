@@ -52,12 +52,14 @@ LichessAPIClient >> fetchUserGames: username max: maxGames until: untilMillis si
 
 { #category : 'private' }
 LichessAPIClient >> get: aZnUrl accept: aMimeTypeString [
+	"Public resources work without a token: it is only sent when logged in"
 
 	| client |
 	client := ZnClient new.
 	client url: aZnUrl.
 	client accept: aMimeTypeString.
-	client headerAt: 'Authorization' put: 'Bearer ' , accessToken.
+	accessToken ifNotNil: [
+		client headerAt: 'Authorization' put: 'Bearer ' , accessToken ].
 	client get.
 	client isSuccess ifFalse: [
 		^ LichessError signalForResponse: client response ].
@@ -77,6 +79,21 @@ LichessAPIClient >> getJSONLines: aZnUrl [
 LichessAPIClient >> initialize [
 
 	baseUrl := 'https://lichess.org/api'
+]
+
+{ #category : 'fetching' }
+LichessAPIClient >> playerExists: aUsername [
+	"Lichess answers 404 for unknown players; other failures are errors"
+
+	| client |
+	client := ZnClient new.
+	client url: baseUrl asZnUrl / 'user' / aUsername.
+	client accept: 'application/json'.
+	client get.
+	client response code = 404 ifTrue: [ ^ false ].
+	client isSuccess ifFalse: [
+		^ LichessError signalForResponse: client response ].
+	^ true
 ]
 
 { #category : 'private' }

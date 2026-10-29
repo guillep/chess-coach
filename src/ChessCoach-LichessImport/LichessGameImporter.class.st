@@ -149,14 +149,16 @@ LichessGameImporter >> isLoggedIn [
 
 { #category : 'oauth2' }
 LichessGameImporter >> login [
-	"Run the browser login and record whose account it is.
+	"Run the browser login and record whose account it is (also as my username).
 	Answer whether it succeeded; false means cancelled or timed out."
 
-	| token |
+	| token name |
 	token := oauthClient authenticate.
 	apiClient accessToken: token.
 	token ifNil: [ ^ false ].
-	oauthClient username: (apiClient fetchMe at: 'username').
+	name := apiClient fetchMe at: 'username'.
+	oauthClient username: name.
+	self username: name.
 	^ true
 ]
 
@@ -243,7 +245,26 @@ LichessGameImporter >> saveGameFromData: gameData [
 
 { #category : 'accessing' }
 LichessGameImporter >> username [
-	"The logged-in Lichess user's name, recorded at login; nil when logged out"
+	"My Lichess username: the one I set (games are public, no login needed), else the logged-in account's, else nil"
 
+	self usernameFile exists ifTrue: [
+		self usernameFile contents trimBoth ifNotEmpty: [ :name | ^ name ] ].
 	^ oauthClient username
+]
+
+{ #category : 'accessing' }
+LichessGameImporter >> username: aStringOrNil [
+	"Remember my Lichess username; nil or empty forgets it (imported games stay)"
+
+	self usernameFile ensureDelete.
+	aStringOrNil isEmptyOrNil ifTrue: [ ^ self ].
+	self usernameFile parent ensureCreateDirectory.
+	self usernameFile writeStreamDo: [ :stream |
+		stream nextPutAll: aStringOrNil trimBoth ]
+]
+
+{ #category : 'accessing' }
+LichessGameImporter >> usernameFile [
+
+	^ fileStore baseDirectory / 'lichess-username'
 ]

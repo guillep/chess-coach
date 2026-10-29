@@ -64,6 +64,19 @@ AnalysisQueueTest >> testAnalysesNewestFirstAndReportsProgress [
 ]
 
 { #category : 'tests' }
+AnalysisQueueTest >> testEnqueueQueuesOneGameAtTheFront [
+
+	| games |
+	games := session games.
+	queue enqueue: games last.
+	queue enqueue: games first.
+	queue enqueue: games last.
+	self assert: queue pendingGameIds asArray equals: {
+			games first gameId.
+			games last gameId }
+]
+
+{ #category : 'tests' }
 AnalysisQueueTest >> testPrioritiseMovesAGameToTheFront [
 
 	| oldest |

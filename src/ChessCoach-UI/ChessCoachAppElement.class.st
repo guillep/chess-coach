@@ -50,7 +50,7 @@ ChessCoachAppElement class >> openOn: aChessCoachSession [
 	space root addChild: app.
 	space
 		addEventHandlerOn: BlSpaceClosedEvent
-		do: [ :event | aChessCoachSession analysisQueue stop ].
+		do: [ :event | aChessCoachSession shutDown ].
 	space show.
 	app startBackgroundAnalysis.
 	^ app
@@ -413,14 +413,10 @@ ChessCoachAppElement >> openMistake: aMistakeRecord [
 
 { #category : 'coach' }
 ChessCoachAppElement >> openReview: aCoachReview of: aGameIndexEntry [
-	"Show a coach review. Its game goes to the front of the background analysis, which the end of the marking pass needs."
+	"Show a coach review. Its game is queued for analysis (Stockfish analyses only the games you review), which the end of the marking pass needs."
 
 	(session isAnalysed: aGameIndexEntry) ifFalse: [
-			| queue |
-			queue := session analysisQueue.
-			(queue stateOf: aGameIndexEntry) = #unknown ifTrue: [
-				queue enqueueUnanalysed ].
-			queue prioritise: aGameIndexEntry ].
+		session analysisQueue enqueue: aGameIndexEntry ].
 	coach := CoachElement new.
 	coach backgroundRunner: backgroundRunner.
 	self applyPieceSet.
@@ -434,6 +430,15 @@ ChessCoachAppElement >> openReview: aCoachReview of: aGameIndexEntry [
 ChessCoachAppElement >> pageButton: aPageId [
 
 	^ navigation items asArray detect: [ :each | each id = aPageId ]
+]
+
+{ #category : 'updating' }
+ChessCoachAppElement >> paintRowAt: anIndex [
+
+	anIndex > rowsColumn childrenCount ifTrue: [ ^ self ].
+	(rowsColumn childAt: anIndex) background: (anIndex = selectedIndex
+			 ifTrue: [ Color fromHexString: '#cfe2ff' ]
+			 ifFalse: [ Color transparent ])
 ]
 
 { #category : 'updating' }
@@ -507,10 +512,13 @@ ChessCoachAppElement >> runInBackground: aBlock [
 
 { #category : 'actions' }
 ChessCoachAppElement >> selectGameAt: anIndex [
-	"Select the listed game at anIndex and show it"
+	"Select the listed game at anIndex and show it; only the previous and the new row are repainted"
 
+	| previous |
+	previous := selectedIndex.
 	selectedIndex := anIndex.
-	self updateRowSelection.
+	previous ifNotNil: [ self paintRowAt: previous ].
+	self paintRowAt: anIndex.
 	self selectedGameChanged
 ]
 
@@ -677,12 +685,9 @@ ChessCoachAppElement >> speeds [
 
 { #category : 'analysis queue' }
 ChessCoachAppElement >> startBackgroundAnalysis [
-	"Queue every unanalysed game and analyse them in the background when Stockfish is there; show what is degraded in the status line"
+	"Start the background analysis when Stockfish is there; it stays idle until a game is queued (when its marking pass starts). Show what is degraded in the status line."
 
-	session isEngineAvailable ifTrue: [
-			session analysisQueue
-				enqueueUnanalysed;
-				start ].
+	session isEngineAvailable ifTrue: [ session analysisQueue start ].
 	self showDegradedModeNotes
 ]
 
@@ -713,8 +718,6 @@ ChessCoachAppElement >> updateFromSession [
 	| selectedId index |
 	refreshButton enabled: session canImport.
 	loadMoreButton enabled: session canImport.
-	session analysisQueue isRunning ifTrue: [
-		session analysisQueue enqueueUnanalysed ].
 	dashboard
 		database: session mistakeDatabase
 		times: session reviewTimes.
@@ -731,8 +734,5 @@ ChessCoachAppElement >> updateFromSession [
 { #category : 'updating' }
 ChessCoachAppElement >> updateRowSelection [
 
-	rowsColumn children doWithIndex: [ :row :index |
-			row background: (index = selectedIndex
-					 ifTrue: [ Color fromHexString: '#cfe2ff' ]
-					 ifFalse: [ Color transparent ]) ]
+	1 to: rowsColumn childrenCount do: [ :index | self paintRowAt: index ]
 ]

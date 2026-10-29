@@ -40,6 +40,21 @@ AnalysisQueue >> announce: aGameIdOrNil [
 ]
 
 { #category : 'queueing' }
+AnalysisQueue >> enqueue: aGameIndexEntry [
+	"Queue one game at the front, unless it is analysed, being analysed or already queued"
+
+	| id |
+	id := aGameIndexEntry gameId.
+	(mutex critical: [
+		 (pending includes: id) or: [
+			 current = id or: [ ready includes: id ] ] ]) ifTrue: [ ^ self ].
+	(session isAnalysed: aGameIndexEntry)
+		ifTrue: [ mutex critical: [ ready add: id ] ]
+		ifFalse: [ mutex critical: [ pending addFirst: id ] ].
+	self announce: id
+]
+
+{ #category : 'queueing' }
 AnalysisQueue >> enqueueUnanalysed [
 	"Queue the stored games that have no analysis yet, newest first"
 
@@ -173,15 +188,15 @@ AnalysisQueue >> stateOf: aGameIndexEntry [
 
 { #category : 'running' }
 AnalysisQueue >> stop [
-	"Stop the background process; a game being analysed goes back to the front of the queue"
+	"Stop the background process (a game being analysed goes back to the front of the queue) and quit its Stockfish"
 
-	process ifNil: [ ^ self ].
-	process terminate.
-	process := nil.
-	mutex critical: [
-			current ifNotNil: [
-					pending addFirst: current.
-					current := nil.
-					progress := nil ] ].
+	process ifNotNil: [
+			process terminate.
+			process := nil.
+			mutex critical: [
+					current ifNotNil: [
+							pending addFirst: current.
+							current := nil.
+							progress := nil ] ] ].
 	analyser engine stop
 ]

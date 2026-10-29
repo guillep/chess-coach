@@ -214,6 +214,29 @@ ChessCoachAppElementTest >> testNewAnalysisMarksThenReviewsAndIsListed [
 ]
 
 { #category : 'tests' }
+ChessCoachAppElementTest >> testOnlyReviewedGamesAreQueuedForAnalysis [
+
+	| queue |
+	self click: app loginButton.
+	self click: app loadMoreButton.
+	queue := AnalysisQueue
+		         session: session
+		         analyser: (GameAnalyser engine: StockfishEngineStub new).
+	session analysisQueue: queue.
+	app startBackgroundAnalysis.
+	app updateFromSession.
+	self assert: queue pendingGameIds isEmpty.
+	app selectGameAt: 2.
+	scripter pulse.
+	app gameView newAnalysis.
+	scripter pulse.
+	self
+		assert: queue pendingGameIds asArray
+		equals: { app games second gameId }.
+	queue stop
+]
+
+{ #category : 'tests' }
 ChessCoachAppElementTest >> testRowsShowTheAnalysisState [
 
 	| queue first |

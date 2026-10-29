@@ -680,6 +680,14 @@ ChessCoachSession >> settings [
 			  settings ]
 ]
 
+{ #category : 'running' }
+ChessCoachSession >> shutDown [
+	"Stop the background analysis and quit every Stockfish process this session started"
+
+	analysisQueue ifNotNil: [ analysisQueue stop ].
+	analyser ifNotNil: [ analyser engine stop ]
+]
+
 { #category : 'accessing' }
 ChessCoachSession >> username [
 

@@ -6,6 +6,22 @@ Class {
 }
 
 { #category : 'tests' }
+ChessBoardElementTest >> testAnArrowFollowsADrag [
+
+	| board scripter |
+	board := ChessBoardElement new.
+	scripter := BlDevScripter new.
+	scripter element: board.
+	scripter space extent: 400 @ 400.
+	scripter pulse.
+	board pressedOn: 'e2'.
+	board enteredOn: 'e4'.
+	self assert: board arrowLayer childrenCount equals: 1.
+	board cancelDrag.
+	self assert: board arrowLayer childrenCount equals: 0
+]
+
+{ #category : 'tests' }
 ChessBoardElementTest >> testMoveListTakesGameAndAnnounces [
 
 	| list selectedPly |

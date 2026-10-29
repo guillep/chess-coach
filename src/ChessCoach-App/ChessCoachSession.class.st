@@ -473,6 +473,19 @@ ChessCoachSession >> mistakeDatabase [
 		  ifFalse: [ MistakeDatabase withRecords: #(  ) ]
 ]
 
+{ #category : 'mistakes' }
+ChessCoachSession >> mistakeDatabaseWithSpeed: aSpeedOrNil [
+	"The reviewed mistakes from games of one speed (bullet, blitz, …); all of them when nil"
+
+	| gameIds |
+	aSpeedOrNil ifNil: [ ^ self mistakeDatabase ].
+	gameIds := ((self gamesWithSpeed: aSpeedOrNil) collect: [ :each |
+		            each gameId ]) asSet.
+	^ MistakeDatabase withRecords:
+		  (self mistakeDatabase records select: [ :each |
+			   gameIds includes: each gameId ])
+]
+
 { #category : 'private' }
 ChessCoachSession >> mistakesFile [
 

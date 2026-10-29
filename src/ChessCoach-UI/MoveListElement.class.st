@@ -46,7 +46,7 @@ MoveListElement >> applyLayout [
 
 { #category : 'initialization' }
 MoveListElement >> buildUI [
-	"Two layouts: rigid, a numbered grid (number, White's move, Black's move), and compact, a flow of moves"
+	"Two layouts: rigid, a numbered grid (number, White's move, Black's move), and compact, a flow of moves. A toggle button switches to compact when checked."
 
 	| header |
 	self removeChildren.
@@ -55,12 +55,12 @@ MoveListElement >> buildUI [
 	header constraintsDo: [ :c |
 			c horizontal matchParent.
 			c vertical fitContent ].
-	toggleButton := ToLabel new text: 'Compact'.
-	toggleButton margin: (BlInsets all: 4).
-	toggleButton padding: (BlInsets all: 4).
-	toggleButton
-		addEventHandlerOn: BlClickEvent
-		do: [ :event | self toggleLayout ].
+	toggleButton := ToToggleButton new
+		                labelText: 'Compact';
+		                margin: (BlInsets all: 4);
+		                yourself.
+	toggleButton checked: layoutMode = #compact.
+	toggleButton newCheckAction: [ self toggleLayout ].
 	header addChild: toggleButton.
 	self addChild: header.
 	compactContainer := BlElement new.
@@ -252,13 +252,8 @@ MoveListElement >> toggleLayout [
 	layoutMode := layoutMode = #compact
 		              ifTrue: [ #rigid ]
 		              ifFalse: [ #compact ].
-	toggleButton ifNotNil: [
-			toggleButton text: (layoutMode = #rigid
-					 ifTrue: [ 'Compact' ]
-					 ifFalse: [ 'Rigid' ]) asRopedText ].
 	self applyLayout.
-	self highlightSelected.
-	^ self
+	self highlightSelected
 ]
 
 { #category : 'accessing' }

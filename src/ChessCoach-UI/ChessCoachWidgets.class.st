@@ -59,12 +59,18 @@ ChessCoachWidgets class >> heading: aString help: aHelpStringOrNil [
 
 { #category : 'building' }
 ChessCoachWidgets class >> help: aString [
-	"A small help icon; its tooltip says aString"
+	"A small help icon; its tooltip says aString, on hover or on click. The tooltip stays open after the click (not closed on release); a click outside closes it."
 
-	^ (ToMaterialDesignIconProvider iconNamed: 'outlined_helpoutline')
-		  extent: 16 @ 16;
-		  tooltipString: aString;
-		  yourself
+	| icon |
+	icon := (ToMaterialDesignIconProvider iconNamed:
+			         'outlined_helpoutline')
+		        extent: 16 @ 16;
+		        tooltipString: aString;
+		        yourself.
+	icon tooltipManagerDo: [ :manager | manager closeOnReleased: false ].
+	icon addEventHandlerOn: BlClickEvent do: [ :event |
+		icon tooltipManagerDo: [ :manager | manager popupEvent: event ] ].
+	^ icon
 ]
 
 { #category : 'building' }
@@ -211,6 +217,42 @@ ChessCoachWidgets class >> separator [
 				   bottom: 4
 				   right: 0);
 		  yourself
+]
+
+{ #category : 'building' }
+ChessCoachWidgets class >> speedBar: aSpeedOrNil do: aBlock [
+	"Toggle buttons for the time controls in one row, aSpeedOrNil checked (nil is All). A Toplo checkable group keeps exactly one checked; checking one gives its speed to aBlock."
+
+	| bar group |
+	bar := ToElement new
+		       layout: BlLinearLayout horizontal;
+		       fitContent;
+		       yourself.
+	group := ToCheckableGroup new.
+	self speeds do: [ :each |
+			| button |
+			button := ToToggleButton new
+				          labelText: each key;
+				          yourself.
+			group register: button.
+			each value = aSpeedOrNil ifTrue: [ button check ].
+			button newCheckAction: [
+				button isChecked ifTrue: [ aBlock value: each value ] ].
+			bar addChild: button ].
+	^ bar
+]
+
+{ #category : 'accessing' }
+ChessCoachWidgets class >> speeds [
+	"Label -> speed (nil for all games)"
+
+	^ {
+		  ('All' -> nil).
+		  ('Bullet' -> 'bullet').
+		  ('Blitz' -> 'blitz').
+		  ('Rapid' -> 'rapid').
+		  ('Classical' -> 'classical').
+		  ('Daily' -> 'correspondence') }
 ]
 
 { #category : 'building' }

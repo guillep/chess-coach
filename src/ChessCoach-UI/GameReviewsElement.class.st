@@ -10,10 +10,11 @@ Class {
 		'game',
 		'reviewsZone',
 		'openBlock',
-		'timeBoxField',
 		'timeBoxNote',
 		'infoZone',
-		'playThroughBlock'
+		'playThroughBlock',
+		'timeBoxMinutes',
+		'timeBoxButtons'
 	],
 	#category : 'ChessCoach-UI-Coach',
 	#package : 'ChessCoach-UI',
@@ -108,9 +109,6 @@ GameReviewsElement >> initialize [
 		               hMatchParent;
 		               vFitContent;
 		               yourself.
-	timeBoxField := ToTextField new
-		                width: 60;
-		                yourself.
 	timeBoxNote := ToLabel text: ''.
 	analyses := ToElement new
 		            layout: BlLinearLayout vertical;
@@ -129,14 +127,8 @@ GameReviewsElement >> initialize [
 				            bigButton: 'Play through'
 				            icon: 'outlined_slideshow'
 				            do: [ playThroughBlock value ]);
-		           addChild: (ToElement new
-				            layout: (BlLinearLayout horizontal cellSpacing: 6);
-				            hMatchParent;
-				            vFitContent;
-				            addChild: (ToLabel text: 'Time box (min):');
-				            addChild: timeBoxField;
-				            addChild: timeBoxNote;
-				            yourself);
+		           addChild: self newTimeBoxChoice;
+		           addChild: timeBoxNote;
 		           addChild: (ChessCoachWidgets
 				            bigButton: 'New analysis'
 				            icon: 'outlined_school'
@@ -168,13 +160,43 @@ GameReviewsElement >> linkTo: aUrl [
 
 { #category : 'actions' }
 GameReviewsElement >> newAnalysis [
-	"Start a review, limited to the minutes of the time box field when it holds a number"
+	"Start a review, limited to the chosen time box when there is one"
 
-	| minutes |
-	minutes := session canTimeBox ifTrue: [
-		           timeBoxField text asString trimBoth asInteger ].
-	(minutes notNil and: [ minutes <= 0 ]) ifTrue: [ minutes := nil ].
-	openBlock value: (session newReviewFor: entry timeBox: minutes)
+	openBlock value: (session
+			 newReviewFor: entry
+			 timeBox: (session canTimeBox ifTrue: [ timeBoxMinutes ]))
+]
+
+{ #category : 'building' }
+GameReviewsElement >> newTimeBoxChoice [
+	"Toggle buttons for the time box of a new analysis: none, or a number of minutes. A Toplo checkable group keeps exactly one checked."
+
+	| row group |
+	row := ToElement new
+		       layout: (BlLinearLayout horizontal cellSpacing: 4);
+		       hMatchParent;
+		       vFitContent;
+		       addChild: ((ToLabel text: 'Time box:')
+				        margin: (BlInsets right: 4);
+				        yourself);
+		       yourself.
+	group := ToCheckableGroup new.
+	timeBoxButtons := OrderedCollection new.
+	#( nil 10 20 30 45 60 ) do: [ :minutes |
+			| button |
+			button := ToToggleButton new
+				          labelText:
+					          (minutes
+						           ifNil: [ 'None' ]
+						           ifNotNil: [ minutes printString , ' min' ]);
+				          yourself.
+			group register: button.
+			button newCheckAction: [
+				button isChecked ifTrue: [ timeBoxMinutes := minutes ] ].
+			timeBoxButtons add: button.
+			row addChild: button ].
+	timeBoxButtons first check.
+	^ row
 ]
 
 { #category : 'accessing' }
@@ -189,21 +211,12 @@ GameReviewsElement >> session: aChessCoachSession entry: aGameIndexEntry [
 	session := aChessCoachSession.
 	entry := aGameIndexEntry.
 	game := session gameFor: aGameIndexEntry.
-	session canTimeBox
-		ifTrue: [
-				timeBoxField enabled: true.
-				timeBoxNote text: '' ]
-		ifFalse: [
-				timeBoxField enabled: false.
-				timeBoxNote text: 'needs more data' ].
+	timeBoxButtons do: [ :each | each enabled: session canTimeBox ].
+	timeBoxNote text: (session canTimeBox
+			 ifTrue: [ '' ]
+			 ifFalse: [ 'The time box needs a few finished reviews first.' ]).
 	self updateInfo.
 	self updateReviews
-]
-
-{ #category : 'accessing' }
-GameReviewsElement >> timeBoxField [
-
-	^ timeBoxField
 ]
 
 { #category : 'updating' }

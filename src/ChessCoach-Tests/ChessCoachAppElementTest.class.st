@@ -141,6 +141,25 @@ ChessCoachAppElementTest >> testGamesListedWhileOnStatsShowLater [
 ]
 
 { #category : 'tests' }
+ChessCoachAppElementTest >> testHelpIconOpensItsTooltipOnClick [
+
+	| icon helpScripter |
+	icon := ChessCoachWidgets help: 'Some help'.
+	helpScripter := BlDevScripter new.
+	helpScripter element: (ToElement new
+			 fitContent;
+			 padding: (BlInsets all: 30);
+			 addChild: icon;
+			 yourself).
+	helpScripter pulse.
+	helpScripter testClick onChildFromBlock: [ :root | icon ].
+	helpScripter syncContinue.
+	helpScripter pulse.
+	self assert: icon currentTooltipWindow notNil.
+	self assert: icon currentTooltipWindow isOpened
+]
+
+{ #category : 'tests' }
 ChessCoachAppElementTest >> testLichessErrorIsShownInline [
 
 	self click: app loginButton.
@@ -459,6 +478,22 @@ ChessCoachAppElementTest >> testStartsLoggedOut [
 	self assert: app loadMoreButton isDisabled.
 	self assert: app games isEmpty.
 	self assert: app gameView isNil
+]
+
+{ #category : 'tests' }
+ChessCoachAppElementTest >> testStatsFilterByTimeControl [
+
+	app showPage: #Stats.
+	scripter pulse.
+	app dashboard chooseSpeed: 'rapid'.
+	scripter pulse.
+	self assert: app dashboard speed equals: 'rapid'.
+	self assert: (app dashboard
+			 allChildrenBreadthFirstDetect: [ :each |
+					 (each isKindOf: ToToggleButton) and: [
+						 each isChecked and: [ each labelText asString = 'Rapid' ] ] ]
+			 ifFound: [ :each | true ]
+			 ifNone: [ false ])
 ]
 
 { #category : 'tests' }

@@ -273,6 +273,7 @@ ChessCoachAppElement >> newDashboard [
 			self showPage: #Games.
 			self games ifNotEmpty: [ :entries |
 				self selectGameId: entries first gameId ] ].
+	board whenSpeedChosenDo: [ :speed | self updateDashboard ].
 	^ board
 ]
 
@@ -798,13 +799,7 @@ ChessCoachAppElement >> speedFilterChecked: aSpeedOrNil [
 ChessCoachAppElement >> speeds [
 	"Label -> speed (nil for all games)"
 
-	^ {
-		  ('All' -> nil).
-		  ('Bullet' -> 'bullet').
-		  ('Blitz' -> 'blitz').
-		  ('Rapid' -> 'rapid').
-		  ('Classical' -> 'classical').
-		  ('Daily' -> 'correspondence') }
+	^ ChessCoachWidgets speeds
 ]
 
 { #category : 'analysis queue' }
@@ -850,15 +845,22 @@ ChessCoachAppElement >> updateAnalysisStatus [
 ]
 
 { #category : 'updating' }
+ChessCoachAppElement >> updateDashboard [
+	"The mistakes of the time control chosen on the Stats page"
+
+	dashboard
+		database: (session mistakeDatabaseWithSpeed: dashboard speed)
+		times: session reviewTimes
+]
+
+{ #category : 'updating' }
 ChessCoachAppElement >> updateFromSession [
 	"Reload the list, keeping the selected game selected when it is still listed"
 
 	| selectedId index |
 	refreshButton enabled: session canImport.
 	loadMoreButton enabled: session canImport.
-	dashboard
-		database: session mistakeDatabase
-		times: session reviewTimes.
+	self updateDashboard.
 	selectedId := self selectedEntry ifNotNil: [ :entry | entry gameId ].
 	listedGames := (session gamesWithSpeed: speedFilter) asArray.
 	index := listedGames findFirst: [ :each | each gameId = selectedId ].

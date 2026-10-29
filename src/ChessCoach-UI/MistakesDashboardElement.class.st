@@ -12,7 +12,9 @@ Class {
 		'selectedTag',
 		'recordBlock',
 		'startBlock',
-		'times'
+		'times',
+		'speed',
+		'speedBlock'
 	],
 	#category : 'ChessCoach-UI-Coach',
 	#package : 'ChessCoach-UI',
@@ -141,6 +143,16 @@ MistakesDashboardElement >> buildTrend [
 						  (blocks collect: [ :each | each at: tag ifAbsent: [ 0 ] ]))) ]
 ]
 
+{ #category : 'actions' }
+MistakesDashboardElement >> chooseSpeed: aSpeedOrNil [
+	"Called from a speed toggle's check action. The page, toggles included, is rebuilt in a later task, not while the toggle runs its action."
+
+	speed := aSpeedOrNil.
+	speedBlock ifNil: [ ^ self ].
+	self enqueueTask:
+		(BlTaskAction new action: [ speedBlock value: aSpeedOrNil ])
+]
+
 { #category : 'private' }
 MistakesDashboardElement >> colorOfTag: aTagId [
 
@@ -232,7 +244,13 @@ MistakesDashboardElement >> rebuild [
 			 pageTitle: 'Stats'
 			 subtitle:
 			 'Your typical mistakes and how long your reviews take, from every review with the coach.').
-	database records ifEmpty: [ ^ self buildEmptyState ].
+	content addChild: (ChessCoachWidgets
+			 speedBar: speed
+			 do: [ :each | self chooseSpeed: each ]).
+	database records ifEmpty: [
+			^ speed ifNil: [ self buildEmptyState ] ifNotNil: [
+					  content addChild: (ChessCoachWidgets paragraph:
+							   'No reviewed mistakes in games of this time control yet.') ] ].
 	self
 		section: 'Your most frequent mistakes'
 		help:
@@ -252,7 +270,7 @@ MistakesDashboardElement >> rebuild [
 			self
 				section: 'Time'
 				help:
-				'Averages over every reviewed moment: per moment kind, per question, and for the marking pass. The last line shows how the time per moment changes, block by block.'
+				'Averages over every reviewed moment, of every time control: per moment kind, per question, and for the marking pass. The last line shows how the time per moment changes, block by block.'
 				build: [ self buildTimes ] ].
 	selectedTag ifNotNil: [ self buildDetail ]
 ]
@@ -292,6 +310,13 @@ MistakesDashboardElement >> sparkline: someCounts [
 ]
 
 { #category : 'accessing' }
+MistakesDashboardElement >> speed [
+	"The time control shown (nil for all games)"
+
+	^ speed
+]
+
+{ #category : 'accessing' }
 MistakesDashboardElement >> texts [
 	"Every label and button text shown, in order (for tests)"
 
@@ -317,6 +342,13 @@ MistakesDashboardElement >> whenRecordSelectedDo: aBlock [
 	"aBlock receives the MistakeRecord I click in a tag's detail"
 
 	recordBlock := aBlock
+]
+
+{ #category : 'accessing' }
+MistakesDashboardElement >> whenSpeedChosenDo: aBlock [
+	"aBlock receives the chosen time control (nil for all games) and gives me the matching database"
+
+	speedBlock := aBlock
 ]
 
 { #category : 'accessing' }

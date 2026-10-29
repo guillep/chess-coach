@@ -68,7 +68,6 @@ GameAnalysisElement >> game: aGame [
 { #category : 'initialization' }
 GameAnalysisElement >> initialize [
 
-	| scrollableMoves |
 	super initialize.
 	self layout: BlLinearLayout horizontal.
 	self constraintsDo: [ :c |
@@ -83,12 +82,13 @@ GameAnalysisElement >> initialize [
 			c horizontal matchParent.
 			c vertical fitContent ].
 	moveList whenMoveSelectedDo: [ :ply | self showPly: ply ].
-	scrollableMoves := moveList asScrollableElement.
-	scrollableMoves constraintsDo: [ :c |
-			c horizontal exact: 200.
-			c vertical matchParent ].
 	self addChild: boardElement.
-	self addChild: scrollableMoves.
+	self addChild: (ToElement new
+			 layout: BlFrameLayout new;
+			 width: 200;
+			 vMatchParent;
+			 addChild: (ChessCoachWidgets scrollable: moveList);
+			 yourself).
 	"Bloc defers the request until the element is added to a space, so arrow keys work as soon as the view opens"
 	moveList requestFocus
 ]

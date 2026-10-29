@@ -16,7 +16,8 @@ Class {
 		'selectedSquare',
 		'moveBlock',
 		'coordinateLabels',
-		'theme'
+		'theme',
+		'previewArrow'
 	],
 	#category : 'ChessCoach-UI-Board',
 	#package : 'ChessCoach-UI',
@@ -34,6 +35,13 @@ ChessBoardElement class >> themes [
 		  at: 'Grey' put: #( '#e6e6e6' '#a8a8a8' );
 		  at: 'Purple' put: #( '#e8e0f0' '#9a7fb5' );
 		  yourself
+]
+
+{ #category : 'accessing' }
+ChessBoardElement >> arrowLayer [
+	"The element that draws the arrows, one child per arrow"
+
+	^ arrowLayer
 ]
 
 { #category : 'accessing' }
@@ -82,9 +90,25 @@ ChessBoardElement >> buildBoard [
 			square
 				addEventHandlerOn: BlMouseUpEvent
 				do: [ :event | self releasedOn: (self squareNameOf: square) ].
+			square
+				addEventHandlerOn: BlMouseEnterEvent
+				do: [ :event | self enteredOn: (self squareNameOf: square) ].
 			self addChild: square.
 			squares add: square ].
+	self
+		addEventHandlerOn: BlMouseLeaveEvent
+		do: [ :event | self cancelDrag ].
 	self theme: 'Brown'
+]
+
+{ #category : 'input' }
+ChessBoardElement >> cancelDrag [
+	"Forget the pressed square and the arrow that followed the mouse, as when the mouse is released or leaves the board"
+
+	pressedSquare := nil.
+	previewArrow ifNil: [ ^ self ].
+	previewArrow := nil.
+	self redrawArrows
 ]
 
 { #category : 'drawing' }
@@ -139,6 +163,19 @@ ChessBoardElement >> coordinateTexts [
 	"The coordinates shown, top-left to bottom-right (for tests)"
 
 	^ coordinateLabels collect: [ :each | each text asString ]
+]
+
+{ #category : 'input' }
+ChessBoardElement >> enteredOn: aSquare [
+	"While dragging from a square, an arrow follows the mouse to the square under it"
+
+	| preview |
+	preview := (pressedSquare isNil or: [ pressedSquare = aSquare ])
+		           ifFalse: [
+		           ChessArrow uci: pressedSquare , aSquare style: #candidate ].
+	preview = previewArrow ifTrue: [ ^ self ].
+	previewArrow := preview.
+	self redrawArrows
 ]
 
 { #category : 'initialization' }
@@ -241,13 +278,16 @@ ChessBoardElement >> pressedOn: aSquare [
 
 { #category : 'drawing' }
 ChessBoardElement >> redrawArrows [
+	"The arrows, and the one following a drag when there is one"
 
 	| size |
 	arrowLayer removeChildren.
 	arrowLayer extent: self extent.
 	size := self width / 8.
 	size > 0 ifFalse: [ ^ self ].
-	arrows do: [ :arrow |
+	(previewArrow
+		 ifNil: [ arrows ]
+		 ifNotNil: [ arrows copyWith: previewArrow ]) do: [ :arrow |
 			| element |
 			element := BlElement new
 				           extent: self extent;
@@ -314,7 +354,7 @@ ChessBoardElement >> releasedOn: aSquare [
 
 	| pressed |
 	pressed := pressedSquare.
-	pressedSquare := nil.
+	self cancelDrag.
 	pressed ifNil: [ ^ self ].
 	pressed ~= aSquare ifTrue: [
 			selectedSquare := nil.

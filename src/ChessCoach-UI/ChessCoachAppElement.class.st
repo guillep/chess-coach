@@ -25,7 +25,6 @@ Class {
 		'dependencyLabel',
 		'listedGames',
 		'selectedIndex',
-		'rowsColumn',
 		'coachTab',
 		'playThroughTab',
 		'playThrough'
@@ -181,10 +180,13 @@ ChessCoachAppElement >> gameList [
 
 { #category : 'accessing' }
 ChessCoachAppElement >> gameRows [
-	"The rows without their separators"
+	"The rows the list currently shows"
 
-	^ (1 to: rowsColumn childrenCount by: 2) collect: [ :index |
-		  rowsColumn childAt: index ]
+	| rows |
+	rows := OrderedCollection new.
+	gameList allChildrenBreadthFirstDo: [ :each |
+		(each isKindOf: ToNodeContainer) ifTrue: [ rows add: each ] ].
+	^ rows asArray
 ]
 
 { #category : 'accessing' }
@@ -231,17 +233,16 @@ ChessCoachAppElement >> initialize [
 		addChild: self newStatusLine
 ]
 
-{ #category : 'private' }
-ChessCoachAppElement >> keepRowVisible: aRow [
-	"Scroll the game list just enough to show aRow, as when moving with the arrow keys"
+{ #category : 'updating' }
+ChessCoachAppElement >> listSelectionChanged [
+	"The list selected another game, by a click or the arrow keys"
 
-	| scrollable rowBounds |
-	scrollable := rowsColumn parent.
-	(scrollable isNil or: [ scrollable height isZero ]) ifTrue: [ ^ self ].
-	rowBounds := (aRow bounds inParent: scrollable) asRectangle.
-	rowBounds top < 0 ifTrue: [ ^ scrollable scrollBy: 0 @ rowBounds top ].
-	rowBounds bottom > scrollable height ifTrue: [
-		scrollable scrollBy: 0 @ (rowBounds bottom - scrollable height) ]
+	| index |
+	index := gameList selectionModel firstIndex.
+	(index isNil or: [ index = 0 or: [ index = selectedIndex ] ])
+		ifTrue: [ ^ self ].
+	selectedIndex := index.
+	self selectedGameChanged
 ]
 
 { #category : 'accessing' }
@@ -280,7 +281,7 @@ ChessCoachAppElement >> newDashboard [
 { #category : 'initialization' }
 ChessCoachAppElement >> newGamesPage [
 	"A title, a bar with the speed filters, Refresh and Load more; below it the game list and the selected game.
-	The list is a plain scrollable column of rows. Workaround: Toplo's ToListElement recycles nodes during layout and skin installation, which left nodes without a space (logged as an upstream candidate). Up and down arrows move the selection; clicking the list gives it the keyboard focus."
+	The list is a Toplo list, which brings its look, scrollbar and arrow keys"
 
 	| title bar body |
 	title := ChessCoachWidgets
@@ -310,29 +311,17 @@ ChessCoachAppElement >> newGamesPage [
 		       addChild: refreshButton;
 		       addChild: loadMoreButton;
 		       yourself.
-	rowsColumn := ToElement new
-		              layout: BlLinearLayout vertical;
-		              hMatchParent;
-		              vFitContent;
-		              yourself.
-	gameList := ToElement new
-		            layout: BlFrameLayout new;
+	gameList := ToListElement new
+		            useScrollbar: true;
 		            width: 300;
 		            vMatchParent;
 		            margin: (BlInsets right: 12);
-		            border:
-			            (BlBorder paint: (Color gray alpha: 0.4) width: 1);
-		            addChild: (ChessCoachWidgets scrollable: rowsColumn);
+		            nodeBuilder: [ :node :entry :holder |
+			            node addChild: (self rowElementFor: entry) ];
+		            addEventHandlerOn: ToListPrimarySelectionChangedEvent
+		            do: [ :event | self listSelectionChanged ];
 		            yourself.
-	gameList addShortcut: (BlShortcutWithAction new
-			 combination: BlKeyCombination arrowDown;
-			 action: [ self selectGameAt: (selectedIndex ifNil: [ 0 ]) + 1 ]).
-	gameList addShortcut: (BlShortcutWithAction new
-			 combination: BlKeyCombination arrowUp;
-			 action: [ self selectGameAt: (selectedIndex ifNil: [ 2 ]) - 1 ]).
-	gameList
-		addEventHandlerOn: BlClickEvent
-		do: [ :event | gameList requestFocus ].
+	gameList selecter beSingleSelection.
 	analysisPane := ToElement new
 		                layout: BlFrameLayout new;
 		                matchParent;
@@ -497,28 +486,6 @@ ChessCoachAppElement >> pageButton: aPageId [
 	^ navigation items asArray detect: [ :each | each id = aPageId ]
 ]
 
-{ #category : 'updating' }
-ChessCoachAppElement >> paintRowAt: anIndex [
-
-	self paintRowAt: anIndex hovered: false
-]
-
-{ #category : 'updating' }
-ChessCoachAppElement >> paintRowAt: anIndex hovered: aBoolean [
-	"Translucent backgrounds, so that they work on light and dark themes"
-
-	| childIndex |
-	childIndex := anIndex * 2 - 1.
-	childIndex > rowsColumn childrenCount ifTrue: [ ^ self ].
-	(rowsColumn childAt: childIndex) background:
-		(anIndex = selectedIndex
-			 ifTrue: [ Color blue alpha: 0.25 ]
-			 ifFalse: [
-					 aBoolean
-						 ifTrue: [ Color gray alpha: 0.15 ]
-						 ifFalse: [ Color transparent ] ])
-]
-
 { #category : 'actions' }
 ChessCoachAppElement >> playThrough: aGameIndexEntry [
 	"Look at the game move by move in its own closable page, replacing an open one"
@@ -540,21 +507,6 @@ ChessCoachAppElement >> playThrough: aGameIndexEntry [
 	^ playThrough
 ]
 
-{ #category : 'updating' }
-ChessCoachAppElement >> rebuildRows [
-	"Each row is followed by a 1 px translucent separator, which works on light and dark themes"
-
-	rowsColumn removeChildren.
-	listedGames doWithIndex: [ :entry :index |
-			rowsColumn addChild: (self rowElementFor: entry at: index).
-			rowsColumn addChild: (BlElement new
-					 height: 1;
-					 constraintsDo: [ :c | c horizontal matchParent ];
-					 background: (Color gray alpha: 0.3);
-					 yourself) ].
-	self updateRowSelection
-]
-
 { #category : 'accessing' }
 ChessCoachAppElement >> refreshButton [
 
@@ -562,29 +514,13 @@ ChessCoachAppElement >> refreshButton [
 ]
 
 { #category : 'private' }
-ChessCoachAppElement >> rowElementFor: aGameIndexEntry at: anIndex [
-	"Players, result and date; a click selects the game. A label, so that its text follows the app theme."
+ChessCoachAppElement >> rowElementFor: aGameIndexEntry [
+	"Players, result and date. A label, so that its text follows the app theme."
 
-	| row |
-	row := ToLabel new
-		       text: (self rowTextFor: aGameIndexEntry);
-		       padding: (BlInsets
-				        top: 8
-				        left: 10
-				        bottom: 8
-				        right: 10);
-		       hMatchParent;
-		       yourself.
-	row
-		addEventHandlerOn: BlClickEvent
-		do: [ :event | self selectGameAt: anIndex ].
-	row
-		addEventHandlerOn: BlMouseEnterEvent
-		do: [ :event | self paintRowAt: anIndex hovered: true ].
-	row
-		addEventHandlerOn: BlMouseLeaveEvent
-		do: [ :event | self paintRowAt: anIndex hovered: false ].
-	^ row
+	^ ToLabel new
+		  text: (self rowTextFor: aGameIndexEntry);
+		  hMatchParent;
+		  yourself
 ]
 
 { #category : 'private' }
@@ -624,16 +560,12 @@ ChessCoachAppElement >> runInBackground: aBlock [
 
 { #category : 'actions' }
 ChessCoachAppElement >> selectGameAt: anIndex [
-	"Select the listed game at anIndex (ignored outside the list), keep it in view and show it; only the previous and the new row are repainted"
+	"Select the listed game at anIndex (ignored outside the list), keep it in view and show it"
 
-	| previous |
 	(anIndex between: 1 and: self games size) ifFalse: [ ^ self ].
-	previous := selectedIndex.
 	selectedIndex := anIndex.
-	previous ifNotNil: [ self paintRowAt: previous ].
-	self paintRowAt: anIndex.
-	anIndex * 2 - 1 <= rowsColumn childrenCount ifTrue: [
-		self keepRowVisible: (rowsColumn childAt: anIndex * 2 - 1) ].
+	gameList selecter selectOnlyIndex: anIndex.
+	gameList scrollToDataSourcePosition: anIndex.
 	self selectedGameChanged
 ]
 
@@ -867,12 +799,9 @@ ChessCoachAppElement >> updateFromSession [
 	selectedIndex := index = 0
 		                 ifTrue: [ nil ]
 		                 ifFalse: [ index ].
-	self rebuildRows.
+	gameList dataAccessor removeAll.
+	gameList dataAccessor addAll: listedGames.
+	selectedIndex ifNotNil: [
+		gameList selecter selectOnlyIndex: selectedIndex ].
 	self updateAnalysisStatus
-]
-
-{ #category : 'updating' }
-ChessCoachAppElement >> updateRowSelection [
-
-	1 to: self games size do: [ :index | self paintRowAt: index ]
 ]

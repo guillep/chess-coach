@@ -82,12 +82,12 @@ CoachReview >> answerMoves: someUCIMoves [
 
 { #category : 'answering' }
 CoachReview >> answerText: aString [
-	"Answer a written question at once; classifyPending tags it later. Answers about a found only move are not classified: there is no mistake."
+	"Answer a written question at once; classifyPending tags it later. Answers about a success (see isSuccess:) are not classified: there is no mistake."
 
 	| question answer |
 	question := self currentQuestion.
 	self assert: question expectsMoves not.
-	answer := self currentMoment isSuccess
+	answer := (self isSuccess: self currentMoment)
 		          ifTrue: [
 		          CoachAnswer question: question text: aString labels: #(  ) ]
 		          ifFalse: [ CoachAnswer question: question text: aString ].
@@ -369,6 +369,15 @@ CoachReview >> isPlanned: aMomentReview [
 	^ planned isNil or: [ planned includes: aMomentReview ply ]
 ]
 
+{ #category : 'testing' }
+CoachReview >> isSuccess: aMomentReview [
+	"Nothing to tag as a mistake: a found only move, or, with the engine, a move that lost less than 5 win-% points (the best move, or one as good)"
+
+	aMomentReview isSuccess ifTrue: [ ^ true ].
+	self hasEngine ifFalse: [ ^ false ].
+	^ (self winDropAt: aMomentReview ply for: aMomentReview color) < 5
+]
+
 { #category : 'report' }
 CoachReview >> kindCounts [
 	"How many reviewed moments of each kind"
@@ -447,12 +456,11 @@ CoachReview >> mistakeRecordFor: aMomentReview [
 
 { #category : 'mistakes' }
 CoachReview >> mistakeRecords [
-	"One record per reviewed moment that was not a success (found only moves are not mistakes)"
+	"One record per reviewed moment that was not a success (see isSuccess:)"
 
 	^ reviews
 		  select: [ :each |
-				  each isReviewed and: [
-					  (each kinds copyWithout: #onlyMoveFound) notEmpty ] ]
+		  each isReviewed and: [ (self isSuccess: each) not ] ]
 		  thenCollect: [ :each | self mistakeRecordFor: each ]
 ]
 

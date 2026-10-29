@@ -99,9 +99,9 @@ CoachElement >> buildBoardAnswer [
 
 { #category : 'building' }
 CoachElement >> buildEngineRevealOf: reveal before: before after: after [
-	"Win chances, my candidates, the engine line and the reply I missed"
+	"Win chances, my candidates, the engine line, the line after my move to compare with it, and the reply I missed"
 
-	| line |
+	| line myLine |
 	line := (review analysis atPly: shownMoment ply - 1) bestLine.
 	currentZone addChild: ((self paragraph:
 				  ('Win chance: {1}% before your move, {2}% after it' format: {
@@ -121,6 +121,13 @@ CoachElement >> buildEngineRevealOf: reveal before: before after: after [
 		(self paragraph: ('Engine line ({1}): {2}' format: {
 					  line scoreString.
 					  (self lineInSAN: (reveal at: 'bestLine') from: before) })).
+	(review analysis atPly: shownMoment ply) lines ifNotEmpty: [ :lines |
+			myLine := lines first.
+			currentZone addChild:
+				(self paragraph: ('Your move {1} ({2}): {1} {3}' format: {
+							  (before sanForUCI: self playedMove).
+							  myLine scoreString.
+							  (self lineInSAN: myLine moves from: after) })) ].
 	(reveal at: 'engineReply') ifNotNil: [ :reply |
 			currentZone addChild: (self paragraph:
 					 ('Engine''s reply: {1} · you expected: {2}' format: {
@@ -427,9 +434,11 @@ CoachElement >> buildTagsOf: aMomentReview [
 	"Each proposed tag is a toggle with a check box icon: checked counts as a mistake, unchecked doesn't. The tag's description is its tooltip. When time trouble counts, it is shown as the main cause. Without the local model, the tag picker opens so the tags are chosen by hand."
 
 	| taxonomy labels manual |
-	aMomentReview isSuccess ifTrue: [
-			^ currentZone addChild:
-				  (self paragraph: 'Well found: no mistake to tag.') ].
+	(review isSuccess: aMomentReview) ifTrue: [
+			^ currentZone addChild: (self paragraph: (aMomentReview isSuccess
+						    ifTrue: [ 'Well found: no mistake to tag.' ]
+						    ifFalse: [
+						    'Your move was as good as the best one: no mistake to tag.' ])) ].
 	taxonomy := MistakeTaxonomy default.
 	manual := review isClassifierUnavailable and: [
 		          aMomentReview isClassifying ].

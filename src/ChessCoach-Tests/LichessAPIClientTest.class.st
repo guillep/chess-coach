@@ -6,6 +6,15 @@ Class {
 }
 
 { #category : 'tests' }
+LichessAPIClientTest >> testAnEmptyBodyIsNoText [
+
+	self assert: (LichessAPIClient new textFrom: nil) equals: ''.
+	self
+		assert: (LichessAPIClient new textFrom: 'é' utf8Encoded)
+		equals: 'é'
+]
+
+{ #category : 'tests' }
 LichessAPIClientTest >> testUserGamesUrlPagesWithUntil [
 
 	| url |

@@ -97,11 +97,13 @@ LichessAPIClient >> playerExists: aUsername [
 ]
 
 { #category : 'private' }
-LichessAPIClient >> textFrom: aStringOrByteArray [
+LichessAPIClient >> textFrom: aStringOrByteArrayOrNil [
+	"Zinc answers nil for an empty body, as an NDJSON list with no games is"
 
-	^ aStringOrByteArray isString
-		  ifTrue: [ aStringOrByteArray ]
-		  ifFalse: [ aStringOrByteArray utf8Decoded ]
+	aStringOrByteArrayOrNil ifNil: [ ^ '' ].
+	^ aStringOrByteArrayOrNil isString
+		  ifTrue: [ aStringOrByteArrayOrNil ]
+		  ifFalse: [ aStringOrByteArrayOrNil utf8Decoded ]
 ]
 
 { #category : 'private' }

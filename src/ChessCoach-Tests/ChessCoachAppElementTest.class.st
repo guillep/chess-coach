@@ -190,13 +190,18 @@ ChessCoachAppElementTest >> testRowsShowTheAnalysisState [
 	queue enqueueUnanalysed.
 	scripter pulse.
 	first := app gameList dataAccessor first.
-	self assert: ((app rowTextFor: first) beginsWith: '(queued) ').
+	self
+		assert: (app analysisIconNameFor: first)
+		equals: 'outlined_hourglassempty'.
 	queue runNext.
 	scripter pulse.
-	self deny: ((app rowTextFor: first) beginsWith: '(').
-	self assert:
-		((app rowTextFor: app gameList dataAccessor second) beginsWith:
-			 '(queued) ')
+	self
+		assert: (app analysisIconNameFor: first)
+		equals: 'outlined_checkcircle'.
+	self
+		assert: (app analysisIconNameFor: app gameList dataAccessor second)
+		equals: 'outlined_hourglassempty'.
+	self assert: ((app rowTextFor: first) beginsWith: 'alice')
 ]
 
 { #category : 'tests' }
@@ -260,6 +265,26 @@ ChessCoachAppElementTest >> testSettingsPage [
 	self assert: session settings ollamaModel equals: 'llama3.1:8b'.
 	self assert:
 		(settings texts includes: 'Validated only with qwen2.5:7b-instruct')
+]
+
+{ #category : 'tests' }
+ChessCoachAppElementTest >> testSpeedFiltersAreToggleButtonsOnOneRow [
+
+	| buttons |
+	buttons := #( nil 'bullet' 'blitz' 'rapid' 'classical' 'correspondence' )
+		           collect: [ :each | app speedButtonFor: each ].
+	self assert:
+		(buttons allSatisfy: [ :each | each isKindOf: ToToggleButton ]).
+	self assert: buttons first isChecked.
+	self assert:
+		(buttons allButFirst noneSatisfy: [ :each | each isChecked ]).
+	self
+		assert:
+		(buttons collect: [ :each | each bounds inSpace top ]) asSet size
+		equals: 1.
+	app filterBySpeed: 'rapid'.
+	self assert: (app speedButtonFor: 'rapid') isChecked.
+	self deny: buttons first isChecked
 ]
 
 { #category : 'tests' }

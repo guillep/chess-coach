@@ -61,10 +61,12 @@ CoachElementTest >> testAWholeMoment [
 
 	self assert: coach mode equals: #list.
 	self assert:
-		(self zoneTexts includes:
-			 'To do · Move 2 (Nf3) · onlyMoveFound · −0%').
+		(self zoneTexts includes: 'Move 2 (Nf3) · onlyMoveFound · −0%').
 	self assert:
-		(self zoneTexts includes: 'To do · Move 4 (Ng5) · mistake · −18%').
+		(self zoneTexts includes: 'Move 4 (Ng5) · mistake · −18%').
+	self
+		assert: (coach stateIconNameOf: review moments last)
+		equals: 'outlined_radiobuttonunchecked'.
 	coach continueReview.
 	scripter pulse.
 	self assert: review currentQuestion kind equals: #whatDidYouSee.
@@ -73,6 +75,9 @@ CoachElementTest >> testAWholeMoment [
 	self assert:
 		(self zoneTexts includes: 'Well found: no mistake to tag.').
 	self assert: review moments first labels isEmpty.
+	self
+		assert: (coach stateIconNameOf: review moments first)
+		equals: 'outlined_checkcircle'.
 	coach nextMoment.
 	scripter pulse.
 	self assert: (coach header text asString includesSubstring:
@@ -117,18 +122,19 @@ CoachElementTest >> testAWholeMoment [
 	3 timesRepeat: [ self answer: 'I did not see it' ].
 	self assert: review currentMoment isRevealed.
 	self assert: (self zoneTexts includes: 'Engine line (+0.50): d4').
-	self assert: (self zoneTexts includes:
-			 '[x] Missed opponent threat · perception (70%)').
+	self assert:
+		(self zoneTexts includes:
+			 'Missed opponent threat · perception (70%)').
+	self assert: review mistakeRecords first labels size equals: 1.
 	self
 		assert: (self arrowsOfStyle: #engine) asArray
 		equals: #( 'd2d4' ).
 	coach toggleTag: 'missed-opponent-threat'.
-	self assert: (self zoneTexts includes:
-			 '[ ] Missed opponent threat · perception (70%)').
 	self assert: review mistakeRecords first labels isEmpty.
 	coach toggleTag: 'missed-opponent-threat'.
 	self assert:
-		(self zoneTexts includes: '[x] Missed opponent threat · perception').
+		(self zoneTexts includes: 'Missed opponent threat · perception').
+	self assert: review mistakeRecords first labels size equals: 1.
 	coach nextMoment.
 	scripter pulse.
 	self assert: coach mode equals: #summary.
@@ -155,7 +161,10 @@ CoachElementTest >> testListShowsPastMomentsAndReviewsOneMoment [
 	self assert: coach mode equals: #list.
 	self assert: review currentMoment isNil.
 	self assert:
-		(self zoneTexts includes: 'Started · Move 4 (Ng5) · mistake · −18%').
+		(self zoneTexts includes: 'Move 4 (Ng5) · mistake · −18%').
+	self
+		assert: (coach stateIconNameOf: moment)
+		equals: 'outlined_timelapse'.
 	coach filter: #blunders.
 	scripter pulse.
 	self assert:

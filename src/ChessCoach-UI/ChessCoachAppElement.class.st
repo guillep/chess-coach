@@ -60,6 +60,18 @@ ChessCoachAppElement class >> session: aChessCoachSession [
 		  yourself
 ]
 
+{ #category : 'private' }
+ChessCoachAppElement >> analysisIconNameFor: aGameIndexEntry [
+	"The Material Design icon showing the background analysis state of the game, or nil"
+
+	| state |
+	state := session analysisQueue stateOf: aGameIndexEntry.
+	state = #ready ifTrue: [ ^ 'outlined_checkcircle' ].
+	state = #queued ifTrue: [ ^ 'outlined_hourglassempty' ].
+	state = #analysing ifTrue: [ ^ 'outlined_sync' ].
+	^ nil
+]
+
 { #category : 'accessing' }
 ChessCoachAppElement >> analysisLabel [
 
@@ -68,18 +80,14 @@ ChessCoachAppElement >> analysisLabel [
 
 { #category : 'private' }
 ChessCoachAppElement >> analysisMarkFor: aGameIndexEntry [
-	"A prefix showing the background analysis state of the game"
+	"The progress of the game being analysed, as a prefix"
 
-	| queue state |
+	| queue |
 	queue := session analysisQueue.
-	state := queue stateOf: aGameIndexEntry.
-	state = #ready ifTrue: [ ^ '' ].
-	state = #queued ifTrue: [ ^ '(queued) ' ].
-	state = #analysing ifTrue: [
-			^ queue progress ifNil: [ '(analysing) ' ] ifNotNil: [ :progress |
-					  '(analysing ' , progress key printString , '/'
-					  , progress value printString , ') ' ] ].
-	^ ''
+	((queue stateOf: aGameIndexEntry) = #analysing and: [
+		 queue progress notNil ]) ifFalse: [ ^ '' ].
+	^ queue progress key printString , '/'
+	  , queue progress value printString , ' '
 ]
 
 { #category : 'analysis queue' }
@@ -134,11 +142,9 @@ ChessCoachAppElement >> exitCoach [
 
 { #category : 'actions' }
 ChessCoachAppElement >> filterBySpeed: aSpeedOrNil [
-	"Show only the games of one time control (all when nil)"
+	"Show only the games of one time control (all when nil), as checking its button does"
 
-	speedFilter := aSpeedOrNil.
-	self updateSpeedButtons.
-	self updateFromSession
+	(speedButtons at: aSpeedOrNil) check
 ]
 
 { #category : 'accessing' }
@@ -251,10 +257,7 @@ ChessCoachAppElement >> newGamesPage [
 		            vMatchParent;
 		            width: 280;
 		            nodeBuilder: [ :node :entry :holder |
-				            node addChild: (ToLabel new
-							             text: (self rowTextFor: entry);
-							             hMatchParent;
-							             yourself) ];
+			            node addChild: (self rowElementFor: entry) ];
 		            addEventHandlerOn: ToListPrimarySelectionChangedEvent
 		            do: [ :event | self selectedGameChanged ];
 		            yourself.
@@ -352,23 +355,27 @@ ChessCoachAppElement >> newPageButton: aString icon: anIconName page: anElement 
 
 { #category : 'initialization' }
 ChessCoachAppElement >> newSpeedBar [
-	"Buttons that filter the game list by time control; the selected one is shown in brackets"
+	"Toggle buttons that filter the game list by time control, in one row. A Toplo checkable group keeps exactly one checked; checking one filters the list."
 
-	| bar |
+	| bar group |
 	bar := ToElement new
 		       layout: BlLinearLayout horizontal;
 		       hFitContent;
 		       vFitContent;
 		       yourself.
+	group := ToCheckableGroup new.
 	speedButtons := Dictionary new.
 	self speeds do: [ :each |
 			| button |
-			button := ToButton new
-				          clickAction: [ self filterBySpeed: each value ];
+			button := ToToggleButton new
+				          labelText: each key;
 				          yourself.
+			group register: button.
+			button newCheckAction: [
+				button isChecked ifTrue: [ self speedFilterChecked: each value ] ].
 			speedButtons at: each value put: button.
 			bar addChild: button ].
-	self updateSpeedButtons.
+	(speedButtons at: nil) check.
 	^ bar
 ]
 
@@ -439,6 +446,27 @@ ChessCoachAppElement >> pageButton: aPageId [
 ChessCoachAppElement >> refreshButton [
 
 	^ refreshButton
+]
+
+{ #category : 'private' }
+ChessCoachAppElement >> rowElementFor: aGameIndexEntry [
+	"The analysis state icon, then the players, result and date"
+
+	| row |
+	row := ToElement new
+		       layout: (BlLinearLayout horizontal cellSpacing: 6);
+		       hMatchParent;
+		       vFitContent;
+		       yourself.
+	(self analysisIconNameFor: aGameIndexEntry) ifNotNil: [ :name |
+			row addChild: ((ToMaterialDesignIconProvider iconNamed: name)
+					 extent: 16 @ 16;
+					 yourself) ].
+	row addChild: (ToLabel new
+			 text: (self rowTextFor: aGameIndexEntry);
+			 hMatchParent;
+			 yourself).
+	^ row
 ]
 
 { #category : 'private' }
@@ -582,6 +610,13 @@ ChessCoachAppElement >> speedButtonFor: aSpeedOrNil [
 	^ speedButtons at: aSpeedOrNil
 ]
 
+{ #category : 'actions' }
+ChessCoachAppElement >> speedFilterChecked: aSpeedOrNil [
+
+	speedFilter := aSpeedOrNil.
+	session ifNotNil: [ self updateFromSession ]
+]
+
 { #category : 'private' }
 ChessCoachAppElement >> speeds [
 	"Label -> speed (nil for all games)"
@@ -637,13 +672,4 @@ ChessCoachAppElement >> updateFromSession [
 	gameList dataAccessor removeAll.
 	gameList dataAccessor addAll: (session gamesWithSpeed: speedFilter).
 	self updateAnalysisStatus
-]
-
-{ #category : 'updating' }
-ChessCoachAppElement >> updateSpeedButtons [
-
-	self speeds do: [ :each |
-			(speedButtons at: each value) labelText: (each value = speedFilter
-					 ifTrue: [ '[' , each key , ']' ]
-					 ifFalse: [ each key ]) ]
 ]

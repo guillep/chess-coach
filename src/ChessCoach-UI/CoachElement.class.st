@@ -113,18 +113,20 @@ CoachElement >> buildList [
 			(self paragraph: 'No moments with this filter.') ].
 	moments do: [ :each |
 			currentZone addChild: (self
-					 button:
-						 (self statePrefixOf: each) , (self describeMoment: each)
-						 , ((review isPlanned: each)
-								  ifTrue: [ '' ]
-								  ifFalse: [ ' · not planned' ])
+					 button: (self describeMoment: each) , ((review isPlanned: each)
+							  ifTrue: [ '' ]
+							  ifFalse: [ ' · not planned' ])
+					 icon: (self stateIconNameOf: each)
 					 do: [ self showMoment: each ]) ].
 	currentZone addChild:
 		(self paragraph: ('Marking {1} · moments {2}' format: {
 					  (self minutes: review markingSeconds).
 					  (self minutes: review reviewingSeconds) })).
 	currentZone addChild: (self row: {
-				 (self button: 'Continue review' do: [ self continueReview ]).
+				 (self
+					  button: 'Continue review'
+					  icon: 'outlined_playarrow'
+					  do: [ self continueReview ]).
 				 (self button: 'Summary' do: [ self showSummary ]).
 				 (self button: 'Back' do: [ exitBlock value ]) })
 ]
@@ -136,8 +138,14 @@ CoachElement >> buildMarking [
 	currentZone addChild: (self paragraph:
 			 'Go through the game and mark the moves you want to talk about. The engine''s view stays hidden. Keys: left/right arrows to move, Enter or Space to mark or unmark.').
 	currentZone addChild: (self row: {
-				 (self button: '<' do: [ self showPly: shownPly - 1 ]).
-				 (self button: '>' do: [ self showPly: shownPly + 1 ]) }).
+				 (self
+					  button: ''
+					  icon: 'outlined_chevronleft'
+					  do: [ self showPly: shownPly - 1 ]).
+				 (self
+					  button: ''
+					  icon: 'outlined_chevronright'
+					  do: [ self showPly: shownPly + 1 ]) }).
 	shownPly > 0 ifTrue: [
 			marked := review isMarked: shownPly.
 			currentZone addChild:
@@ -149,8 +157,11 @@ CoachElement >> buildMarking [
 								   ifFalse: [ '' ]) })).
 			marked
 				ifTrue: [
-					currentZone addChild:
-						(self button: 'Unmark' do: [ self unmarkShown ]) ]
+						currentZone addChild:
+							(self
+								 button: 'Unmark'
+								 icon: 'outlined_flag'
+								 do: [ self unmarkShown ]) ]
 				ifFalse: [
 						noteField := ToTextField new
 							             hMatchParent;
@@ -158,7 +169,11 @@ CoachElement >> buildMarking [
 						currentZone
 							addChild: (self paragraph: 'Note (optional):');
 							addChild: noteField;
-							addChild: (self button: 'Mark' do: [ self markShown ]) ] ].
+							addChild:
+								(self
+									 button: 'Mark'
+									 icon: 'outlined_flag'
+									 do: [ self markShown ]) ] ].
 	currentZone addChild: (self paragraph: 'Marked: '
 			 , (review marks ifEmpty: [ 'nothing yet' ] ifNotEmpty: [ :marks |
 						  ', ' join:
@@ -307,7 +322,7 @@ CoachElement >> buildTagPickerFor: aMomentReview [
 
 { #category : 'building' }
 CoachElement >> buildTagsOf: aMomentReview [
-	"Each proposed tag is a toggle: [x] counts as a mistake, [ ] doesn't. The tag's description is its tooltip. When time trouble counts, it is shown as the main cause."
+	"Each proposed tag is a toggle with a check box icon: checked counts as a mistake, unchecked doesn't. The tag's description is its tooltip. When time trouble counts, it is shown as the main cause."
 
 	| taxonomy labels |
 	aMomentReview isSuccess ifTrue: [
@@ -315,7 +330,7 @@ CoachElement >> buildTagsOf: aMomentReview [
 				  (self paragraph: 'Well found: no mistake to tag.') ].
 	taxonomy := MistakeTaxonomy default.
 	currentZone addChild: (self paragraph:
-			 'Tags: [x] counts as a mistake, [ ] doesn''t. Click to change; hover for help.').
+			 'Tags: checked ones count as mistakes. Click to change; hover for help.').
 	aMomentReview isClassifying ifTrue: [
 		currentZone addChild: (self paragraph: '  classifying…') ].
 	labels := aMomentReview labels asArray sort: [ :a :b |
@@ -330,13 +345,13 @@ CoachElement >> buildTagsOf: aMomentReview [
 			| tag |
 			tag := taxonomy tagAt: label tagId.
 			currentZone addChild: ((self
-					  button: (label isRejected
-							   ifTrue: [ '[ ] ' ]
-							   ifFalse: [ '[x] ' ]) , tag name , ' · ' , tag category
-						  , (label isConfirmed
+					  button: tag name , ' · ' , tag category , (label isConfirmed
 								   ifTrue: [ '' ]
 								   ifFalse: [
 									   ' (' , (label confidence * 100) rounded printString , '%)' ])
+					  icon: (label isRejected
+							   ifTrue: [ 'outlined_checkboxoutlineblank' ]
+							   ifFalse: [ 'outlined_checkbox' ])
 					  do: [ self toggleTag: label tagId ])
 					 tooltipString: tag description;
 					 yourself) ].
@@ -421,6 +436,17 @@ CoachElement >> button: aString do: aBlock [
 	^ ToButton new
 		  labelText: aString;
 		  clickAction: aBlock;
+		  yourself
+]
+
+{ #category : 'private' }
+CoachElement >> button: aString icon: anIconName do: aBlock [
+	"A button with a Material Design icon before its label"
+
+	^ (self button: aString do: aBlock)
+		  icon: ((ToMaterialDesignIconProvider iconNamed: anIconName)
+				   extent: 18 @ 18;
+				   yourself);
 		  yourself
 ]
 
@@ -901,11 +927,12 @@ CoachElement >> startNextAfter: aPly [
 ]
 
 { #category : 'private' }
-CoachElement >> statePrefixOf: aMomentReview [
+CoachElement >> stateIconNameOf: aMomentReview [
+	"Reviewed, started or still to do"
 
-	aMomentReview isReviewed ifTrue: [ ^ 'Done · ' ].
-	aMomentReview isStarted ifTrue: [ ^ 'Started · ' ].
-	^ 'To do · '
+	aMomentReview isReviewed ifTrue: [ ^ 'outlined_checkcircle' ].
+	aMomentReview isStarted ifTrue: [ ^ 'outlined_timelapse' ].
+	^ 'outlined_radiobuttonunchecked'
 ]
 
 { #category : 'actions' }
@@ -1022,8 +1049,10 @@ CoachElement >> updateCurrentZone [
 	mode = #moment ifTrue: [ self buildMoment ].
 	(mode ~= #moment and: [ message notNil ]) ifTrue: [
 		currentZone addChild: (self paragraph: message) ].
-	currentZone addChild:
-		(self button: 'Report a problem' do: [ self reportProblem ])
+	currentZone addChild: (self
+			 button: 'Report a problem'
+			 icon: 'outlined_bugreport'
+			 do: [ self reportProblem ])
 ]
 
 { #category : 'updating' }

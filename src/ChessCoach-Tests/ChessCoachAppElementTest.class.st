@@ -13,10 +13,12 @@ Class {
 
 { #category : 'helpers' }
 ChessCoachAppElementTest >> click: anElement [
-	"Login lives in the settings page: open it when the button isn't shown"
+	"Show the page that holds anElement (Settings or Games) when it isn't shown, then click it"
 
-	anElement isAttachedToSceneGraph ifFalse: [
-		self click: app settingsButton ].
+	#( #Settings #Games ) do: [ :page |
+			anElement isAttachedToSceneGraph ifFalse: [
+					app showPage: page.
+					scripter pulse ] ].
 	scripter testClick onChildFromBlock: [ :root | anElement ].
 	scripter syncContinue.
 	scripter pulse
@@ -86,11 +88,10 @@ ChessCoachAppElementTest >> testLoadMoreButtonIsVisibleBelowTheList [
 ]
 
 { #category : 'tests' }
-ChessCoachAppElementTest >> testLoginShowsUserAndLogoutButton [
+ChessCoachAppElementTest >> testLoginShowsLogoutButton [
 
 	self click: app loginButton.
 	self assert: app loginButton labelText asString equals: 'Logout'.
-	self assert: app userLabel text asString equals: 'tester'.
 	self assert: app loadMoreButton isEnabled
 ]
 
@@ -102,6 +103,31 @@ ChessCoachAppElementTest >> testLogoutKeepsGamesListed [
 	self click: app loginButton.
 	self assert: app loginButton labelText asString equals: 'Login'.
 	self assert: app gameList dataAccessor size equals: 20
+]
+
+{ #category : 'tests' }
+ChessCoachAppElementTest >> testNavigation [
+
+	| games stats header |
+	self
+		assert: app gamesPage isAttachedToSceneGraph
+		description: 'starts on Games without reviews'.
+	self deny: app dashboard isAttachedToSceneGraph.
+	header := app navigation header.
+	self assert: header bounds inSpace left equals: 0.
+	self
+		assert: header height > header width
+		description: 'tabs in a column on the left'.
+	app showPage: #Stats.
+	scripter pulse.
+	self assert: app dashboard isAttachedToSceneGraph.
+	self deny: app gamesPage isAttachedToSceneGraph.
+	games := app gamesPage.
+	app showPage: #Games.
+	scripter pulse.
+	self assert: app gamesPage == games description: 'pages are kept'.
+	stats := app pageButton: #Stats.
+	self assert: stats labelText asString equals: 'Stats'
 ]
 
 { #category : 'tests' }
@@ -204,7 +230,8 @@ ChessCoachAppElementTest >> testSettingsPage [
 			 taxonomy: MistakeTaxonomy default).
 	"The whole page fits without scrolling"
 	scripter space extent: 1200 @ 1200.
-	self click: app settingsButton.
+	app showPage: #Settings.
+	scripter pulse.
 	settings := app settingsElement.
 	self assert: settings isAttachedToSceneGraph.
 	self assert: (settings texts includes: 'Depth: 18').
@@ -225,7 +252,6 @@ ChessCoachAppElementTest >> testSettingsPage [
 	settings validateChessCom.
 	scripter pulse.
 	self assert: session chessComUsername equals: 'Bob'.
-	self assert: app userLabel text asString equals: 'Bob'.
 	self click: (settings buttonLabeled: 'Test').
 	self assert: (settings texts includes: 'OK: Stockfish stub').
 	self click: (settings buttonLabeled: 'Load models').
@@ -233,9 +259,7 @@ ChessCoachAppElementTest >> testSettingsPage [
 	self click: (settings buttonLabeled: 'llama3.1:8b').
 	self assert: session settings ollamaModel equals: 'llama3.1:8b'.
 	self assert:
-		(settings texts includes: 'Validated only with qwen2.5:7b-instruct').
-	self click: (settings buttonLabeled: 'Close').
-	self assert: app dashboard isAttachedToSceneGraph
+		(settings texts includes: 'Validated only with qwen2.5:7b-instruct')
 ]
 
 { #category : 'tests' }

@@ -9,8 +9,8 @@ Class {
 		'session',
 		'refreshButton',
 		'loadMoreButton',
-		'userLabel',
 		'statusLabel',
+		'analysisLabel',
 		'gameList',
 		'analysisPane',
 		'gameView',
@@ -19,7 +19,8 @@ Class {
 		'dashboard',
 		'speedFilter',
 		'speedButtons',
-		'settingsButton',
+		'navigation',
+		'gamesPage',
 		'settingsElement'
 	],
 	#category : 'ChessCoach-UI-App',
@@ -59,6 +60,12 @@ ChessCoachAppElement class >> session: aChessCoachSession [
 		  yourself
 ]
 
+{ #category : 'accessing' }
+ChessCoachAppElement >> analysisLabel [
+
+	^ analysisLabel
+]
+
 { #category : 'private' }
 ChessCoachAppElement >> analysisMarkFor: aGameIndexEntry [
 	"A prefix showing the background analysis state of the game"
@@ -77,11 +84,12 @@ ChessCoachAppElement >> analysisMarkFor: aGameIndexEntry [
 
 { #category : 'analysis queue' }
 ChessCoachAppElement >> analysisStateChangedOf: aGameIdOrNil [
-	"Redraw the row of the game whose analysis state changed (every row when nil)"
+	"Redraw the row of the game whose analysis state changed (every row when nil) and the status line"
 
 	gameList dataAccessor withIndexDo: [ :entry :index |
 			(aGameIdOrNil isNil or: [ entry gameId = aGameIdOrNil ]) ifTrue: [
-				gameList dataAccessor at: index put: entry ] ]
+				gameList dataAccessor at: index put: entry ] ].
+	self updateAnalysisStatus
 ]
 
 { #category : 'settings' }
@@ -99,7 +107,7 @@ ChessCoachAppElement >> backgroundRunner: aBlock [
 	"aBlock receives the work block to run; tests pass [ :work | work value ]"
 
 	backgroundRunner := aBlock.
-	settingsElement ifNotNil: [ settingsElement backgroundRunner: aBlock ]
+	settingsElement backgroundRunner: aBlock
 ]
 
 { #category : 'accessing' }
@@ -152,6 +160,12 @@ ChessCoachAppElement >> games [
 	^ gameList dataAccessor asArray
 ]
 
+{ #category : 'accessing' }
+ChessCoachAppElement >> gamesPage [
+
+	^ gamesPage
+]
+
 { #category : 'private' }
 ChessCoachAppElement >> inUIDo: aBlock [
 
@@ -160,21 +174,20 @@ ChessCoachAppElement >> inUIDo: aBlock [
 
 { #category : 'initialization' }
 ChessCoachAppElement >> initialize [
+	"Pages in a tab pane with the tabs in a left column, and a status line below"
 
-	| body |
 	super initialize.
 	backgroundRunner := [ :aBlock |
 	                    aBlock forkAt: Processor userBackgroundPriority ].
 	self layout: BlLinearLayout vertical.
 	self matchParent.
-	body := ToElement new
-		        layout: BlLinearLayout horizontal;
-		        matchParent;
-		        yourself.
-	body addChild: self newGamesPane.
-	body addChild: (analysisPane := self newAnalysisPane).
-	self addChild: self newTopBar.
-	self addChild: body
+	dashboard := self newDashboard.
+	gamesPage := self newGamesPage.
+	settingsElement := SettingsElement new.
+	navigation := self newNavigation.
+	self
+		addChild: navigation;
+		addChild: self newStatusLine
 ]
 
 { #category : 'accessing' }
@@ -190,19 +203,77 @@ ChessCoachAppElement >> loginButton [
 	^ settingsElement loginButton
 ]
 
-{ #category : 'initialization' }
-ChessCoachAppElement >> newAnalysisPane [
-	"The right pane starts on the mistakes dashboard (the landing)"
+{ #category : 'accessing' }
+ChessCoachAppElement >> navigation [
 
-	dashboard := MistakesDashboardElement new.
-	dashboard whenRecordSelectedDo: [ :record | self openMistake: record ].
-	dashboard whenStartRequestedDo: [
+	^ navigation
+]
+
+{ #category : 'initialization' }
+ChessCoachAppElement >> newDashboard [
+
+	| board |
+	board := MistakesDashboardElement new.
+	board whenRecordSelectedDo: [ :record | self openMistake: record ].
+	board whenStartRequestedDo: [
+			self showPage: #Games.
 			self games ifNotEmpty: [ :entries |
 				self selectGameId: entries first gameId ] ].
+	^ board
+]
+
+{ #category : 'initialization' }
+ChessCoachAppElement >> newGamesPage [
+	"A bar with the speed filters, Refresh and Load more; below it the game list and the selected game or the coach"
+
+	| bar body |
+	refreshButton := ToButton new
+		                 labelText: 'Refresh';
+		                 clickAction: [
+			                 self runInBackground: [ session refresh ] ];
+		                 yourself.
+	loadMoreButton := ToButton new
+		                  labelText: 'Load more';
+		                  clickAction: [
+			                  self runInBackground: [ session loadMoreGames ] ];
+		                  yourself.
+	bar := ToElement new
+		       layout: (BlLinearLayout horizontal cellSpacing: 8);
+		       hMatchParent;
+		       vFitContent;
+		       padding: (BlInsets all: 8);
+		       addChild: self newSpeedBar;
+		       addChild: refreshButton;
+		       addChild: loadMoreButton;
+		       yourself.
+	gameList := ToListElement new
+		            useScrollbar: true;
+		            vMatchParent;
+		            width: 280;
+		            nodeBuilder: [ :node :entry :holder |
+				            node addChild: (ToLabel new
+							             text: (self rowTextFor: entry);
+							             hMatchParent;
+							             yourself) ];
+		            addEventHandlerOn: ToListPrimarySelectionChangedEvent
+		            do: [ :event | self selectedGameChanged ];
+		            yourself.
+	analysisPane := ToElement new
+		                layout: BlFrameLayout new;
+		                matchParent;
+		                yourself.
+	body := ToElement new
+		        layout: BlLinearLayout horizontal;
+		        matchParent;
+		        addChild: gameList;
+		        addChild: analysisPane;
+		        yourself.
+	self showDefaultPane.
 	^ ToElement new
-		  layout: BlFrameLayout new;
+		  layout: BlLinearLayout vertical;
 		  matchParent;
-		  addChild: dashboard;
+		  addChild: bar;
+		  addChild: body;
 		  yourself
 ]
 
@@ -239,13 +310,54 @@ ChessCoachAppElement >> newGamesPane [
 ]
 
 { #category : 'initialization' }
+ChessCoachAppElement >> newNavigation [
+	"Games, Stats and Settings as pages of a Toplo tab pane, tabs in a column on the left. Pages are built once and kept."
+
+	| pane |
+	pane := ToTabPaneElement new.
+	pane horizontal: true.
+	pane matchParent.
+	pane showAddTabItemButton: false.
+	pane addItem: (self
+			 newPageButton: 'Games'
+			 icon: 'outlined_sportsesports'
+			 page: gamesPage).
+	pane addItem:
+		(self
+			 newPageButton: 'Stats'
+			 icon: 'outlined_insights'
+			 page: dashboard).
+	pane addItem: (self
+			 newPageButton: 'Settings'
+			 icon: 'outlined_settings'
+			 page: settingsElement).
+	^ pane
+]
+
+{ #category : 'initialization' }
+ChessCoachAppElement >> newPageButton: aString icon: anIconName page: anElement [
+	"A square tab: a large Material Design icon above a small label"
+
+	^ ToTabButton new
+		  id: aString asSymbol;
+		  labelText: aString;
+		  icon: ((ToMaterialDesignIconProvider iconNamed: anIconName)
+				   extent: 32 @ 32;
+				   yourself);
+		  beVertical;
+		  removable: false;
+		  paneBuilder: [ :pane :button :holder | pane addChild: anElement ];
+		  yourself
+]
+
+{ #category : 'initialization' }
 ChessCoachAppElement >> newSpeedBar [
 	"Buttons that filter the game list by time control; the selected one is shown in brackets"
 
 	| bar |
 	bar := ToElement new
-		       layout: BlFlowLayout horizontal;
-		       hMatchParent;
+		       layout: BlLinearLayout horizontal;
+		       hFitContent;
 		       vFitContent;
 		       yourself.
 	speedButtons := Dictionary new.
@@ -261,39 +373,31 @@ ChessCoachAppElement >> newSpeedBar [
 ]
 
 { #category : 'initialization' }
-ChessCoachAppElement >> newTopBar [
+ChessCoachAppElement >> newStatusLine [
+	"Background work, errors and the analysis queue, shared by every page"
 
-	| bar |
-	bar := ToElement new
-		       layout: (BlLinearLayout horizontal cellSpacing: 8);
-		       hMatchParent;
-		       vFitContent;
-		       padding: (BlInsets all: 8);
-		       yourself.
-	refreshButton := ToButton new
-		                 labelText: 'Refresh';
-		                 clickAction: [
-			                 self runInBackground: [ session refresh ] ];
-		                 yourself.
-	settingsButton := ToButton new
-		                  labelText: 'Settings';
-		                  clickAction: [ self openSettings ];
-		                  yourself.
-	userLabel := ToLabel text: ''.
 	statusLabel := ToLabel text: ''.
-	bar
-		addChild: refreshButton;
-		addChild: settingsButton;
-		addChild: userLabel;
-		addChild: statusLabel.
-	^ bar
+	analysisLabel := ToLabel text: ''.
+	^ ToElement new
+		  layout: (BlLinearLayout horizontal cellSpacing: 16);
+		  hMatchParent;
+		  vFitContent;
+		  padding: (BlInsets
+				   top: 2
+				   left: 8
+				   bottom: 2
+				   right: 8);
+		  addChild: statusLabel;
+		  addChild: analysisLabel;
+		  yourself
 ]
 
 { #category : 'coach' }
 ChessCoachAppElement >> openMistake: aMistakeRecord [
-	"Select the game of a mistake and show its moment in the most recent review that has it"
+	"Go to Games, select the game of a mistake and show its moment in the most recent review that has it"
 
 	| entry review |
+	self showPage: #Games.
 	(self selectGameId: aMistakeRecord gameId) ifFalse: [ ^ self ].
 	entry := self selectedEntry.
 	review := (session reviewsFor: entry) reversed
@@ -325,11 +429,10 @@ ChessCoachAppElement >> openReview: aCoachReview of: aGameIndexEntry [
 	^ coach
 ]
 
-{ #category : 'settings' }
-ChessCoachAppElement >> openSettings [
+{ #category : 'navigation' }
+ChessCoachAppElement >> pageButton: aPageId [
 
-	coach := nil.
-	self showInPane: settingsElement
+	^ navigation items asArray detect: [ :each | each id = aPageId ]
 ]
 
 { #category : 'accessing' }
@@ -403,6 +506,7 @@ ChessCoachAppElement >> selectedGameChanged [
 
 { #category : 'accessing' }
 ChessCoachAppElement >> session: aChessCoachSession [
+	"Connect to the session and open on Stats when there are reviewed mistakes, on Games otherwise"
 
 	session := aChessCoachSession.
 	session announcer
@@ -424,17 +528,19 @@ ChessCoachAppElement >> session: aChessCoachSession [
 					self enqueueTask:
 						(BlTaskAction new action: [ self applyPieceSet ]) ] ]
 		for: self.
-	settingsElement := SettingsElement new.
 	settingsElement backgroundRunner: backgroundRunner.
 	settingsElement session: session.
-	settingsElement whenClosedDo: [ self showDefaultPane ].
-	self updateFromSession
+	self updateFromSession.
+	self showPage: (session mistakeDatabase records
+			 ifEmpty: [ #Games ]
+			 ifNotEmpty: [ #Stats ])
 ]
 
 { #category : 'accessing' }
 ChessCoachAppElement >> settingsButton [
+	"The Settings tab"
 
-	^ settingsButton
+	^ self pageButton: #Settings
 ]
 
 { #category : 'accessing' }
@@ -445,9 +551,13 @@ ChessCoachAppElement >> settingsElement [
 
 { #category : 'settings' }
 ChessCoachAppElement >> showDefaultPane [
-	"The view of the selected game, or the mistakes dashboard"
+	"The view of the selected game, or a hint"
 
-	self showInPane: (gameView ifNil: [ dashboard ])
+	self showInPane: (gameView ifNil: [
+				 ToLabel new
+					 text: 'Select a game';
+					 padding: (BlInsets all: 16);
+					 yourself ])
 ]
 
 { #category : 'private' }
@@ -456,6 +566,14 @@ ChessCoachAppElement >> showInPane: anElement [
 	analysisPane removeChildren.
 	anElement removeFromParent.
 	analysisPane addChild: anElement
+]
+
+{ #category : 'navigation' }
+ChessCoachAppElement >> showPage: aPageId [
+	"#Games, #Stats or #Settings"
+
+	navigation selecter selectIndex:
+		(navigation items asArray findFirst: [ :each | each id = aPageId ])
 ]
 
 { #category : 'accessing' }
@@ -492,21 +610,33 @@ ChessCoachAppElement >> statusLabel [
 	^ statusLabel
 ]
 
+{ #category : 'analysis queue' }
+ChessCoachAppElement >> updateAnalysisStatus [
+
+	| left |
+	left := session analysisQueue pendingGameIds size.
+	analysisLabel text: (left = 0
+			 ifTrue: [ '' ]
+			 ifFalse: [
+					 'Analysing in the background: ' , left printString , ' game'
+					 , (left = 1
+							  ifTrue: [ '' ]
+							  ifFalse: [ 's' ]) , ' left' ])
+]
+
 { #category : 'updating' }
 ChessCoachAppElement >> updateFromSession [
 
 	refreshButton enabled: session canImport.
 	loadMoreButton enabled: session canImport.
-	userLabel text: (' · ' join: ({
-				  session username.
-				  session chessComUsername } reject: [ :each | each isNil ])).
 	session analysisQueue isRunning ifTrue: [
 		session analysisQueue enqueueUnanalysed ].
 	dashboard
 		database: session mistakeDatabase
 		times: session reviewTimes.
 	gameList dataAccessor removeAll.
-	gameList dataAccessor addAll: (session gamesWithSpeed: speedFilter)
+	gameList dataAccessor addAll: (session gamesWithSpeed: speedFilter).
+	self updateAnalysisStatus
 ]
 
 { #category : 'updating' }
@@ -516,10 +646,4 @@ ChessCoachAppElement >> updateSpeedButtons [
 			(speedButtons at: each value) labelText: (each value = speedFilter
 					 ifTrue: [ '[' , each key , ']' ]
 					 ifFalse: [ each key ]) ]
-]
-
-{ #category : 'accessing' }
-ChessCoachAppElement >> userLabel [
-
-	^ userLabel
 ]

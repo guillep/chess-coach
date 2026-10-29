@@ -7,7 +7,6 @@ Class {
 	#instVars : [
 		'session',
 		'backgroundRunner',
-		'closeBlock',
 		'loginButton',
 		'cancelButton',
 		'lichessStatus',
@@ -47,12 +46,7 @@ SettingsElement >> build [
 		           padding: (BlInsets all: 16);
 		           yourself.
 	content
-		addChild: (self row: {
-						 (self heading: 'Settings').
-						 (ToButton new
-							  labelText: 'Close';
-							  clickAction: [ closeBlock value ];
-							  yourself) });
+		addChild: (self heading: 'Settings');
 		addChild: (self heading: 'Accounts');
 		addChild: self lichessRow;
 		addChild: self chessComRow;
@@ -81,7 +75,7 @@ SettingsElement >> build [
 				 by: 1);
 		addChild: (multiPVNote := ToLabel new);
 		addChild: (self note:
-				 'Changes apply to games analysed from now on; stored analyses are kept.');
+					 'Changes apply to games analysed from now on; stored analyses are kept.');
 		addChild: (self heading: 'Coach (local LLM)');
 		addChild: self ollamaRow;
 		addChild: (modelsZone := self row: #(  ));
@@ -186,7 +180,6 @@ SettingsElement >> initialize [
 	super initialize.
 	backgroundRunner := [ :aBlock |
 	                    aBlock forkAt: Processor userBackgroundPriority ].
-	closeBlock := [ ].
 	numberLabels := Dictionary new.
 	pieceSetButtons := Dictionary new.
 	self layout: BlLinearLayout vertical.
@@ -505,10 +498,4 @@ SettingsElement >> validateChessCom [
 						 ifTrue: [ 'OK: ' , name ]
 						 ifFalse: [ 'Not found: no such Chess.com player' ]) ]
 		showingErrorsIn: chessComStatus
-]
-
-{ #category : 'accessing' }
-SettingsElement >> whenClosedDo: aBlock [
-
-	closeBlock := aBlock
 ]

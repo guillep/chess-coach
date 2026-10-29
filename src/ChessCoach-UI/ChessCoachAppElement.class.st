@@ -27,7 +27,10 @@ Class {
 		'selectedIndex',
 		'coachTab',
 		'playThroughTab',
-		'playThrough'
+		'playThrough',
+		'bell',
+		'bellBadge',
+		'notificationsWindow'
 	],
 	#category : 'ChessCoach-UI-App',
 	#package : 'ChessCoach-UI',
@@ -55,6 +58,7 @@ ChessCoachAppElement class >> openOn: aChessCoachSession [
 		do: [ :event | aChessCoachSession shutDown ].
 	space show.
 	app startBackgroundAnalysis.
+	aChessCoachSession startScheduledChecks.
 	^ app
 ]
 
@@ -131,6 +135,18 @@ ChessCoachAppElement >> backgroundRunner: aBlock [
 
 	backgroundRunner := aBlock.
 	settingsElement backgroundRunner: aBlock
+]
+
+{ #category : 'accessing' }
+ChessCoachAppElement >> bell [
+
+	^ bell
+]
+
+{ #category : 'accessing' }
+ChessCoachAppElement >> bellBadge [
+
+	^ bellBadge
 ]
 
 { #category : 'navigation' }
@@ -219,7 +235,7 @@ ChessCoachAppElement >> inUIDo: aBlock [
 
 { #category : 'initialization' }
 ChessCoachAppElement >> initialize [
-	"Pages in a tab pane with the tabs in a left column, and a status line below"
+	"Pages in a tab pane with the tabs in a left column, the notification bell over its top right corner, and a status line below"
 
 	super initialize.
 	backgroundRunner := [ :aBlock |
@@ -231,7 +247,12 @@ ChessCoachAppElement >> initialize [
 	settingsElement := SettingsElement new.
 	navigation := self newNavigation.
 	self
-		addChild: navigation;
+		addChild: (ToElement new
+				 layout: BlFrameLayout new;
+				 matchParent;
+				 addChild: navigation;
+				 addChild: self newBell;
+				 yourself);
 		addChild: self newStatusLine
 ]
 
@@ -264,6 +285,46 @@ ChessCoachAppElement >> loginButton [
 ChessCoachAppElement >> navigation [
 
 	^ navigation
+]
+
+{ #category : 'initialization' }
+ChessCoachAppElement >> newBell [
+	"The notification bell, top right, with a red dot while there are unread notifications. Clicking it pops up the notifications below it, to its left (they would leave the window otherwise), and marks them read"
+
+	bellBadge := BlElement new
+		             geometry: BlCircleGeometry new;
+		             extent: 10 @ 10;
+		             background: (Color fromHexString: '#dc2626');
+		             visibility: BlVisibility hidden;
+		             constraintsDo: [ :c |
+				             c frame horizontal alignRight.
+				             c frame vertical alignTop ];
+		             yourself.
+	bell := ToButton new
+		        id: #notifications;
+		        icon:
+			        ((ToMaterialDesignIconProvider iconNamed:
+					          'outlined_notifications')
+				         extent: 24 @ 24;
+				         yourself);
+		        tooltipText: 'Notifications';
+		        yourself.
+	notificationsWindow := ToPopupWindowManager new.
+	notificationsWindow placement: ToAnchoredBottomLeftPlacement new.
+	notificationsWindow windowBuilder: [ :window :element |
+			window root addChild: self newNotificationsPanel.
+			session notifications markAllRead ].
+	bell addEventHandler: notificationsWindow.
+	^ ToElement new
+		  layout: BlFrameLayout new;
+		  fitContent;
+		  margin: (BlInsets all: 8);
+		  constraintsDo: [ :c |
+				  c frame horizontal alignRight.
+				  c frame vertical alignTop ];
+		  addChild: bell;
+		  addChild: bellBadge;
+		  yourself
 ]
 
 { #category : 'initialization' }
@@ -369,6 +430,75 @@ ChessCoachAppElement >> newNavigation [
 	^ pane
 ]
 
+{ #category : 'notifications' }
+ChessCoachAppElement >> newNotificationRow: aNotification in: aPanel [
+	"Title, time and text, the notification's action (Show for new games) and a dismiss button that removes the row"
+
+	| row header |
+	row := ToElement new
+		       layout: (BlLinearLayout vertical cellSpacing: 4);
+		       hMatchParent;
+		       vFitContent;
+		       yourself.
+	header := ToElement new
+		          layout: (BlLinearLayout horizontal cellSpacing: 8);
+		          hMatchParent;
+		          vFitContent;
+		          addChild: (ToLabel new
+				           text: aNotification title asRopedText bold;
+				           hMatchParent;
+				           yourself);
+		          addChild:
+		          (ToLabel text: (self timeTextFor: aNotification time));
+		          addChild: (ToButton new
+				           icon:
+					           ((ToMaterialDesignIconProvider iconNamed:
+							             'outlined_close')
+						            extent: 16 @ 16;
+						            yourself);
+				           tooltipText: 'Dismiss';
+				           clickAction: [
+						           session notifications dismiss: aNotification.
+						           aPanel removeChild: row ];
+				           yourself);
+		          yourself.
+	row addChild: header.
+	aNotification text ifNotEmpty: [ :text |
+		row addChild: (ChessCoachWidgets paragraph: text) ].
+	aNotification kind = #newGames ifTrue: [
+			row addChild: (ToButton new
+					 labelText: 'Show';
+					 clickAction: [
+							 notificationsWindow currentWindow ifNotNil: [ :window |
+									 window close ].
+							 self showPage: #Games ];
+					 yourself) ].
+	^ row
+]
+
+{ #category : 'notifications' }
+ChessCoachAppElement >> newNotificationsPanel [
+	"The notifications, newest first, each with its action and a dismiss button"
+
+	| panel visible |
+	panel := ToElement new
+		         layout: (BlLinearLayout vertical cellSpacing: 8);
+		         width: 360;
+		         vFitContent;
+		         padding: (BlInsets all: 12);
+		         yourself.
+	visible := session notifications visible.
+	visible ifEmpty: [
+			^ panel
+				  addChild: (ToLabel text: 'No notifications');
+				  yourself ].
+	visible
+		do: [ :each |
+		panel addChild: (self newNotificationRow: each in: panel) ]
+		separatedBy: [ panel addChild: ChessCoachWidgets separator ].
+	^ panel
+]
+
 { #category : 'initialization' }
 ChessCoachAppElement >> newPageButton: aString icon: anIconName page: anElement [
 	"A square tab: a large Material Design icon above a small label"
@@ -431,6 +561,12 @@ ChessCoachAppElement >> newStatusLine [
 		  addChild: analysisLabel;
 		  addChild: dependencyLabel;
 		  yourself
+]
+
+{ #category : 'accessing' }
+ChessCoachAppElement >> notificationsWindow [
+
+	^ notificationsWindow
 ]
 
 { #category : 'coach' }
@@ -622,6 +758,11 @@ ChessCoachAppElement >> session: aChessCoachSession [
 						 self analysisStateChangedOf: announcement gameId ]) ]
 		for: self.
 	session announcer
+		when: ChessCoachNotificationsChanged
+		do: [ :announcement |
+			self enqueueTask: (BlTaskAction new action: [ self updateBell ]) ]
+		for: self.
+	session announcer
 		when: ChessCoachSettingsChanged
 		do: [ :announcement |
 				(#( 'pieceSet' 'boardTheme' ) includes: announcement key) ifTrue: [
@@ -639,6 +780,7 @@ ChessCoachAppElement >> session: aChessCoachSession [
 	settingsElement session: session.
 	settingsElement whenSetupRequestedDo: [ self showWizard ].
 	self updateFromSession.
+	self updateBell.
 	self showPage: (session mistakeDatabase records
 			 ifEmpty: [ #Games ]
 			 ifNotEmpty: [ #Stats ]).
@@ -768,6 +910,15 @@ ChessCoachAppElement >> tabClosed: aTabButton [
 			playThroughTab := nil ]
 ]
 
+{ #category : 'notifications' }
+ChessCoachAppElement >> timeTextFor: aDateAndTime [
+	"Today's notifications show their time, older ones their date"
+
+	^ aDateAndTime asDate = Date today
+		  ifTrue: [ aDateAndTime asTime print24 first: 5 ]
+		  ifFalse: [ aDateAndTime asDate yyyymmdd ]
+]
+
 { #category : 'analysis queue' }
 ChessCoachAppElement >> updateAnalysisStatus [
 
@@ -780,6 +931,15 @@ ChessCoachAppElement >> updateAnalysisStatus [
 					 , (left = 1
 							  ifTrue: [ '' ]
 							  ifFalse: [ 's' ]) , ' left' ])
+]
+
+{ #category : 'notifications' }
+ChessCoachAppElement >> updateBell [
+	"Show the red dot while there are unread notifications"
+
+	bellBadge visibility: (session notifications unreadCount > 0
+			 ifTrue: [ BlVisibility visible ]
+			 ifFalse: [ BlVisibility hidden ])
 ]
 
 { #category : 'updating' }

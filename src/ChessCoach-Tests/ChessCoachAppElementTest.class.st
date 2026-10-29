@@ -518,6 +518,30 @@ ChessCoachAppElementTest >> testSwitchingBackToGamesWithGamesListed [
 ]
 
 { #category : 'tests' }
+ChessCoachAppElementTest >> testTheBellShowsUnreadNotifications [
+
+	self deny: app bellBadge isVisible description: 'no dot at first'.
+	session notifications post: (ChessCoachNotification
+			 key: 'new-games'
+			 kind: #newGames
+			 title: '2 new games'
+			 text: 'Downloaded from your accounts').
+	scripter pulse.
+	self assert: app bellBadge isVisible description: 'dot after posting'.
+	self
+		assert: app bell bounds inSpace right > (app space extent x - 60)
+		description: 'bell at the right'.
+	BlSpace simulateMouseDownOn: app bell.
+	scripter pulse.
+	self
+		assert: app notificationsWindow currentWindow notNil
+		description: 'popup open'.
+	self assert: session notifications unreadCount equals: 0.
+	scripter pulse.
+	self deny: app bellBadge isVisible description: 'no dot once read'
+]
+
+{ #category : 'tests' }
 ChessCoachAppElementTest >> testTheGameListScrollbarIsBesideTheRows [
 
 	| scrollbar |

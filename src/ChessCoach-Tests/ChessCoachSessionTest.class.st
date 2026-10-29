@@ -26,6 +26,21 @@ ChessCoachSessionTest >> setUp [
 ]
 
 { #category : 'tests' }
+ChessCoachSessionTest >> testAFailingCheckIsNotifiedOncePerSite [
+
+	session login.
+	session loadMoreGames.
+	api error: (LichessError new messageText: 'Lichess is down').
+	session checkForNewGames.
+	session checkForNewGames.
+	self assert: session notifications visible size equals: 1.
+	self assert: session notifications visible first kind equals: #error.
+	self
+		assert: session notifications visible first text
+		equals: 'Lichess is down'
+]
+
+{ #category : 'tests' }
 ChessCoachSessionTest >> testChangesAreAnnounced [
 
 	| count |
@@ -39,6 +54,26 @@ ChessCoachSessionTest >> testChangesAreAnnounced [
 	session refresh.
 	session logout.
 	self assert: count equals: 4
+]
+
+{ #category : 'tests' }
+ChessCoachSessionTest >> testCheckingForNewGamesNotifiesThem [
+
+	session login.
+	session loadMoreGames.
+	api addNewestGame: (LichessAPIClientStub gameNumber: 26).
+	api addNewestGame: (LichessAPIClientStub gameNumber: 27).
+	session checkForNewGames.
+	self assert: session games first gameId equals: 'g27'.
+	self assert: session notifications visible size equals: 1.
+	self
+		assert: session notifications visible first kind
+		equals: #newGames.
+	self
+		assert: session notifications visible first title
+		equals: '2 new games'.
+	session checkForNewGames.
+	self assert: session notifications visible size equals: 1
 ]
 
 { #category : 'tests' }
@@ -345,6 +380,15 @@ ChessCoachSessionTest >> testReviewIsSavedAndFeedsTheMistakeDatabase [
 		((session reviewsFor: entry) collect: [ :each | each number ])
 			asArray
 		equals: #( 1 2 )
+]
+
+{ #category : 'tests' }
+ChessCoachSessionTest >> testShutDownStopsTheScheduledChecks [
+
+	session startScheduledChecks.
+	session shutDown.
+	self deny: (Process allInstances anySatisfy: [ :each |
+			 each name = 'Chess Coach scheduler' and: [ each isTerminated not ] ])
 ]
 
 { #category : 'tests' }

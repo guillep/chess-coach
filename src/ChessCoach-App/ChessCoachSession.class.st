@@ -12,7 +12,9 @@ Class {
 		'classifier',
 		'analysisQueue',
 		'chessComImporter',
-		'settings'
+		'settings',
+		'notifications',
+		'scheduler'
 	],
 	#category : 'ChessCoach-App',
 	#package : 'ChessCoach-App'
@@ -145,6 +147,30 @@ ChessCoachSession >> canTimeBox [
 ChessCoachSession >> cancelLogin [
 
 	importer cancelLogin
+]
+
+{ #category : 'notifications' }
+ChessCoachSession >> checkForNewGames [
+	"Download new games from every site with a username, as Refresh does, and notify them. A site that fails gets one error notification, replaced while it keeps failing"
+
+	| entries |
+	entries := OrderedCollection new.
+	self username ifNotNil: [
+			entries addAll:
+				(self importFrom: 'Lichess' doing: [ importer importNewerGames ]) ].
+	self chessComUsername ifNotNil: [
+			entries addAll: (self
+					 importFrom: 'Chess.com'
+					 doing: [ self chessComImporter importNewerGames ]) ].
+	entries ifEmpty: [ ^ self ].
+	self notifications post: (ChessCoachNotification
+			 key: 'new-games-' , DateAndTime now asUnixTime printString
+			 kind: #newGames
+			 title: (entries size = 1
+					  ifTrue: [ '1 new game' ]
+					  ifFalse: [ entries size printString , ' new games' ])
+			 text: 'Downloaded from your accounts').
+	self announceChanged
 ]
 
 { #category : 'chess.com' }
@@ -316,6 +342,25 @@ ChessCoachSession >> gamesWithSpeed: aSpeedOrNil [
 					backfilled := true ] ].
 	backfilled ifTrue: [ importer indexManager saveIndexToDisk ].
 	^ games select: [ :entry | entry speed = aSpeedOrNil ]
+]
+
+{ #category : 'notifications' }
+ChessCoachSession >> importFrom: siteName doing: aBlock [
+	"Answer the entries aBlock imports. On an error, notify it under the site's key (unexpected errors also go to errors.log) and answer none"
+
+	^ aBlock
+		  on: Error
+		  do: [ :error |
+				  ((error isKindOf: LichessError) or: [
+					   error isKindOf: NetworkError ]) ifFalse: [
+					  self logError: error ].
+				  self notifications post: (ChessCoachNotification
+						   key: 'error-' , siteName
+						   kind: #error
+						   title: siteName , ' check failed'
+						   text:
+						   (error messageText ifNil: [ error class name ]) asString).
+				  #(  ) ]
 ]
 
 { #category : 'initialization' }
@@ -594,6 +639,21 @@ ChessCoachSession >> newReviewFor: aGameIndexEntry timeBox: minutesOrNil [
 	^ review
 ]
 
+{ #category : 'notifications' }
+ChessCoachSession >> notifications [
+	"The notification center, in notifications.json next to the games"
+
+	^ notifications ifNil: [
+			  notifications := ChessCoachNotifications onFile:
+				                   importer fileStore baseDirectory
+				                   / 'notifications.json'.
+			  notifications whenChangedDo: [
+					  announcer announce: (ChessCoachNotificationsChanged new
+							   notifications: notifications;
+							   yourself) ].
+			  notifications ]
+]
+
 { #category : 'private' }
 ChessCoachSession >> rebuiltMistakeDatabase [
 	"The reviews are the source of truth: collect the mistakes saved in every games/<id>.review-<n>.json. A moment reviewed in several reviews of a game counts once, from the most recent one."
@@ -710,10 +770,21 @@ ChessCoachSession >> settings [
 
 { #category : 'running' }
 ChessCoachSession >> shutDown [
-	"Stop the background analysis and quit every Stockfish process this session started"
+	"Stop the scheduled checks, the background analysis and quit every Stockfish process this session started"
 
+	scheduler ifNotNil: [ scheduler stop ].
 	analysisQueue ifNotNil: [ analysisQueue stop ].
 	analyser ifNotNil: [ analyser engine stop ]
+]
+
+{ #category : 'running' }
+ChessCoachSession >> startScheduledChecks [
+	"Check for new games now and every 30 minutes, until shutDown. Unexpected errors go to errors.log"
+
+	scheduler := ChessCoachScheduler new.
+	scheduler onErrorDo: [ :error | self logError: error ].
+	scheduler every: 30 minutes do: [ self checkForNewGames ].
+	scheduler start
 ]
 
 { #category : 'accessing' }

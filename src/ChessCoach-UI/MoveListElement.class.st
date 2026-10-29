@@ -55,10 +55,7 @@ MoveListElement >> buildUI [
 	header constraintsDo: [ :c |
 			c horizontal matchParent.
 			c vertical fitContent ].
-	toggleButton := BlTextElement new text: 'Compact' asRopedText.
-	toggleButton constraintsDo: [ :c |
-			c horizontal fitContent.
-			c vertical fitContent ].
+	toggleButton := ToLabel new text: 'Compact'.
 	toggleButton margin: (BlInsets all: 4).
 	toggleButton padding: (BlInsets all: 4).
 	toggleButton
@@ -171,11 +168,12 @@ MoveListElement >> moveTexts [
 
 { #category : 'building' }
 MoveListElement >> newMoveElementFor: aMove at: anIndex [
+	"A label, so that its text follows the app theme"
 
-	^ BlTextElement new
+	^ ToLabel new
 		  text: ((markedPlies includes: anIndex)
 				   ifTrue: [ '*' , aMove san ]
-				   ifFalse: [ aMove san ]) asRopedText;
+				   ifFalse: [ aMove san ]);
 		  margin: (BlInsets all: 4);
 		  padding: (BlInsets all: 2);
 		  addEventHandlerOn: BlClickEvent
@@ -193,21 +191,19 @@ MoveListElement >> rebuildMoves [
 	game moves doWithIndex: [ :move :index |
 			| compact rigid |
 			compact := self newMoveElementFor: move at: index.
-			compact constraintsDo: [ :c |
-					c horizontal fitContent.
-					c vertical fitContent ].
+			compact fitContent.
 			compactContainer addChild: compact.
 			moveElements at: index put: compact.
 			index odd ifTrue: [
-					rigidContainer addChild: (BlTextElement new
-							 text: ((index + 1 // 2) printString , '.') asRopedText;
+					rigidContainer addChild: (ToLabel new
+							 text: (index + 1 // 2) printString , '.';
 							 margin: (BlInsets all: 4);
 							 padding: (BlInsets all: 2);
 							 yourself) ].
 			rigid := self newMoveElementFor: move at: index.
-			rigid constraintsDo: [ :c |
-					c horizontal matchParent.
-					c vertical fitContent ].
+			rigid
+				hMatchParent;
+				vFitContent.
 			rigidContainer addChild: rigid.
 			rigidMoveElements at: index put: rigid ].
 	self applyLayout.

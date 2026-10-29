@@ -17,6 +17,7 @@ Class {
 ChessCoachSettings class >> defaults [
 
 	^ Dictionary new
+		  at: 'appTheme' put: 'Light';
 		  at: 'pieceSet' put: 'Meridian';
 		  at: 'boardTheme' put: 'Brown';
 		  at: 'gamesPerLoad' put: 20;
@@ -35,6 +36,13 @@ ChessCoachSettings class >> onFile: aFileReference [
 	"Settings stored in aFileReference; missing values take their defaults"
 
 	^ self new setFile: aFileReference
+]
+
+{ #category : 'accessing' }
+ChessCoachSettings >> appTheme [
+	"'Light' or 'Dark': the look of the whole app (the board has its own colours)"
+
+	^ self at: 'appTheme'
 ]
 
 { #category : 'accessing' }

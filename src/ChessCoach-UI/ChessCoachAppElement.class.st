@@ -91,6 +91,20 @@ ChessCoachAppElement >> analysisStateChangedOf: aGameIdOrNil [
 ]
 
 { #category : 'settings' }
+ChessCoachAppElement >> applyAppTheme [
+	"Toplo's light or dark theme for the whole app, with a matching page background"
+
+	| dark |
+	dark := session settings appTheme = 'Dark'.
+	self localTheme: (dark
+			 ifTrue: [ ToRawDarkTheme new ]
+			 ifFalse: [ ToRawTheme new ]).
+	self background: (Color fromHexString: (dark
+				  ifTrue: [ '#1f2124' ]
+				  ifFalse: [ '#ffffff' ]))
+]
+
+{ #category : 'settings' }
 ChessCoachAppElement >> applyPieceSet [
 	"Every open board uses the piece set and the colour theme of the settings"
 
@@ -158,8 +172,10 @@ ChessCoachAppElement >> gameList [
 
 { #category : 'accessing' }
 ChessCoachAppElement >> gameRows [
+	"The rows without their separators"
 
-	^ rowsColumn children
+	^ (1 to: rowsColumn childrenCount by: 2) collect: [ :index |
+		  rowsColumn childAt: index ]
 ]
 
 { #category : 'accessing' }
@@ -280,7 +296,6 @@ ChessCoachAppElement >> newGamesPage [
 		              layout: BlLinearLayout vertical;
 		              hMatchParent;
 		              vFitContent;
-		              background: (Color fromHexString: '#e3e6ea');
 		              yourself.
 	gameList := ToElement new
 		            layout: BlFrameLayout new;
@@ -292,9 +307,7 @@ ChessCoachAppElement >> newGamesPage [
 				             bottom: 8
 				             right: 0);
 		            border:
-			            (BlBorder
-				             paint: (Color fromHexString: '#c8ccd2')
-				             width: 1);
+			            (BlBorder paint: (Color gray alpha: 0.4) width: 1);
 		            addChild: (ChessCoachWidgets scrollable: rowsColumn);
 		            yourself.
 	analysisPane := ToElement new
@@ -452,22 +465,32 @@ ChessCoachAppElement >> paintRowAt: anIndex [
 
 { #category : 'updating' }
 ChessCoachAppElement >> paintRowAt: anIndex hovered: aBoolean [
+	"Translucent backgrounds, so that they work on light and dark themes"
 
-	anIndex > rowsColumn childrenCount ifTrue: [ ^ self ].
-	(rowsColumn childAt: anIndex) background: (anIndex = selectedIndex
-			 ifTrue: [ Color fromHexString: '#cfe2ff' ]
+	| childIndex |
+	childIndex := anIndex * 2 - 1.
+	childIndex > rowsColumn childrenCount ifTrue: [ ^ self ].
+	(rowsColumn childAt: childIndex) background:
+		(anIndex = selectedIndex
+			 ifTrue: [ Color blue alpha: 0.25 ]
 			 ifFalse: [
 					 aBoolean
-						 ifTrue: [ Color fromHexString: '#f0f4fa' ]
-						 ifFalse: [ Color white ] ])
+						 ifTrue: [ Color gray alpha: 0.15 ]
+						 ifFalse: [ Color transparent ] ])
 ]
 
 { #category : 'updating' }
 ChessCoachAppElement >> rebuildRows [
+	"Each row is followed by a 1 px translucent separator, which works on light and dark themes"
 
 	rowsColumn removeChildren.
 	listedGames doWithIndex: [ :entry :index |
-		rowsColumn addChild: (self rowElementFor: entry at: index) ].
+			rowsColumn addChild: (self rowElementFor: entry at: index).
+			rowsColumn addChild: (BlElement new
+					 height: 1;
+					 constraintsDo: [ :c | c horizontal matchParent ];
+					 background: (Color gray alpha: 0.3);
+					 yourself) ].
 	self updateRowSelection
 ]
 
@@ -479,20 +502,17 @@ ChessCoachAppElement >> refreshButton [
 
 { #category : 'private' }
 ChessCoachAppElement >> rowElementFor: aGameIndexEntry at: anIndex [
-	"Players, result and date; a click selects the game. Rows are 1 px apart over the column's grey, which draws the separators."
+	"Players, result and date; a click selects the game. A label, so that its text follows the app theme."
 
 	| row |
-	row := BlTextElement new
-		       text: (self rowTextFor: aGameIndexEntry) asRopedText;
+	row := ToLabel new
+		       text: (self rowTextFor: aGameIndexEntry);
 		       padding: (BlInsets
 				        top: 8
 				        left: 10
 				        bottom: 8
 				        right: 10);
-		       margin: (BlInsets bottom: 1);
-		       constraintsDo: [ :c |
-				       c horizontal matchParent.
-				       c vertical fitContent ];
+		       hMatchParent;
 		       yourself.
 	row
 		addEventHandlerOn: BlClickEvent
@@ -608,8 +628,12 @@ ChessCoachAppElement >> session: aChessCoachSession [
 		do: [ :announcement |
 				(#( 'pieceSet' 'boardTheme' ) includes: announcement key) ifTrue: [
 					self enqueueTask:
-						(BlTaskAction new action: [ self applyPieceSet ]) ] ]
+						(BlTaskAction new action: [ self applyPieceSet ]) ].
+				announcement key = 'appTheme' ifTrue: [
+					self enqueueTask:
+						(BlTaskAction new action: [ self applyAppTheme ]) ] ]
 		for: self.
+	self applyAppTheme.
 	settingsElement backgroundRunner: backgroundRunner.
 	settingsElement session: session.
 	settingsElement whenSetupRequestedDo: [ self showWizard ].
@@ -765,5 +789,5 @@ ChessCoachAppElement >> updateFromSession [
 { #category : 'updating' }
 ChessCoachAppElement >> updateRowSelection [
 
-	1 to: rowsColumn childrenCount do: [ :index | self paintRowAt: index ]
+	1 to: self games size do: [ :index | self paintRowAt: index ]
 ]

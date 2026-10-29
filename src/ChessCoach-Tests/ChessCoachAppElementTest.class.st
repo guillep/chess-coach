@@ -57,6 +57,26 @@ ChessCoachAppElementTest >> setUp [
 ]
 
 { #category : 'tests' }
+ChessCoachAppElementTest >> testAppTheme [
+
+	| settings |
+	scripter space extent: 1200 @ 1200.
+	app showPage: #Settings.
+	scripter pulse.
+	settings := app settingsElement.
+	self assert: (app localTheme isKindOf: ToRawDarkTheme) not.
+	self click: (settings buttonLabeled: 'Dark').
+	scripter pulse.
+	self assert: session settings appTheme equals: 'Dark'.
+	self assert: (settings texts includes: '[Dark]').
+	self assert: (app localTheme isKindOf: ToRawDarkTheme).
+	self click: (settings buttonLabeled: 'Light').
+	scripter pulse.
+	self assert: session settings appTheme equals: 'Light'.
+	self deny: (app localTheme isKindOf: ToRawDarkTheme)
+]
+
+{ #category : 'tests' }
 ChessCoachAppElementTest >> testGamesListedWhileOnStatsShowLater [
 	"As at startup with reviews: the list is filled while the app is on Stats, then the Games page is opened"
 

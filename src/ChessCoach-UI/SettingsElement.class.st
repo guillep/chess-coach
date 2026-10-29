@@ -24,12 +24,25 @@ Class {
 		'setupBlock',
 		'lichessField',
 		'lichessUserStatus',
-		'themeButtons'
+		'themeButtons',
+		'appThemeButtons'
 	],
 	#category : 'ChessCoach-UI-App',
 	#package : 'ChessCoach-UI',
 	#tag : 'App'
 }
+
+{ #category : 'building' }
+SettingsElement >> appThemeRow [
+	"One button per app theme; the chosen one is shown in brackets"
+
+	^ self row: (#( 'Light' 'Dark' ) collect: [ :name |
+				   appThemeButtons at: name put: (ToButton new
+						    clickAction: [
+								    session settings at: 'appTheme' put: name.
+								    self updateAppTheme ];
+						    yourself) ])
+]
 
 { #category : 'accessing' }
 SettingsElement >> backgroundRunner: aBlock [
@@ -77,6 +90,11 @@ SettingsElement >> build [
 						  to: 100
 						  by: 10) });
 		addChild: (widgets
+				 section: 'Appearance'
+				 help:
+				 'Light or dark colours for the whole app. The board keeps its own colours.'
+				 rows: { self appThemeRow });
+		addChild: (widgets
 				 section: 'Board'
 				 help:
 				 'The pieces and the square colours of every board of the app.'
@@ -116,6 +134,7 @@ SettingsElement >> build [
 	self addChild: (widgets scrollable: content).
 	self updateAccounts.
 	self updateNumbers.
+	self updateAppTheme.
 	self updatePieceSet.
 	self updateModels: { session settings ollamaModel }
 ]
@@ -220,6 +239,7 @@ SettingsElement >> initialize [
 	numberLabels := Dictionary new.
 	pieceSetButtons := Dictionary new.
 	themeButtons := Dictionary new.
+	appThemeButtons := Dictionary new.
 	self layout: BlLinearLayout vertical.
 	self matchParent
 ]
@@ -370,13 +390,10 @@ SettingsElement >> ollamaRow [
 
 { #category : 'building' }
 SettingsElement >> pieceSetRow [
-	"The piece-set and colour-theme choices on the left, a large preview board on the right"
+	"The piece-set and colour-theme choices on the left, every piece on two rows on the right"
 
 	| pieceSets themes |
-	previewBoard := ChessBoardElement new
-		                extent: 280 @ 280;
-		                chessPosition: ChessPosition initial;
-		                yourself.
+	previewBoard := PieceSetPreviewElement new.
 	pieceSets := ToElement new
 		             layout: (BlLinearLayout vertical cellSpacing: 4);
 		             fitContent;
@@ -579,6 +596,15 @@ SettingsElement >> updateAccounts [
 			chessComField text asString isEmpty ifTrue: [
 				chessComField text: name ].
 			chessComStatus text: 'OK: ' , name ]
+]
+
+{ #category : 'updating' }
+SettingsElement >> updateAppTheme [
+
+	appThemeButtons keysAndValuesDo: [ :name :button |
+			button labelText: (name = session settings appTheme
+					 ifTrue: [ '[' , name , ']' ]
+					 ifFalse: [ name ]) ]
 ]
 
 { #category : 'updating' }

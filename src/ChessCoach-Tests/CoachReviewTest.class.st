@@ -317,6 +317,67 @@ CoachReviewTest >> testMistakeRecordsAndJSON [
 ]
 
 { #category : 'tests' }
+CoachReviewTest >> testTimeBoxPlansMarksThenTheMostImportantMoments [
+
+	| review times restored |
+	"Every reviewed moment took 2 minutes"
+	times := ReviewTimes fromReviewDictionaries: { (Dictionary new
+			          at: 'moments' put: ((1 to: 10) collect: [ :each |
+							           Dictionary new
+								           at: 'kinds' put: #( 'mistake' );
+								           at: 'seconds' put: 120;
+								           at: 'pending' put: #(  );
+								           at: 'answers' put: #(  );
+								           yourself ]);
+			          yourself) }.
+	self assert: times reviewedMomentCount equals: 0.
+	times := ReviewTimes fromReviewDictionaries: { (Dictionary new
+			          at: 'moments' put: ((1 to: 10) collect: [ :each |
+							           Dictionary new
+								           at: 'kinds' put: #( 'mistake' );
+								           at: 'seconds' put: 120;
+								           at: 'pending' put: #(  );
+								           at: 'answers' put: { (Dictionary new
+										            at: 'question' put: (Dictionary new
+												             at: 'kind' put: 'why';
+												             yourself);
+										            at: 'seconds' put: 60;
+										            yourself) };
+								           yourself ]);
+			          yourself) }.
+	self assert: times reviewedMomentCount equals: 10.
+	review := self newReviewMarking.
+	review timeBox: 5.
+	review showPly: 5.
+	review mark: 5 note: ''.
+	self wait: 60.
+	review
+		finishMarkingWith: analysis
+		moments: self momentsForTests , { (ChessMoment
+				 ply: 5
+				 color: #white
+				 kind: #marked
+				 source: #marks
+				 note: '') }.
+	review planWith: times.
+	self assert: (review isPlanned: review moments second).
+	self assert: (review isPlanned: review moments last).
+	self deny: (review isPlanned: review moments first).
+	self assert: review plannedMinutes equals: 5.
+	self assert: (review nextMomentAfter: 0 passing: #all) ply equals: 5.
+	self assert: (review nextMomentAfter: 5 passing: #all) ply equals: 7.
+	self deny: review isOverTime.
+	review start: review moments last.
+	self wait: 300.
+	self assert: review isOverTime.
+	restored := self newReviewMarking
+		            restoreFromJSON: review asJSON analysis: [ analysis ];
+		            yourself.
+	self assert: restored timeBox equals: 5.
+	self deny: (restored isPlanned: restored moments first)
+]
+
+{ #category : 'tests' }
 CoachReviewTest >> testTimings [
 
 	| review moment |

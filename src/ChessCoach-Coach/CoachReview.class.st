@@ -25,7 +25,10 @@ Class {
 		'depth',
 		'clock',
 		'changedBlock',
-		'momentClosedBlock'
+		'momentClosedBlock',
+		'timeBox',
+		'planned',
+		'plannedSeconds'
 	],
 	#category : 'ChessCoach-Coach',
 	#package : 'ChessCoach-Coach'
@@ -92,7 +95,7 @@ CoachReview >> answerText: aString [
 
 { #category : 'converting' }
 CoachReview >> asJSON [
-	"The review file content (games/<id>.review-<n>.json): marks, moments with my answers, timings and the mistake records derived from them"
+	"The review file content (games/<id>.review-<n>.json): marks, moments with my answers, timings, the time box and the mistake records derived from them"
 
 	^ STONJSON toString: (Dictionary new
 			   at: 'game' put: gameId;
@@ -103,6 +106,9 @@ CoachReview >> asJSON [
 			   at: 'plySeconds'
 			   put: (plySeconds associations asArray collect: [ :each |
 						    Array with: each key with: each value ]);
+			   at: 'timeBox' put: timeBox;
+			   at: 'planned' put: (planned ifNotNil: [ planned asArray sort ]);
+			   at: 'plannedSeconds' put: plannedSeconds;
 			   at: 'moments'
 			   put: (reviews collect: [ :each | each asDictionary ]) asArray;
 			   at: 'mistakes' put: (self isMarking
@@ -323,6 +329,19 @@ CoachReview >> isMarking [
 	^ analysis isNil
 ]
 
+{ #category : 'time box' }
+CoachReview >> isOverTime [
+
+	^ timeBox notNil and: [ self totalSeconds > (timeBox * 60) ]
+]
+
+{ #category : 'time box' }
+CoachReview >> isPlanned: aMomentReview [
+	"Whether the time box leaves room for aMomentReview (always, without a time box)"
+
+	^ planned isNil or: [ planned includes: aMomentReview ply ]
+]
+
 { #category : 'navigating' }
 CoachReview >> leaveMoment [
 	"Stop working on the current moment, answered or not. Its time is recorded."
@@ -412,12 +431,13 @@ CoachReview >> momentsPassing: aFilter [
 
 { #category : 'navigating' }
 CoachReview >> nextMomentAfter: aPly passing: aFilter [
-	"The first moment after aPly not reviewed yet, or nil when none is left"
+	"The first planned moment after aPly not reviewed yet, or nil when none is left"
 
 	^ reviews
 		  detect: [ :each |
 				  each ply > aPly and: [
-					  each isReviewed not and: [ each passes: aFilter ] ] ]
+						  each isReviewed not and: [
+							  (each passes: aFilter) and: [ self isPlanned: each ] ] ] ]
 		  ifNone: [ nil ]
 ]
 
@@ -478,6 +498,35 @@ CoachReview >> phaseOf: aFEN ply: aPly [
 	^ 'middlegame'
 ]
 
+{ #category : 'time box' }
+CoachReview >> planWith: aReviewTimes [
+	"Choose the moments that fit the time box: the time already spent marking is taken out, my marks go first, then the most important moments, each costing my average time for its kind"
+
+	| budget ordered |
+	timeBox ifNil: [ ^ self ].
+	budget := timeBox * 60 - self markingSeconds.
+	ordered := (reviews select: [ :each | each isMarked ]) asArray
+	           ,
+		           ((reviews reject: [ :each | each isMarked ]) asArray
+			            sort: [ :a :b | a score > b score ]).
+	planned := Set new.
+	plannedSeconds := 0.
+	ordered do: [ :moment |
+			| cost |
+			cost := aReviewTimes expectedSecondsFor: moment kinds.
+			(moment isMarked or: [ plannedSeconds + cost <= budget ]) ifTrue: [
+					planned add: moment ply.
+					plannedSeconds := plannedSeconds + cost ] ].
+	self changed
+]
+
+{ #category : 'time box' }
+CoachReview >> plannedMinutes [
+	"The expected time of the planned moments plus the marking pass, in minutes"
+
+	^ (plannedSeconds ifNil: [ 0 ]) + self markingSeconds / 60
+]
+
 { #category : 'timing' }
 CoachReview >> plySeconds [
 	"Seconds spent on each ply during the marking pass"
@@ -512,6 +561,10 @@ CoachReview >> restoreFromJSON: aString analysis: aBlock [
 	plySeconds := Dictionary new.
 	(dictionary at: 'plySeconds' ifAbsent: [ #(  ) ]) do: [ :pair |
 		plySeconds at: pair first put: pair second ].
+	timeBox := dictionary at: 'timeBox' ifAbsent: [ nil ].
+	planned := (dictionary at: 'planned' ifAbsent: [ nil ]) ifNotNil: [
+		           :plies | plies asSet ].
+	plannedSeconds := dictionary at: 'plannedSeconds' ifAbsent: [ nil ].
 	reviews := ((dictionary at: 'moments') collect: [ :each |
 		            CoachMomentReview fromDictionary: each ])
 		           asOrderedCollection.
@@ -555,9 +608,13 @@ CoachReview >> reviewedMoments [
 
 { #category : 'timing' }
 CoachReview >> reviewingSeconds [
-	"Time spent on the moments (questions and reveals)"
+	"Time spent on the moments (questions and reveals), including the moment in progress"
 
-	^ reviews inject: 0 into: [ :sum :each | sum + each seconds ]
+	^ (reviews inject: 0 into: [ :sum :each | sum + each seconds ])
+	  +
+	  (current
+		   ifNil: [ 0 ]
+		   ifNotNil: [ self secondsSince: momentStartedAt ])
 ]
 
 { #category : 'accessing' }
@@ -620,6 +677,19 @@ CoachReview >> takeAnswerSeconds [
 	seconds := self secondsSince: questionShownAt.
 	questionShownAt := clock value.
 	^ seconds
+]
+
+{ #category : 'time box' }
+CoachReview >> timeBox [
+	"Minutes I gave this analysis, or nil"
+
+	^ timeBox
+]
+
+{ #category : 'time box' }
+CoachReview >> timeBox: minutes [
+
+	timeBox := minutes
 ]
 
 { #category : 'timing' }

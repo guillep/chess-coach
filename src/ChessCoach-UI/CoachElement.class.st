@@ -93,6 +93,7 @@ CoachElement >> buildList [
 								   ifTrue: [ '[' , (self filterLabel: each) , ']' ]
 								   ifFalse: [ self filterLabel: each ])
 						  do: [ self filter: each ] ])).
+	self buildTimeBox.
 	moments := review momentsPassing: self filter.
 	moments ifEmpty: [
 		currentZone addChild:
@@ -105,6 +106,9 @@ CoachElement >> buildList [
 									  each isStarted
 										  ifTrue: [ '… ' ]
 										  ifFalse: [ '○ ' ] ]) , (self describeMoment: each)
+						 , ((review isPlanned: each)
+								  ifTrue: [ '' ]
+								  ifFalse: [ ' · not planned' ])
 					 do: [ self showMoment: each ]) ].
 	currentZone addChild:
 		(self paragraph: ('Marking {1} · moments {2}' format: {
@@ -168,6 +172,8 @@ CoachElement >> buildMoment [
 			^ currentZone addChild: (self row: {
 						   (self button: 'Review this moment' do: [ self reviewShown ]).
 						   (self button: 'Back to list' do: [ self backToList ]) }) ].
+	review isOverTime ifTrue: [
+		currentZone addChild: (self paragraph: 'Time box reached.') ].
 	shownMoment isRevealed ifTrue: [ ^ self buildReveal ].
 	question := review currentQuestion.
 	currentZone addChild: (self paragraph: question text).
@@ -293,6 +299,20 @@ CoachElement >> buildTextAnswer [
 				 labelText: 'Answer';
 				 clickAction: [ self submitText ];
 				 yourself)
+]
+
+{ #category : 'building' }
+CoachElement >> buildTimeBox [
+	"'≈ 18 of 20 min planned · 7 min so far', and a warning past the limit"
+
+	review timeBox ifNil: [ ^ self ].
+	currentZone addChild:
+		(self paragraph: ('≈ {1} of {2} min planned · {3} so far' format: {
+					  review plannedMinutes rounded.
+					  review timeBox.
+					  (self minutes: review totalSeconds) })).
+	review isOverTime ifTrue: [
+		currentZone addChild: (self paragraph: 'Time box reached.') ]
 ]
 
 { #category : 'private' }

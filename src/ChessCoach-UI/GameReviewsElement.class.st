@@ -10,7 +10,9 @@ Class {
 		'game',
 		'replay',
 		'reviewsZone',
-		'openBlock'
+		'openBlock',
+		'timeBoxField',
+		'timeBoxNote'
 	],
 	#category : 'ChessCoach-UI-Coach',
 	#package : 'ChessCoach-UI',
@@ -53,6 +55,10 @@ GameReviewsElement >> initialize [
 		               hMatchParent;
 		               vFitContent;
 		               yourself.
+	timeBoxField := ToTextField new
+		                width: 60;
+		                yourself.
+	timeBoxNote := ToLabel text: ''.
 	panel := ToElement new
 		         layout: (BlLinearLayout vertical cellSpacing: 10);
 		         width: 300;
@@ -62,6 +68,14 @@ GameReviewsElement >> initialize [
 	panel
 		addChild: (ToLabel text: 'Analyses with the coach');
 		addChild: reviewsZone;
+		addChild: (ToElement new
+				 layout: (BlLinearLayout horizontal cellSpacing: 6);
+				 hMatchParent;
+				 vFitContent;
+				 addChild: (ToLabel text: 'Time box (min):');
+				 addChild: timeBoxField;
+				 addChild: timeBoxNote;
+				 yourself);
 		addChild: (ToButton new
 				 labelText: 'New analysis';
 				 clickAction: [ self newAnalysis ];
@@ -73,8 +87,13 @@ GameReviewsElement >> initialize [
 
 { #category : 'actions' }
 GameReviewsElement >> newAnalysis [
+	"Start a review, limited to the minutes of the time box field when it holds a number"
 
-	openBlock value: (session newReviewFor: entry)
+	| minutes |
+	minutes := session canTimeBox ifTrue: [
+		           timeBoxField text asString trimBoth asInteger ].
+	(minutes notNil and: [ minutes <= 0 ]) ifTrue: [ minutes := nil ].
+	openBlock value: (session newReviewFor: entry timeBox: minutes)
 ]
 
 { #category : 'accessing' }
@@ -95,7 +114,20 @@ GameReviewsElement >> session: aChessCoachSession entry: aGameIndexEntry [
 			 ifTrue: [ colors first ]
 			 ifFalse: [ #white ]).
 	replay game: game.
+	session canTimeBox
+		ifTrue: [
+				timeBoxField enabled: true.
+				timeBoxNote text: '' ]
+		ifFalse: [
+				timeBoxField enabled: false.
+				timeBoxNote text: 'needs more data' ].
 	self updateReviews
+]
+
+{ #category : 'accessing' }
+GameReviewsElement >> timeBoxField [
+
+	^ timeBoxField
 ]
 
 { #category : 'updating' }

@@ -125,6 +125,13 @@ ChessCoachSession >> canImport [
 	^ self isLoggedIn or: [ self chessComUsername notNil ]
 ]
 
+{ #category : 'coach' }
+ChessCoachSession >> canTimeBox [
+	"Time-boxed analyses need my times on at least 10 reviewed moments"
+
+	^ self reviewTimes reviewedMomentCount >= 10
+]
+
 { #category : 'login' }
 ChessCoachSession >> cancelLogin [
 
@@ -212,12 +219,13 @@ ChessCoachSession >> explorer: aLichessExplorerClient [
 
 { #category : 'coach' }
 ChessCoachSession >> finishMarking: aCoachReview of: aGameIndexEntry [
-	"End the marking pass: merge my marks with the heuristic moments. Slow when the game is not analysed yet: call it off the UI thread."
+	"End the marking pass: merge my marks with the heuristic moments, and plan the moments that fit the time box if there is one. Slow when the game is not analysed yet: call it off the UI thread."
 
 	aCoachReview
 		finishMarkingWith: (self analysisFor: aGameIndexEntry)
 		moments:
-		(self momentsFor: aGameIndexEntry marks: aCoachReview marks)
+		(self momentsFor: aGameIndexEntry marks: aCoachReview marks).
+	aCoachReview planWith: self reviewTimes
 ]
 
 { #category : 'accessing' }
@@ -412,11 +420,19 @@ ChessCoachSession >> newCoachReviewFor: aGameIndexEntry [
 ChessCoachSession >> newReviewFor: aGameIndexEntry [
 	"Start the next review of the game, in its manual marking pass"
 
+	^ self newReviewFor: aGameIndexEntry timeBox: nil
+]
+
+{ #category : 'coach' }
+ChessCoachSession >> newReviewFor: aGameIndexEntry timeBox: minutesOrNil [
+	"Start the next review of the game, in its manual marking pass, optionally limited to minutesOrNil"
+
 	| review |
 	review := self newCoachReviewFor: aGameIndexEntry.
 	review number: ((self reviewsFor: aGameIndexEntry)
 			 inject: 0
 			 into: [ :max :each | max max: each number ]) + 1.
+	review timeBox: minutesOrNil.
 	self saveReviewFile: review.
 	self announceChanged.
 	^ review

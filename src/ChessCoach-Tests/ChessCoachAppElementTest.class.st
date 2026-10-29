@@ -164,12 +164,13 @@ ChessCoachAppElementTest >> testRowsShowTheAnalysisState [
 	queue enqueueUnanalysed.
 	scripter pulse.
 	first := app gameList dataAccessor first.
-	self assert: ((app rowTextFor: first) beginsWith: '⏳ ').
+	self assert: ((app rowTextFor: first) beginsWith: '(queued) ').
 	queue runNext.
 	scripter pulse.
-	self assert: ((app rowTextFor: first) beginsWith: '✓ ').
+	self deny: ((app rowTextFor: first) beginsWith: '(').
 	self assert:
-		((app rowTextFor: app gameList dataAccessor second) beginsWith: '⏳ ')
+		((app rowTextFor: app gameList dataAccessor second) beginsWith:
+			 '(queued) ')
 ]
 
 { #category : 'tests' }
@@ -216,7 +217,8 @@ ChessCoachAppElementTest >> testSettingsPage [
 		(settings previewBoard pieceSet isKindOf: LiviusPieceSet).
 	settings chessComField text: 'nobody'.
 	self click: (settings buttonLabeled: 'Validate').
-	self assert: (settings texts includes: '✗ no such Chess.com player').
+	self assert:
+		(settings texts includes: 'Not found: no such Chess.com player').
 	self assert: session chessComUsername isNil.
 	settings chessComField text: 'Bob'.
 	"A second click on the same button right away would count as a double click"
@@ -225,7 +227,7 @@ ChessCoachAppElementTest >> testSettingsPage [
 	self assert: session chessComUsername equals: 'Bob'.
 	self assert: app userLabel text asString equals: 'Bob'.
 	self click: (settings buttonLabeled: 'Test').
-	self assert: (settings texts includes: '✓ Stockfish stub').
+	self assert: (settings texts includes: 'OK: Stockfish stub').
 	self click: (settings buttonLabeled: 'Load models').
 	self assert: (settings texts includes: '2 models installed').
 	self click: (settings buttonLabeled: 'llama3.1:8b').

@@ -174,7 +174,7 @@ SettingsElement >> inBackground: aBlock then: aUIBlock showingErrorsIn: aStatusL
 				          do: [ :error |
 						          self enqueueTask: (BlTaskAction new action: [
 								           aStatusLabel text:
-									           '✗ ' , error messageText asString ]).
+									           'Error: ' , error messageText asString ]).
 						          ^ nil ].
 			self enqueueTask:
 				(BlTaskAction new action: [ aUIBlock cull: result ]) ]
@@ -398,7 +398,7 @@ SettingsElement >> testModel [
 					                asMilliSeconds.
 				labels -> milliseconds ]
 		then: [ :result |
-				llmStatus text: ('✓ {1} in {2} s' format: {
+				llmStatus text: ('OK: {1} in {2} s' format: {
 							 (', ' join: (result key collect: [ :each | each tagId ])).
 							 (result value / 1000.0 printShowingDecimalPlaces: 1) }) ]
 		showingErrorsIn: llmStatus
@@ -414,7 +414,7 @@ SettingsElement >> testStockfish [
 	stockfishStatus text: 'starting…'.
 	self
 		inBackground: [ session analyser engine version ]
-		then: [ :version | stockfishStatus text: '✓ ' , version ]
+		then: [ :version | stockfishStatus text: 'OK: ' , version ]
 		showingErrorsIn: stockfishStatus
 ]
 
@@ -443,7 +443,7 @@ SettingsElement >> updateAccounts [
 	session chessComUsername ifNotNil: [ :name |
 			chessComField text asString isEmpty ifTrue: [
 				chessComField text: name ].
-			chessComStatus text: '✓ ' , name ]
+			chessComStatus text: 'OK: ' , name ]
 ]
 
 { #category : 'updating' }
@@ -502,8 +502,8 @@ SettingsElement >> validateChessCom [
 		inBackground: [ session validateChessComUsername: name ]
 		then: [ :exists |
 				chessComStatus text: (exists
-						 ifTrue: [ '✓ ' , name ]
-						 ifFalse: [ '✗ no such Chess.com player' ]) ]
+						 ifTrue: [ 'OK: ' , name ]
+						 ifFalse: [ 'Not found: no such Chess.com player' ]) ]
 		showingErrorsIn: chessComStatus
 ]
 

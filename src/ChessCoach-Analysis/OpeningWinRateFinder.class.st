@@ -8,7 +8,8 @@ Class {
 	#instVars : [
 		'game',
 		'explorer',
-		'colors'
+		'colors',
+		'problem'
 	],
 	#category : 'ChessCoach-Analysis',
 	#package : 'ChessCoach-Analysis'
@@ -101,20 +102,26 @@ OpeningWinRateFinder >> momentForMove: aSAN ply: aPly color: aColor in: data [
 
 { #category : 'finding' }
 OpeningWinRateFinder >> moments [
+	"When the explorer can't be reached or refuses the request, the moments found so far are answered and the reason is kept in problem"
 
 	| moments |
 	moments := OrderedCollection new.
-	game moves withIndexDo: [ :move :ply |
-			| position data |
-			position := game positionAfterPly: ply - 1.
-			(colors includes: position turn) ifTrue: [
-					data := self databaseMovesFrom: position.
-					(self gameCountOf: data) < self minimumGames ifTrue: [ ^ moments ].
-					(self
-						 momentForMove: move san
-						 ply: ply
-						 color: position turn
-						 in: data) ifNotNil: [ :moment | moments add: moment ] ] ].
+	[
+		game moves withIndexDo: [ :move :ply |
+				| position data |
+				position := game positionAfterPly: ply - 1.
+				(colors includes: position turn) ifTrue: [
+						data := self databaseMovesFrom: position.
+						(self gameCountOf: data) < self minimumGames ifTrue: [
+							^ moments ].
+						(self
+							 momentForMove: move san
+							 ply: ply
+							 color: position turn
+							 in: data) ifNotNil: [ :moment | moments add: moment ] ] ] ]
+		on: LichessError , NetworkError
+		do: [ :error |
+			problem := 'Opening statistics unavailable: ' , error messageText ].
 	^ moments
 ]
 
@@ -128,6 +135,13 @@ OpeningWinRateFinder >> normalizedSAN: aString [
 OpeningWinRateFinder >> percent: aNumber [
 
 	^ (aNumber printShowingDecimalPlaces: 0) , '%'
+]
+
+{ #category : 'accessing' }
+OpeningWinRateFinder >> problem [
+	"Why the explorer could not be used, or nil"
+
+	^ problem
 ]
 
 { #category : 'private' }

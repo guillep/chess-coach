@@ -209,6 +209,25 @@ ChessCoachSessionTest >> testOldReviewAndMarksBecomeReviewOne [
 ]
 
 { #category : 'tests' }
+ChessCoachSessionTest >> testOpeningHeuristicNeedsLichess [
+
+	| entry game engine problems |
+	session login.
+	session loadMoreGames.
+	entry := session games first.
+	game := session gameFor: entry.
+	engine := StockfishEngineStub new.
+	session analyser: (GameAnalyser engine: engine).
+	session logout.
+	problems := OrderedCollection new.
+	session momentsFor: entry marks: #(  ) problems: problems.
+	self
+		assert: problems asArray
+		equals:
+		#( 'Log in to Lichess to compare your opening moves with its database.' )
+]
+
+{ #category : 'tests' }
 ChessCoachSessionTest >> testRefreshFetchesEveryNewerGameWithoutGaps [
 
 	session login.

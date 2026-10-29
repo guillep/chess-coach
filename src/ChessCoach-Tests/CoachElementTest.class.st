@@ -61,9 +61,10 @@ CoachElementTest >> testAWholeMoment [
 
 	self assert: coach mode equals: #list.
 	self assert:
-		(self zoneTexts includes: '○ Move 2 (Nf3) · onlyMoveFound · −0%').
+		(self zoneTexts includes:
+			 'To do · Move 2 (Nf3) · onlyMoveFound · −0%').
 	self assert:
-		(self zoneTexts includes: '○ Move 4 (Ng5) · mistake · −18%').
+		(self zoneTexts includes: 'To do · Move 4 (Ng5) · mistake · −18%').
 	coach continueReview.
 	scripter pulse.
 	self assert: review currentQuestion kind equals: #whatDidYouSee.
@@ -137,7 +138,7 @@ CoachElementTest >> testListShowsPastMomentsAndReviewsOneMoment [
 	self assert: coach mode equals: #list.
 	self assert: review currentMoment isNil.
 	self assert:
-		(self zoneTexts includes: '… Move 4 (Ng5) · mistake · −18%').
+		(self zoneTexts includes: 'Started · Move 4 (Ng5) · mistake · −18%').
 	coach filter: #blunders.
 	scripter pulse.
 	self assert:

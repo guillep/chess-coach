@@ -100,12 +100,8 @@ CoachElement >> buildList [
 			(self paragraph: 'No moments with this filter.') ].
 	moments do: [ :each |
 			currentZone addChild: (self
-					 button: (each isReviewed
-							  ifTrue: [ '✓ ' ]
-							  ifFalse: [
-									  each isStarted
-										  ifTrue: [ '… ' ]
-										  ifFalse: [ '○ ' ] ]) , (self describeMoment: each)
+					 button:
+						 (self statePrefixOf: each) , (self describeMoment: each)
 						 , ((review isPlanned: each)
 								  ifTrue: [ '' ]
 								  ifFalse: [ ' · not planned' ])
@@ -317,14 +313,27 @@ CoachElement >> buildTimeBox [
 
 { #category : 'private' }
 CoachElement >> busy: aString while: aBlock then: aUIBlock [
-	"Show aString while aBlock runs in the background, then run aUIBlock and refresh"
+	"Show aString while aBlock runs in the background, then run aUIBlock with aBlock's result and refresh. An error is logged and shown in the panel instead of opening a debugger."
 
 	busy := aString.
 	self refresh.
-	self runInBackground: aBlock then: [
-			busy := nil.
-			aUIBlock value.
-			self refresh ]
+	backgroundRunner value: [
+			| result failed |
+			failed := false.
+			result := [ aBlock value ]
+				          on: Error
+				          do: [ :error |
+						          failed := true.
+						          session logError: error.
+						          'Something went wrong: ' , error class name , ': '
+						          , (error messageText ifNil: [ '' ]) asString
+						          , ' (details in errors.log)' ].
+			self inUIDo: [
+					busy := nil.
+					failed
+						ifTrue: [ message := result ]
+						ifFalse: [ aUIBlock cull: result ].
+					self refresh ] ]
 ]
 
 { #category : 'private' }
@@ -393,12 +402,26 @@ CoachElement >> describeMoves: someUCIMoves in: aCoachQuestion [
 
 { #category : 'actions' }
 CoachElement >> doneMarking [
-	"Merge my marks with the heuristic moments (waits for the engine analysis if needed), then walk through the moments"
+	"Merge my marks with the heuristic moments (analysing the game if needed, with its progress), then walk through the moments"
 
 	self
 		busy: 'Finding the important moments…'
-		while: [ session finishMarking: review of: entry ]
-		then: [ self continueReview ]
+		while: [
+				session
+					finishMarking: review
+					of: entry
+					onProgress: [ :done :total |
+							self inUIDo: [
+									busy ifNotNil: [
+											busy := 'Analysing the game… move {1} of {2}' format: {
+													        (done + 1 // 2).
+													        (total + 1 // 2) }.
+											self updateCurrentZone ] ] ] ]
+		then: [ :problems |
+				self continueReview.
+				problems ifNotEmpty: [
+						message := ' ' join: problems.
+						self refresh ] ]
 ]
 
 { #category : 'actions' }
@@ -441,8 +464,16 @@ CoachElement >> history [
 	^ history
 ]
 
+{ #category : 'private' }
+CoachElement >> inUIDo: aBlock [
+	"Run aBlock in the UI thread"
+
+	self enqueueTask: (BlTaskAction new action: aBlock)
+]
+
 { #category : 'initialization' }
 CoachElement >> initialize [
+	"The panel has a fixed width so that its multi-line labels wrap inside the scrollable column"
 
 	| panel |
 	super initialize.
@@ -473,7 +504,7 @@ CoachElement >> initialize [
 		               yourself.
 	panel := ToElement new
 		         layout: (BlLinearLayout vertical cellSpacing: 10);
-		         hMatchParent;
+		         width: 360;
 		         vFitContent;
 		         padding: (BlInsets all: 10);
 		         yourself.
@@ -737,6 +768,14 @@ CoachElement >> startNextAfter: aPly [
 				shownMoment := moment.
 				mode := #moment ].
 	self refresh
+]
+
+{ #category : 'private' }
+CoachElement >> statePrefixOf: aMomentReview [
+
+	aMomentReview isReviewed ifTrue: [ ^ 'Done · ' ].
+	aMomentReview isStarted ifTrue: [ ^ 'Started · ' ].
+	^ 'To do · '
 ]
 
 { #category : 'actions' }

@@ -246,12 +246,13 @@ MistakesDashboardElement >> selectTag: aTagId [
 
 { #category : 'private' }
 MistakesDashboardElement >> sparkline: someCounts [
+	"One digit per value, 0 to 9, relative to the largest one"
 
-	| bars max |
-	bars := '▁▂▃▄▅▆▇█'.
+	| max |
 	max := someCounts max max: 1.
-	^ String withAll: (someCounts collect: [ :each |
-			   bars at: (each / max * (bars size - 1)) rounded + 1 ])
+	^ ' ' join:
+		  (someCounts collect: [ :each |
+			   (each / max * 9) rounded printString ])
 ]
 
 { #category : 'accessing' }

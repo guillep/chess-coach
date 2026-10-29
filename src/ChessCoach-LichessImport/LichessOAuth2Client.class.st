@@ -35,12 +35,14 @@ LichessOAuth2Client >> accessToken [
 { #category : 'oauth2' }
 LichessOAuth2Client >> authenticate [
 	"Run the browser PKCE flow and return the access token, saving it to the token file.
-	Answer nil when the user cancels or nothing arrives within five minutes."
+	Answer nil when the user cancels or nothing arrives within five minutes.
+	The callback server logs only errors: it needs no connection events."
 
 	| server authCode |
 	self hasValidToken ifTrue: [ ^ accessToken ].
 	authorizationCodeReceived := Semaphore new.
 	server := ZnServer on: 8888.
+	server logLevel: 1.
 	server onRequestRespond: [ :request |
 			(request uri queryAt: #code ifAbsent: [ nil ])
 				ifNil: [

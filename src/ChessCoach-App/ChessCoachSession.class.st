@@ -75,7 +75,14 @@ ChessCoachSession >> analysisFileFor: aGameIndexEntry [
 
 { #category : 'moments' }
 ChessCoachSession >> analysisFor: aGameIndexEntry [
-	"The engine analysis of the game, computed once per depth and kept next to its PGN"
+	"The engine analysis of the game, computed once and kept next to its PGN"
+
+	^ self analysisFor: aGameIndexEntry onProgress: [ :done :total |  ]
+]
+
+{ #category : 'moments' }
+ChessCoachSession >> analysisFor: aGameIndexEntry onProgress: aBlock [
+	"The engine analysis of the game, computed once and kept next to its PGN. aBlock receives (plies done, total) while it is computed."
 
 	(self isAnalysed: aGameIndexEntry) ifTrue: [
 			^ GameAnalysis fromJSON:
@@ -83,7 +90,7 @@ ChessCoachSession >> analysisFor: aGameIndexEntry [
 	^ self
 		  analyse: aGameIndexEntry
 		  with: self analyser
-		  onProgress: [ :done :total |  ]
+		  onProgress: aBlock
 ]
 
 { #category : 'moments' }
@@ -204,6 +211,13 @@ ChessCoachSession >> configure: aGameAnalyser [
 	^ aGameAnalyser
 ]
 
+{ #category : 'errors' }
+ChessCoachSession >> errorLog [
+	"Errors the app showed instead of opening a debugger, newest last"
+
+	^ importer fileStore baseDirectory / 'errors.log'
+]
+
 { #category : 'moments' }
 ChessCoachSession >> explorer [
 	"The Lichess opening explorer, with my token, unless another one was set"
@@ -219,13 +233,26 @@ ChessCoachSession >> explorer: aLichessExplorerClient [
 
 { #category : 'coach' }
 ChessCoachSession >> finishMarking: aCoachReview of: aGameIndexEntry [
-	"End the marking pass: merge my marks with the heuristic moments, and plan the moments that fit the time box if there is one. Slow when the game is not analysed yet: call it off the UI thread."
 
-	aCoachReview
-		finishMarkingWith: (self analysisFor: aGameIndexEntry)
-		moments:
-		(self momentsFor: aGameIndexEntry marks: aCoachReview marks).
-	aCoachReview planWith: self reviewTimes
+	^ self
+		  finishMarking: aCoachReview
+		  of: aGameIndexEntry
+		  onProgress: [ :done :total |  ]
+]
+
+{ #category : 'coach' }
+ChessCoachSession >> finishMarking: aCoachReview of: aGameIndexEntry onProgress: aBlock [
+	"End the marking pass: merge my marks with the heuristic moments, and plan the moments that fit the time box if there is one. aBlock receives (plies done, total) while the game is analysed. Answer the sentences explaining heuristics that could not run. Slow when the game is not analysed yet: call it off the UI thread."
+
+	| problems analysis |
+	problems := OrderedCollection new.
+	analysis := self analysisFor: aGameIndexEntry onProgress: aBlock.
+	aCoachReview finishMarkingWith: analysis moments: (self
+			 momentsFor: aGameIndexEntry
+			 marks: aCoachReview marks
+			 problems: problems).
+	aCoachReview planWith: self reviewTimes.
+	^ problems
 ]
 
 { #category : 'accessing' }
@@ -290,6 +317,32 @@ ChessCoachSession >> loadMoreGames [
 	self chessComUsername ifNotNil: [
 		self chessComImporter importOlderGames: self settings gamesPerLoad ].
 	self announceChanged
+]
+
+{ #category : 'errors' }
+ChessCoachSession >> logError: anError [
+	"Append anError with its stack to errors.log, for bug reports"
+
+	| stack |
+	stack := String streamContents: [ :stream |
+			         anError signalerContext ifNotNil: [ :context |
+					         context stack do: [ :each |
+							         stream
+								         print: each;
+								         cr ] ] ].
+	self errorLog parent ensureCreateDirectory.
+	self errorLog writeStreamDo: [ :stream |
+			stream
+				setToEnd;
+				nextPutAll: '--- ';
+				nextPutAll: DateAndTime now printString;
+				nextPutAll: ' ';
+				nextPutAll: anError class name;
+				nextPutAll: ': ';
+				nextPutAll: (anError messageText ifNil: [ '' ]) asString;
+				lf;
+				nextPutAll: stack;
+				lf ]
 ]
 
 { #category : 'login' }
@@ -364,23 +417,43 @@ ChessCoachSession >> mistakesFile [
 
 { #category : 'moments' }
 ChessCoachSession >> momentsFor: aGameIndexEntry marks: someMarks [
-	"The game's interesting moments, merged with someMarks (dictionaries with 'ply' and 'note'), sorted by ply. Slow the first time (engine analysis): call it off the UI thread."
+	"The game's interesting moments, merged with someMarks; heuristics that could not run are left out"
 
-	| game analysis colors |
+	^ self
+		  momentsFor: aGameIndexEntry
+		  marks: someMarks
+		  problems: OrderedCollection new
+]
+
+{ #category : 'moments' }
+ChessCoachSession >> momentsFor: aGameIndexEntry marks: someMarks problems: aCollection [
+	"The game's interesting moments, merged with someMarks (dictionaries with 'ply' and 'note'), sorted by ply. Heuristics that could not run add a sentence to aCollection. Slow the first time (engine analysis): call it off the UI thread."
+
+	| game analysis colors finders opening |
 	game := self gameFor: aGameIndexEntry.
 	analysis := self analysisFor: aGameIndexEntry.
 	colors := self myColorsIn: game.
+	finders := OrderedCollection new.
+	finders
+		add: (EvaluationJumpFinder on: analysis);
+		add: (OnlyMoveFinder on: analysis);
+		add: (LongThinkFinder on: game).
+	(explorer notNil or: [ self isLoggedIn ])
+		ifTrue: [
+				finders add: (opening := OpeningWinRateFinder
+						            game: game
+						            explorer: self explorer
+						            colors: colors) ]
+		ifFalse: [
+				aCollection add:
+					'Log in to Lichess to compare your opening moves with its database.' ].
 	^ (MomentDetector
-		   finders: {
-				   (EvaluationJumpFinder on: analysis).
-				   (OnlyMoveFinder on: analysis).
-				   (OpeningWinRateFinder
-					    game: game
-					    explorer: self explorer
-					    colors: colors).
-				   (LongThinkFinder on: game) }
+		   finders: finders
 		   marksFinder: (MarkedMomentsFinder game: game marks: someMarks)
-		   colors: colors) moments
+		   colors: colors) moments in: [ :moments |
+			  opening ifNotNil: [
+				  opening problem ifNotNil: [ :problem | aCollection add: problem ] ].
+			  moments ]
 ]
 
 { #category : 'moments' }

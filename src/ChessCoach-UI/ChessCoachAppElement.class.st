@@ -66,12 +66,12 @@ ChessCoachAppElement >> analysisMarkFor: aGameIndexEntry [
 	| queue state |
 	queue := session analysisQueue.
 	state := queue stateOf: aGameIndexEntry.
-	state = #ready ifTrue: [ ^ '✓ ' ].
-	state = #queued ifTrue: [ ^ '⏳ ' ].
+	state = #ready ifTrue: [ ^ '' ].
+	state = #queued ifTrue: [ ^ '(queued) ' ].
 	state = #analysing ifTrue: [
-			^ queue progress ifNil: [ '⚙ ' ] ifNotNil: [ :progress |
-					  '⚙ ' , progress key printString , '/'
-					  , progress value printString , ' ' ] ].
+			^ queue progress ifNil: [ '(analysing) ' ] ifNotNil: [ :progress |
+					  '(analysing ' , progress key printString , '/'
+					  , progress value printString , ') ' ] ].
 	^ ''
 ]
 
@@ -276,7 +276,7 @@ ChessCoachAppElement >> newTopBar [
 			                 self runInBackground: [ session refresh ] ];
 		                 yourself.
 	settingsButton := ToButton new
-		                  labelText: '⚙ Settings';
+		                  labelText: 'Settings';
 		                  clickAction: [ self openSettings ];
 		                  yourself.
 	userLabel := ToLabel text: ''.

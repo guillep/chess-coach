@@ -36,16 +36,15 @@ ChessBoardElement >> arrows: someChessArrows [
 
 { #category : 'initialization' }
 ChessBoardElement >> buildArrowLayer [
-	"Arrows are drawn above the squares and pieces and never take mouse events"
+	"Arrows are drawn above the squares and pieces and never take mouse events. A resize redraws them after the layout pass, since changing elements during it breaks the layout."
 
 	arrowLayer := BlElement new
 		              constraintsDo: [ :c | c ignoreByLayout ];
 		              preventMeAndChildrenMouseEvents;
 		              yourself.
 	self addChild: arrowLayer.
-	self
-		addEventHandlerOn: BlElementExtentChangedEvent
-		do: [ :event | self redrawArrows ]
+	self addEventHandlerOn: BlElementExtentChangedEvent do: [ :event |
+		self enqueueTask: (BlTaskAction new action: [ self redrawArrows ]) ]
 ]
 
 { #category : 'initialization' }

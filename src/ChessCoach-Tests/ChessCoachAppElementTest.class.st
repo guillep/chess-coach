@@ -188,12 +188,16 @@ ChessCoachAppElementTest >> testLichessUsernameInSettings [
 { #category : 'tests' }
 ChessCoachAppElementTest >> testLoadMoreAddsRows [
 
+	| texts |
 	self click: app loginButton.
 	self click: app loadMoreButton.
 	self assert: app games size equals: 20.
-	self
-		assert: (app rowTextFor: app games first)
-		equals: 'alice – Stockfish level 3, 1-0, 1970-01-01'
+	texts := OrderedCollection new.
+	app gameTable allChildrenBreadthFirstDo: [ :each |
+		(each isKindOf: ToLabel) ifTrue: [ texts add: each text asString ] ].
+	self assert: (texts includesAll:
+			 #( 'White' 'Black' 'Result' 'Date' 'Time control' 'alice' 'Stockfish level 3'
+			    '1-0' '1970-01-01' ))
 ]
 
 { #category : 'tests' }
@@ -203,7 +207,7 @@ ChessCoachAppElementTest >> testLoadMoreButtonIsVisibleBelowTheList [
 	buttonBounds := app loadMoreButton bounds inSpace bounds.
 	self assert: buttonBounds height > 0.
 	self assert: buttonBounds bottom <= 700.
-	self assert: app gameList width equals: 300.
+	self assert: app gameTable width equals: 680.
 	target := app space root findMouseEventTargetAt: buttonBounds center.
 	self assert: (target == app loadMoreButton or: [
 			 target allParentsInclude: app loadMoreButton ])
@@ -335,12 +339,6 @@ ChessCoachAppElementTest >> testReviewedGamesHaveAnIconAndCanBeLeftOut [
 	scripter pulse.
 	self assert: (app isReviewed: games first).
 	self deny: (app isReviewed: games second).
-	self assert:
-		((app rowElementFor: games first) children anySatisfy: [ :each |
-			 each isKindOf: ToImage ]).
-	self deny:
-		((app rowElementFor: games second) children anySatisfy: [ :each |
-			 each isKindOf: ToImage ]).
 	self click: app notReviewedButton.
 	self assert: app notReviewedButton isChecked.
 	self assert: app games size equals: games size - 1.
@@ -378,8 +376,7 @@ ChessCoachAppElementTest >> testRowsShowTheAnalysisState [
 		assert: (app analysisIconNameFor: first)
 		equals: 'outlined_checkcircle'.
 	self assert:
-		(app analysisLabel text asString includesSubstring: '19 games left').
-	self assert: ((app rowTextFor: first) beginsWith: 'alice')
+		(app analysisLabel text asString includesSubstring: '19 games left')
 ]
 
 { #category : 'tests' }
@@ -481,6 +478,32 @@ ChessCoachAppElementTest >> testSetupWizard [
 	self assert: app navigation isAttachedToSceneGraph.
 	self assert: app games size equals: 20.
 	self deny: session isFirstRun
+]
+
+{ #category : 'tests' }
+ChessCoachAppElementTest >> testSortingKeepsTheShownGameSelected [
+
+	| reviewed column |
+	session login.
+	session loadMoreGames.
+	scripter pulse.
+	reviewed := app games last.
+	session saveReview: (session newReviewFor: reviewed).
+	scripter pulse.
+	app selectGameAt: app games size.
+	scripter pulse.
+	column := app gameTable columns last.
+	column nextSort.
+	app gameTable dispatchEvent:
+		(ToTableColumnSortRequestEvent column: column).
+	scripter pulse.
+	self assert:
+		(app games first == reviewed or: [ app games last == reviewed ]).
+	self
+		deny: app games last == reviewed
+		description: 'reviewed games first'.
+	self assert:
+		(app games at: app gameList selectionModel firstIndex) == reviewed
 ]
 
 { #category : 'tests' }

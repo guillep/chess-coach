@@ -23,7 +23,6 @@ Class {
 		'gamesPage',
 		'settingsElement',
 		'dependencyLabel',
-		'listedGames',
 		'selectedIndex',
 		'coachTab',
 		'playThroughTab',
@@ -32,7 +31,9 @@ Class {
 		'bellBadge',
 		'notificationsWindow',
 		'reviewedIds',
-		'notReviewedButton'
+		'notReviewedButton',
+		'gameTable',
+		'shownGameId'
 	],
 	#category : 'ChessCoach-UI-App',
 	#package : 'ChessCoach-UI',
@@ -192,6 +193,19 @@ ChessCoachAppElement >> filterBySpeed: aSpeedOrNil [
 	(speedButtons at: aSpeedOrNil) check
 ]
 
+{ #category : 'initialization' }
+ChessCoachAppElement >> gameColumn: aTitle width: aNumber value: aBlock [
+	"A column showing aBlock's text for each game, sorted by that text"
+
+	^ ToTableColumn new
+		  key: aTitle;
+		  title: aTitle;
+		  width: aNumber;
+		  dataIndex: aBlock;
+		  sorterBlock: aBlock;
+		  yourself
+]
+
 { #category : 'accessing' }
 ChessCoachAppElement >> gameList [
 
@@ -210,6 +224,12 @@ ChessCoachAppElement >> gameRows [
 ]
 
 { #category : 'accessing' }
+ChessCoachAppElement >> gameTable [
+
+	^ gameTable
+]
+
+{ #category : 'accessing' }
 ChessCoachAppElement >> gameView [
 	"The view of the selected game, or nil before one is selected"
 
@@ -218,9 +238,9 @@ ChessCoachAppElement >> gameView [
 
 { #category : 'private' }
 ChessCoachAppElement >> games [
-	"The listed games, in list order"
+	"The listed games, in table order (the table sorts them in place)"
 
-	^ listedGames ifNil: [ #(  ) ]
+	^ gameList dataAccessor asArray
 ]
 
 { #category : 'accessing' }
@@ -266,13 +286,14 @@ ChessCoachAppElement >> isReviewed: aGameIndexEntry [
 
 { #category : 'updating' }
 ChessCoachAppElement >> listSelectionChanged [
-	"The list selected another game, by a click or the arrow keys"
+	"The table selected another game, by a click or the arrow keys. Sorting moves the shown game: only its index changes then"
 
 	| index |
 	index := gameList selectionModel firstIndex.
 	(index isNil or: [ index = 0 or: [ index = selectedIndex ] ])
 		ifTrue: [ ^ self ].
 	selectedIndex := index.
+	self selectedEntry gameId = shownGameId ifTrue: [ ^ self ].
 	self selectedGameChanged
 ]
 
@@ -350,9 +371,64 @@ ChessCoachAppElement >> newDashboard [
 ]
 
 { #category : 'initialization' }
+ChessCoachAppElement >> newGameTable [
+	"A Toplo table of the games: one column per field, sorted by clicking the arrow in its header, and a coach icon on reviewed games"
+
+	gameTable := ToTableElement new
+		             useScrollbar: true;
+		             width: 680;
+		             vMatchParent;
+		             margin: (BlInsets right: 12);
+		             yourself.
+	gameTable columns: {
+			(self
+				 gameColumn: 'White'
+				 width: 150
+				 value: [ :entry | entry players first ]).
+			(self
+				 gameColumn: 'Black'
+				 width: 150
+				 value: [ :entry | entry players second ]).
+			(self
+				 gameColumn: 'Result'
+				 width: 80
+				 value: [ :entry | entry result ]).
+			(self gameColumn: 'Date' width: 100 value: [ :entry | entry date ]).
+			((self
+				  gameColumn: 'Time control'
+				  width: 125
+				  value: [ :entry | self speedNameOf: entry ])
+				 sorterBlock: [ :entry | self speedRankOf: entry ];
+				 yourself).
+			(ToTableColumn new
+				 key: 'reviewed';
+				 title: '';
+				 width: 40;
+				 dataIndex: [ :entry | entry ];
+				 sorterBlock: [ :entry |
+						 (self isReviewed: entry)
+							 ifTrue: [ 1 ]
+							 ifFalse: [ 0 ] ];
+				 cellBuilder: [ :cell :entry :holder |
+						 (self isReviewed: entry) ifTrue: [
+									 cell addChild:
+											 ((ToMaterialDesignIconProvider iconNamed:
+													   'outlined_school')
+												  extent: 16 @ 16;
+												  tooltipText: 'Reviewed with the coach';
+												  yourself) ] ];
+				 yourself) }.
+	gameList := gameTable list.
+	gameList
+		addEventHandlerOn: ToListPrimarySelectionChangedEvent
+		do: [ :event | self listSelectionChanged ].
+	gameTable selecter beSingleSelection.
+	^ gameTable
+]
+
+{ #category : 'initialization' }
 ChessCoachAppElement >> newGamesPage [
-	"A title, a bar with the speed filters, the Not reviewed filter, Refresh and Load more; below it the game list and the selected game.
-	The list is a Toplo list, which brings its look, scrollbar and arrow keys"
+	"A title, a bar with the speed filters, the Not reviewed filter, Refresh and Load more; below it the game table and the selected game"
 
 	| title bar body |
 	title := ChessCoachWidgets
@@ -390,17 +466,6 @@ ChessCoachAppElement >> newGamesPage [
 		       addChild: refreshButton;
 		       addChild: loadMoreButton;
 		       yourself.
-	gameList := ToListElement new
-		            useScrollbar: true;
-		            width: 300;
-		            vMatchParent;
-		            margin: (BlInsets right: 12);
-		            nodeBuilder: [ :node :entry :holder |
-			            node addChild: (self rowElementFor: entry) ];
-		            addEventHandlerOn: ToListPrimarySelectionChangedEvent
-		            do: [ :event | self listSelectionChanged ];
-		            yourself.
-	gameList selecter beSingleSelection.
 	analysisPane := ToElement new
 		                layout: BlFrameLayout new;
 		                matchParent;
@@ -408,7 +473,7 @@ ChessCoachAppElement >> newGamesPage [
 	body := ToElement new
 		        layout: BlLinearLayout horizontal;
 		        matchParent;
-		        addChild: gameList;
+		        addChild: self newGameTable;
 		        addChild: analysisPane;
 		        yourself.
 	self showDefaultPane.
@@ -674,41 +739,6 @@ ChessCoachAppElement >> refreshButton [
 ]
 
 { #category : 'private' }
-ChessCoachAppElement >> rowElementFor: aGameIndexEntry [
-	"Players, result and date, with a coach icon when the game has a review. A label, so that its text follows the app theme."
-
-	| row |
-	row := ToElement new
-		       layout: (BlLinearLayout horizontal cellSpacing: 6);
-		       hMatchParent;
-		       vFitContent;
-		       addChild: (ToLabel new
-				        text: (self rowTextFor: aGameIndexEntry);
-				        hMatchParent;
-				        yourself);
-		       yourself.
-	(self isReviewed: aGameIndexEntry) ifTrue: [
-			row addChild:
-				((ToMaterialDesignIconProvider iconNamed: 'outlined_school')
-					 extent: 16 @ 16;
-					 tooltipText: 'Reviewed with the coach';
-					 yourself) ].
-	^ row
-]
-
-{ #category : 'private' }
-ChessCoachAppElement >> rowTextFor: aGameIndexEntry [
-
-	^ String streamContents: [ :stream |
-			  stream
-				  nextPutAll: (' – ' join: aGameIndexEntry players);
-				  nextPutAll: ', ';
-				  nextPutAll: aGameIndexEntry result;
-				  nextPutAll: ', ';
-				  nextPutAll: aGameIndexEntry date ]
-]
-
-{ #category : 'private' }
 ChessCoachAppElement >> runInBackground: aBlock [
 	"Run network work off the UI thread and show its progress. Lichess and network errors are shown in the status line; any other error is shown too and appended to errors.log, instead of opening a debugger."
 
@@ -767,6 +797,7 @@ ChessCoachAppElement >> selectedGameChanged [
 
 	| entry |
 	entry := self selectedEntry ifNil: [ ^ self ].
+	shownGameId := entry gameId.
 	gameView := GameReviewsElement new.
 	gameView session: session entry: entry.
 	gameView whenOpenDo: [ :review | self openReview: review of: entry ].
@@ -911,6 +942,24 @@ ChessCoachAppElement >> speedFilterChecked: aSpeedOrNil [
 ]
 
 { #category : 'private' }
+ChessCoachAppElement >> speedNameOf: aGameIndexEntry [
+
+	^ (self speeds
+		   detect: [ :each | each value = aGameIndexEntry speed ]
+		   ifNone: [ nil ])
+		  ifNil: [ aGameIndexEntry speed ifNil: [ '' ] ]
+		  ifNotNil: [ :each | each key ]
+]
+
+{ #category : 'private' }
+ChessCoachAppElement >> speedRankOf: aGameIndexEntry [
+	"Faster speeds first, as the speed filters are"
+
+	^ #( 'ultraBullet' 'bullet' 'blitz' 'rapid' 'classical' 'correspondence' )
+		  indexOf: aGameIndexEntry speed
+]
+
+{ #category : 'private' }
 ChessCoachAppElement >> speeds [
 	"Label -> speed (nil for all games)"
 
@@ -988,23 +1037,23 @@ ChessCoachAppElement >> updateDashboard [
 
 { #category : 'updating' }
 ChessCoachAppElement >> updateFromSession [
-	"Reload the list, keeping the selected game selected when it is still listed. With Not reviewed checked, reviewed games are left out"
+	"Reload the table, keeping the selected game selected when it is still listed. With Not reviewed checked, reviewed games are left out"
 
-	| selectedId index |
+	| selectedId listed index |
 	refreshButton enabled: session canImport.
 	loadMoreButton enabled: session canImport.
 	self updateDashboard.
 	selectedId := self selectedEntry ifNotNil: [ :entry | entry gameId ].
 	reviewedIds := session reviewedGameIds.
-	listedGames := (session gamesWithSpeed: speedFilter) asArray.
+	listed := (session gamesWithSpeed: speedFilter) asArray.
 	notReviewedButton isChecked ifTrue: [
-		listedGames := listedGames reject: [ :each | self isReviewed: each ] ].
-	index := listedGames findFirst: [ :each | each gameId = selectedId ].
+		listed := listed reject: [ :each | self isReviewed: each ] ].
+	index := listed findFirst: [ :each | each gameId = selectedId ].
 	selectedIndex := index = 0
 		                 ifTrue: [ nil ]
 		                 ifFalse: [ index ].
 	gameList dataAccessor removeAll.
-	gameList dataAccessor addAll: listedGames.
+	gameList dataAccessor addAll: listed.
 	selectedIndex ifNotNil: [
 		gameList selecter selectOnlyIndex: selectedIndex ].
 	self updateAnalysisStatus

@@ -333,7 +333,6 @@ ChessCoachSession >> gamesWithSpeed: aSpeedOrNil [
 	Entries indexed before speeds were recorded get theirs from the PGN once, and the index is saved."
 
 	| games backfilled |
-	aSpeedOrNil ifNil: [ ^ self games ].
 	games := self games.
 	backfilled := false.
 	games do: [ :entry |
@@ -341,6 +340,7 @@ ChessCoachSession >> gamesWithSpeed: aSpeedOrNil [
 					entry speed: (self gameFor: entry) speed.
 					backfilled := true ] ].
 	backfilled ifTrue: [ importer indexManager saveIndexToDisk ].
+	aSpeedOrNil ifNil: [ ^ games ].
 	^ games select: [ :entry | entry speed = aSpeedOrNil ]
 ]
 

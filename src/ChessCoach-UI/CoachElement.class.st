@@ -46,13 +46,15 @@ CoachElement class >> session: aChessCoachSession entry: aGameIndexEntry review:
 
 { #category : 'actions' }
 CoachElement >> addQuickAnswer: aString [
-	"Append aString to what is already written"
+	"Append aString as a sentence, ending with a dot and a space so that typing can continue"
 
 	| text |
-	text := answerField text asString trimBoth.
+	text := answerField text asString trimRight.
+	(text notEmpty and: [ ('.!?' includes: text last) not ]) ifTrue: [
+		text := text , '.' ].
 	answerField text: (text isEmpty
-			 ifTrue: [ aString ]
-			 ifFalse: [ text , '. ' , aString ])
+			 ifTrue: [ aString , '. ' ]
+			 ifFalse: [ text , ' ' , aString , '. ' ])
 ]
 
 { #category : 'accessing' }
@@ -94,7 +96,10 @@ CoachElement >> buildBoardAnswer [
 	review currentQuestion kind = #candidates ifTrue: [
 			currentZone addChild: (self paragraph:
 					 'Your move is already marked in blue. Mark a move again to remove it.') ].
-	currentZone addChild: (self button: 'Done' do: [ self submitMoves ])
+	currentZone addChild: (ChessCoachWidgets
+			 primaryButton: 'Done'
+			 icon: 'filled_arrowforward'
+			 do: [ self submitMoves ])
 ]
 
 { #category : 'building' }
@@ -224,8 +229,12 @@ CoachElement >> buildMarking [
 						  ', ' join:
 							  (marks collect: [ :each |
 								   (game moves at: (each at: 'ply')) san ]) ])).
+	currentZone addChild: ChessCoachWidgets separator.
 	currentZone addChild: (self row: {
-				 (self button: 'Done marking' do: [ self doneMarking ]).
+				 (ChessCoachWidgets
+					  primaryButton: 'Done marking'
+					  icon: 'filled_arrowforward'
+					  do: [ self doneMarking ]).
 				 (self button: 'Back' do: [ exitBlock value ]) })
 ]
 
@@ -245,11 +254,12 @@ CoachElement >> buildMoment [
 		currentZone addChild: (self paragraph: 'Time box reached.') ].
 	shownMoment isRevealed ifTrue: [ ^ self buildReveal ].
 	question := review currentQuestion.
-	currentZone addChild: (self paragraph: question text).
+	currentZone addChild: (self questionTitle: question).
 	question expectsMoves
 		ifTrue: [ self buildBoardAnswer ]
 		ifFalse: [ self buildTextAnswer ].
 	message ifNotNil: [ currentZone addChild: (self paragraph: message) ].
+	currentZone addChild: ChessCoachWidgets separator.
 	currentZone addChild: (self row: {
 				 (self button: 'Stop' do: [ self stop ]).
 				 (self button: 'Pause' do: [ self pause ]) })
@@ -355,11 +365,13 @@ CoachElement >> buildReportTime [
 
 { #category : 'building' }
 CoachElement >> buildReveal [
+	"What the engine says, the time spent and the tags, in sections"
 
 	| reveal before after |
 	reveal := review revealOf: shownMoment.
 	before := self positionBefore: shownMoment.
 	after := game positionAfterPly: shownMoment ply.
+	currentZone addChild: (self heading: 'The engine''s view').
 	review hasEngine
 		ifTrue: [
 		self buildEngineRevealOf: reveal before: before after: after ]
@@ -368,12 +380,18 @@ CoachElement >> buildReveal [
 						 'Stockfish isn''t available, so there is no engine evaluation for this moment.') ].
 	currentZone addChild: (self paragraph:
 			 'Time on this moment: ' , (self minutes: shownMoment seconds)).
+	currentZone addChild: ChessCoachWidgets separator.
+	currentZone addChild: (self heading: 'Mistakes').
 	self buildTagsOf: shownMoment.
+	currentZone addChild: ChessCoachWidgets separator.
 	currentZone addChild:
 		(self row: ((walking and: [ self isActive: shownMoment ])
 				  ifTrue: [
 						  {
-							  (self button: 'Next moment' do: [ self nextMoment ]).
+							  (ChessCoachWidgets
+								   primaryButton: 'Next moment'
+								   icon: 'filled_arrowforward'
+								   do: [ self nextMoment ]).
 							  (self button: 'Stop' do: [ self stop ]).
 							  (self button: 'Pause' do: [ self pause ]) } ]
 				  ifFalse: [
@@ -431,7 +449,7 @@ CoachElement >> buildTagPickerFor: aMomentReview [
 
 { #category : 'building' }
 CoachElement >> buildTagsOf: aMomentReview [
-	"Each proposed tag is a toggle with a check box icon: checked counts as a mistake, unchecked doesn't. The tag's description is its tooltip. When time trouble counts, it is shown as the main cause. Without the local model, the tag picker opens so the tags are chosen by hand."
+	"Each proposed tag is a toggle with a check box icon: checked counts as a mistake, unchecked doesn't. Its label never changes: the percentage is how sure the model was, shown whether or not the tag is checked. The tag's description is its tooltip. When time trouble counts, it is shown as the main cause. Without the local model, the tag picker opens so the tags are chosen by hand."
 
 	| taxonomy labels manual |
 	(review isSuccess: aMomentReview) ifTrue: [
@@ -442,8 +460,10 @@ CoachElement >> buildTagsOf: aMomentReview [
 	taxonomy := MistakeTaxonomy default.
 	manual := review isClassifierUnavailable and: [
 		          aMomentReview isClassifying ].
-	currentZone addChild: (self paragraph:
-			 'Tags: checked ones count as mistakes. Click to change; hover for help.').
+	currentZone addChild: ((self paragraph:
+				  'Checked tags count as mistakes in your stats; click one to change it. The percentage is how sure the coach model is that the tag fits your answers.')
+			 tooltipString: 'Hover over a tag for its description.';
+			 yourself).
 	manual
 		ifTrue: [
 				currentZone addChild: (self paragraph:
@@ -463,10 +483,8 @@ CoachElement >> buildTagsOf: aMomentReview [
 			| tag |
 			tag := taxonomy tagAt: label tagId.
 			currentZone addChild: ((self
-					  button: tag name , ' · ' , tag category , (label isConfirmed
-								   ifTrue: [ '' ]
-								   ifFalse: [
-									   ' (' , (label confidence * 100) rounded printString , '%)' ])
+					  button: tag name , ' · ' , tag category , ' ('
+						  , (label confidence * 100) rounded printString , '%)'
 					  icon: (label isRejected
 							   ifTrue: [ 'outlined_checkboxoutlineblank' ]
 							   ifFalse: [ 'outlined_checkbox' ])
@@ -507,10 +525,10 @@ CoachElement >> buildTextAnswer [
 	currentZone
 		addChild: chips;
 		addChild: answerField;
-		addChild: (ToButton new
-				 labelText: 'Answer';
-				 clickAction: [ self submitText ];
-				 yourself)
+		addChild: (ChessCoachWidgets
+				 primaryButton: 'Answer'
+				 icon: 'filled_arrowforward'
+				 do: [ self submitText ])
 ]
 
 { #category : 'building' }
@@ -570,6 +588,19 @@ CoachElement >> button: aString icon: anIconName do: aBlock [
 				   extent: 18 @ 18;
 				   yourself);
 		  yourself
+]
+
+{ #category : 'private' }
+CoachElement >> clockTextBefore: aPly [
+	"' · 2:31 on your clock': the time I had left when I had to play the move at aPly (my clock after my previous move), or '' when the game has no clock times"
+
+	| clock seconds |
+	aPly <= 2 ifTrue: [ ^ '' ].
+	clock := (game moves at: aPly - 2) timestamp ifNil: [ ^ '' ].
+	seconds := clock asSeconds.
+	^ ' · {1}:{2} on your clock' format: {
+			  (seconds // 60).
+			  (seconds \\ 60 printPaddedWith: $0 to: 2) }
 ]
 
 { #category : 'actions' }
@@ -673,11 +704,14 @@ CoachElement >> header [
 
 { #category : 'private' }
 CoachElement >> heading: aString [
+	"A section title in the panel"
 
 	^ ToLabel new
 		  text: (aString asRopedText
 				   bold;
+				   fontSize: 15;
 				   yourself);
+		  margin: (BlInsets top: 4);
 		  yourself
 ]
 
@@ -685,6 +719,18 @@ CoachElement >> heading: aString [
 CoachElement >> history [
 
 	^ history
+]
+
+{ #category : 'building' }
+CoachElement >> iconButton: anIconName tooltip: aString do: aBlock [
+
+	^ ToButton new
+		  icon: ((ToMaterialDesignIconProvider iconNamed: anIconName)
+				   extent: 18 @ 18;
+				   yourself);
+		  tooltipString: aString;
+		  clickAction: aBlock;
+		  yourself
 ]
 
 { #category : 'private' }
@@ -696,9 +742,9 @@ CoachElement >> inUIDo: aBlock [
 
 { #category : 'initialization' }
 CoachElement >> initialize [
-	"The panel has a fixed width so that its multi-line labels wrap inside the scrollable column. A close button at the top right pauses the review and closes its page. Review time counts only while the coach is shown."
+	"The panel has a fixed width so that its multi-line labels wrap, inside a scrollable column with a scrollbar. Report a problem and Close are small buttons on the first row, on the right; Close pauses the review and closes its page. Review time counts only while the coach is shown."
 
-	| panel closeButton |
+	| panel |
 	super initialize.
 	markedMoves := OrderedCollection new.
 	walking := false.
@@ -721,14 +767,6 @@ CoachElement >> initialize [
 		          beMultiLine;
 		          hMatchParent;
 		          yourself.
-	closeButton := ToButton new
-		               icon:
-			               (ToMaterialDesignIconProvider iconNamed:
-					                'outlined_close');
-		               tooltipString:
-			               'Close the coach; the review is saved and continues next time';
-		               clickAction: [ self pause ];
-		               yourself.
 	history := ToElement new
 		           layout: (BlLinearLayout vertical cellSpacing: 4);
 		           hMatchParent;
@@ -747,19 +785,35 @@ CoachElement >> initialize [
 		         yourself.
 	panel
 		addChild: (ToElement new
-				 layout: (BlLinearLayout horizontal cellSpacing: 6);
+				 layout: (BlLinearLayout horizontal cellSpacing: 4);
 				 hMatchParent;
 				 vFitContent;
-				 addChild: header;
-				 addChild: closeButton;
+				 addChild: (BlElement new
+						  constraintsDo: [ :c |
+								  c horizontal matchParent.
+								  c vertical exact: 1 ];
+						  yourself);
+				 addChild: (self
+						  iconButton: 'outlined_bugreport'
+						  tooltip:
+						  'Report a problem: save the game, its analysis and this review for a bug report'
+						  do: [ self reportProblem ]);
+				 addChild: (self
+						  iconButton: 'outlined_close'
+						  tooltip:
+						  'Close the coach; the review is saved and continues next time'
+						  do: [ self pause ]);
 				 yourself);
+		addChild: header;
 		addChild: history;
 		addChild: currentZone.
 	self
 		addChild: board;
-		addChild: (panel asScrollableElement
+		addChild: (ToElement new
+				 layout: BlFrameLayout new;
 				 width: 380;
 				 vMatchParent;
+				 addChild: (ChessCoachWidgets scrollable: panel);
 				 yourself)
 ]
 
@@ -907,6 +961,34 @@ CoachElement >> playedMove [
 CoachElement >> positionBefore: aMomentReview [
 
 	^ game positionAfterPly: aMomentReview ply - 1
+]
+
+{ #category : 'building' }
+CoachElement >> questionTitle: aCoachQuestion [
+	"The current question, set apart with an icon and in bold, so that a new question is noticed"
+
+	^ ToElement new
+		  layout: (BlLinearLayout horizontal cellSpacing: 8);
+		  hMatchParent;
+		  vFitContent;
+		  padding: (BlInsets all: 8);
+		  background: (Color blue alpha: 0.12);
+		  geometry: (BlRoundedRectangleGeometry cornerRadius: 6);
+		  addChild:
+			  ((ToMaterialDesignIconProvider iconNamed: 'filled_livehelp')
+				   extent: 22 @ 22;
+				   yourself);
+		  addChild: (ToTextField new
+				   wrappingMode: true;
+				   hMatchParent;
+				   vFitContent;
+				   text: (aCoachQuestion text asRopedText
+						    bold;
+						    yourself);
+				   beReadonlyWithSelection;
+				   background: Color transparent;
+				   yourself);
+		  yourself
 ]
 
 { #category : 'private' }
@@ -1162,6 +1244,7 @@ CoachElement >> unmarkShown [
 
 { #category : 'updating' }
 CoachElement >> updateBoard [
+	"The list of moments and the summary show the game's final position"
 
 	| question arrows |
 	mode = #marking ifTrue: [
@@ -1169,7 +1252,9 @@ CoachElement >> updateBoard [
 					   ifTrue: [ #(  ) ]
 					   ifFalse: [
 					   { (ChessArrow uci: (game uciMoves at: shownPly) style: #played) } ]) ].
-	mode = #moment ifFalse: [ ^ board arrows: #(  ) ].
+	mode = #moment ifFalse: [
+			board chessPosition: (game positionAfterPly: game moves size).
+			^ board arrows: #(  ) ].
 	question := self currentQuestionOrNil.
 	board orientation: shownMoment color.
 	(question notNil and: [ question kind = #expectedReply ]) ifTrue: [
@@ -1206,17 +1291,13 @@ CoachElement >> updateCurrentZone [
 	currentZone removeChildren.
 	answerField := nil.
 	noteField := nil.
-	busy ifNotNil: [ ^ currentZone addChild: (ToLabel text: busy) ].
+	busy ifNotNil: [ ^ currentZone addChild: (self paragraph: busy) ].
 	mode = #marking ifTrue: [ self buildMarking ].
 	mode = #list ifTrue: [ self buildList ].
 	mode = #summary ifTrue: [ self buildSummary ].
 	mode = #moment ifTrue: [ self buildMoment ].
 	(mode ~= #moment and: [ message notNil ]) ifTrue: [
-		currentZone addChild: (self paragraph: message) ].
-	currentZone addChild: (self
-			 button: 'Report a problem'
-			 icon: 'outlined_bugreport'
-			 do: [ self reportProblem ])
+		currentZone addChild: (self paragraph: message) ]
 ]
 
 { #category : 'updating' }
@@ -1241,33 +1322,33 @@ CoachElement >> updateHeader [
 						   (self minutes: review totalSeconds) }) ].
 	mode = #summary ifTrue: [ ^ header text: 'Review summary' ].
 	move := game moves at: shownMoment ply.
-	header text: ('Moment {1} of {2} · move {3} ({4}) · {5}' format: {
+	header text:
+		('Moment {1} of {2} · move {3} ({4}) · {5}{6}' format: {
 				 ((review momentsPassing: self filter) indexOf: shownMoment).
 				 (review momentsPassing: self filter) size.
 				 (shownMoment ply + 1 // 2).
 				 move san.
-				 (', ' join: shownMoment kinds) })
+				 (', ' join: shownMoment kinds).
+				 (self clockTextBefore: shownMoment ply) })
 ]
 
 { #category : 'updating' }
 CoachElement >> updateHistory [
+	"My earlier answers on this moment, under a title, as text I can select and copy"
 
 	history removeChildren.
 	mode = #moment ifFalse: [ ^ self ].
+	shownMoment answers ifEmpty: [ ^ self ].
+	history addChild: (self heading: 'Your answers').
 	shownMoment answers do: [ :answer |
-			history addChild: (ToLabel new
-					 beMultiLine;
-					 hMatchParent;
-					 text: answer question text;
-					 yourself).
-			history addChild: (ToLabel new
-					 beMultiLine;
-					 hMatchParent;
-					 text: '→ ' , (answer question expectsMoves
-								  ifTrue: [
-									  self describeMoves: answer moves in: answer question ]
-								  ifFalse: [ answer text ]);
-					 yourself) ]
+			history addChild:
+				(ChessCoachWidgets selectableParagraph: answer question text).
+			history addChild: (ChessCoachWidgets selectableParagraph:
+					 '→ ' , (answer question expectsMoves
+						  ifTrue: [
+						  self describeMoves: answer moves in: answer question ]
+						  ifFalse: [ answer text ])) ].
+	history addChild: ChessCoachWidgets separator
 ]
 
 { #category : 'updating' }

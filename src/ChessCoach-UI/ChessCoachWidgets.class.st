@@ -11,22 +11,12 @@ Class {
 
 { #category : 'building' }
 ChessCoachWidgets class >> bigButton: aString icon: anIconName do: aBlock [
-	"A main action: a full-width primary button with a larger label and icon"
+	"A main action of a page: a full-width primary button"
 
-	| button |
-	button := ToButton new
-		          labelText: aString;
-		          icon:
-			          ((ToMaterialDesignIconProvider iconNamed: anIconName)
-				           extent: 24 @ 24;
-				           yourself);
-		          clickAction: aBlock;
-		          hMatchParent;
-		          padding: (BlInsets all: 12);
-		          addStamp: #primary;
-		          yourself.
-	button label addStamp: #H4.
-	^ button
+	^ (self primaryButton: aString icon: anIconName do: aBlock)
+		  hMatchParent;
+		  padding: (BlInsets all: 12);
+		  yourself
 ]
 
 { #category : 'building' }
@@ -133,6 +123,35 @@ ChessCoachWidgets class >> paragraph: aString [
 ]
 
 { #category : 'building' }
+ChessCoachWidgets class >> primaryButton: aString icon: anIconName do: aBlock [
+	"The main action of a view: a filled button with an icon. The raw themes ignore the #primary stamp, so the button's own tokens give it the primary colours."
+
+	| button primary |
+	button := ToButton new
+		          labelText: aString;
+		          icon:
+			          ((ToMaterialDesignIconProvider iconNamed: anIconName)
+				           extent: 20 @ 20;
+				           yourself);
+		          clickAction: aBlock;
+		          padding: (BlInsets
+				           top: 8
+				           left: 16
+				           bottom: 8
+				           right: 16);
+		          yourself.
+	primary := Color fromHexString: '#2563eb'.
+	button
+		addTokenNamed: #'color-bg-container' withValue: primary;
+		addTokenNamed: #'color-border' withValue: primary;
+		addTokenNamed: #'color-text' withValue: Color white;
+		addTokenNamed: #'color-primary' withValue: Color white;
+		addTokenNamed: #'color-primary-hover' withValue: Color white;
+		addTokenNamed: #'color-primary-pressed' withValue: Color white.
+	^ button
+]
+
+{ #category : 'building' }
 ChessCoachWidgets class >> scrollable: anElement [
 	"anElement in a vertically scrollable area filling its parent, with a scrollbar along its right side"
 
@@ -163,6 +182,35 @@ ChessCoachWidgets class >> section: aTitle help: aHelpStringOrNil rows: someElem
 
 	^ self group:
 		  { (self heading: aTitle help: aHelpStringOrNil) } , someElements
+]
+
+{ #category : 'building' }
+ChessCoachWidgets class >> selectableParagraph: aString [
+	"Read-only text that wraps and can be selected and copied"
+
+	^ ToTextField new
+		  wrappingMode: true;
+		  hMatchParent;
+		  vFitContent;
+		  text: aString;
+		  beReadonlyWithSelection;
+		  yourself
+]
+
+{ #category : 'building' }
+ChessCoachWidgets class >> separator [
+	"A 1 px translucent horizontal line, for light and dark themes"
+
+	^ BlElement new
+		  height: 1;
+		  constraintsDo: [ :c | c horizontal matchParent ];
+		  background: (Color gray alpha: 0.3);
+		  margin: (BlInsets
+				   top: 4
+				   left: 0
+				   bottom: 4
+				   right: 0);
+		  yourself
 ]
 
 { #category : 'building' }

@@ -37,6 +37,15 @@ CoachElementTest >> clickOn: aSquare [
 	scripter pulse
 ]
 
+{ #category : 'helpers' }
+CoachElementTest >> historyTexts [
+	"The texts of my earlier answers on the shown moment"
+
+	^ coach history children
+		  select: [ :each | each isKindOf: ToTextField ]
+		  thenCollect: [ :each | each text asString ]
+]
+
 { #category : 'running' }
 CoachElementTest >> setUp [
 
@@ -104,10 +113,9 @@ CoachElementTest >> testAWholeMoment [
 	coach addQuickAnswer: 'Intuition'.
 	self
 		assert: coach answerField text asString
-		equals: 'It looked natural. Intuition'.
+		equals: 'It looked natural. Intuition. '.
 	self answer: 'I wanted to attack f7'.
-	self assert: (coach history children anySatisfy: [ :each |
-			 each text asString = '→ I wanted to attack f7' ]).
+	self assert: (self historyTexts includes: '→ I wanted to attack f7').
 	self assert: (coach board chessPosition pieceAt: 'g5') equals: 'N'.
 	self clickOn: 'h7'.
 	self clickOn: 'h6'.
@@ -133,7 +141,8 @@ CoachElementTest >> testAWholeMoment [
 	self assert: review mistakeRecords first labels isEmpty.
 	coach toggleTag: 'missed-opponent-threat'.
 	self assert:
-		(self zoneTexts includes: 'Missed opponent threat · perception').
+		(self zoneTexts includes:
+			 'Missed opponent threat · perception (70%)').
 	self assert: review mistakeRecords first labels size equals: 1.
 	coach nextMoment.
 	scripter pulse.
@@ -266,6 +275,15 @@ CoachElementTest >> testReportAProblem [
 				 'note.txt'.
 				 (entry gameId , '.pgn').
 				 'current-review-1.json' })
+]
+
+{ #category : 'tests' }
+CoachElementTest >> testTheListShowsTheFinalPosition [
+
+	self assert: coach mode equals: #list.
+	self
+		assert: coach board chessPosition fen
+		equals: (review game positionAfterPly: review game moves size) fen
 ]
 
 { #category : 'helpers' }

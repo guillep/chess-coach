@@ -222,16 +222,29 @@ ChessCoachAppElement >> newDashboard [
 
 { #category : 'initialization' }
 ChessCoachAppElement >> newGamesPage [
-	"A bar with the speed filters, Refresh and Load more; below it the game list and the selected game or the coach"
+	"A title, a bar with the speed filters, Refresh and Load more; below it the game list and the selected game or the coach"
 
-	| bar body |
+	| title bar body |
+	title := ChessCoachWidgets
+		         pageTitle: 'Games'
+		         subtitle:
+		         'Your downloaded games. Pick one to see it, or start a new analysis with the coach.'.
+	title padding: (BlInsets
+			 top: 8
+			 left: 8
+			 bottom: 0
+			 right: 8).
 	refreshButton := ToButton new
 		                 labelText: 'Refresh';
+		                 tooltipString:
+			                 'Download the games played since your newest one';
 		                 clickAction: [
 			                 self runInBackground: [ session refresh ] ];
 		                 yourself.
 	loadMoreButton := ToButton new
 		                  labelText: 'Load more';
+		                  tooltipString:
+			                  'Download older games (see Settings → Games per Load more)';
 		                  clickAction: [
 			                  self runInBackground: [ session loadMoreGames ] ];
 		                  yourself.
@@ -267,6 +280,7 @@ ChessCoachAppElement >> newGamesPage [
 	^ ToElement new
 		  layout: BlLinearLayout vertical;
 		  matchParent;
+		  addChild: title;
 		  addChild: bar;
 		  addChild: body;
 		  yourself
@@ -306,22 +320,22 @@ ChessCoachAppElement >> newGamesPane [
 
 { #category : 'initialization' }
 ChessCoachAppElement >> newNavigation [
-	"Games, Stats and Settings as pages of a Toplo tab pane, tabs in a column on the left. Pages are built once and kept."
+	"Stats, Games and Settings as pages of a Toplo tab pane, tabs in a column on the left. Pages are built once and kept."
 
 	| pane |
 	pane := ToTabPaneElement new.
 	pane horizontal: true.
 	pane matchParent.
 	pane showAddTabItemButton: false.
-	pane addItem: (self
-			 newPageButton: 'Games'
-			 icon: 'outlined_sportsesports'
-			 page: gamesPage).
 	pane addItem:
 		(self
 			 newPageButton: 'Stats'
 			 icon: 'outlined_insights'
 			 page: dashboard).
+	pane addItem: (self
+			 newPageButton: 'Games'
+			 icon: 'outlined_managesearch'
+			 page: gamesPage).
 	pane addItem: (self
 			 newPageButton: 'Settings'
 			 icon: 'outlined_settings'

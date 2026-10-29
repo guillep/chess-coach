@@ -40,57 +40,77 @@ SettingsElement >> backgroundRunner: aBlock [
 { #category : 'building' }
 SettingsElement >> build [
 
-	| content |
+	| content widgets |
+	widgets := ChessCoachWidgets.
 	self removeChildren.
 	content := ToElement new
-		           layout: (BlLinearLayout vertical cellSpacing: 8);
+		           layout: (BlLinearLayout vertical cellSpacing: 12);
 		           hMatchParent;
 		           vFitContent;
 		           padding: (BlInsets all: 16);
 		           yourself.
 	content
-		addChild: (self row: {
-						 (self heading: 'Settings').
-						 (ToButton new
-							  labelText: 'Run setup again';
-							  clickAction: [ setupBlock value ];
-							  yourself) });
-		addChild: (self heading: 'Accounts');
-		addChild: self lichessRow;
-		addChild: self chessComRow;
-		addChild: (self heading: 'Games');
-		addChild: (self
-				 numberRow: 'Games per Load more'
-				 key: 'gamesPerLoad'
-				 from: 10
-				 to: 100
-				 by: 10);
-		addChild: (self heading: 'Board');
-		addChild: self pieceSetRow;
-		addChild: (self heading: 'Analysis (Stockfish)');
-		addChild: self stockfishRow;
-		addChild: (self
-				 numberRow: 'Depth'
-				 key: 'depth'
-				 from: 10
-				 to: 30
-				 by: 1);
-		addChild: (self
-				 numberRow: 'Lines (MultiPV)'
-				 key: 'multiPV'
-				 from: 1
-				 to: 5
-				 by: 1);
-		addChild: (multiPVNote := ToLabel new);
-		addChild: (self note:
-				 'Changes apply to games analysed from now on; stored analyses are kept.');
-		addChild: (self heading: 'Coach (local LLM)');
-		addChild: self ollamaRow;
-		addChild: (modelsZone := self row: #(  ));
-		addChild: (llmStatus := ToLabel new
-				              beMultiLine;
-				              hMatchParent;
-				              yourself).
+		addChild: (widgets
+				 pageTitle: 'Settings'
+				 subtitle:
+					 'Accounts, the board, the engine and the coach model. Every change is saved at once.');
+		addChild: (ToButton new
+				 labelText: 'Run setup again';
+				 clickAction: [ setupBlock value ];
+				 yourself);
+		addChild: (widgets
+				 section: 'Accounts'
+				 help:
+				 'Your games are public on Lichess and Chess.com: a username is enough to download them. Validate checks that the player exists. Logging in to Lichess is optional and only adds opening statistics from its database.'
+				 rows: {
+						 self lichessRow.
+						 self chessComRow });
+		addChild: (widgets
+				 section: 'Games'
+				 help:
+				 'How many games Load more downloads from each site at a time. Refresh always downloads every newer game.'
+				 rows: { (self
+						  numberRow: 'Games per Load more'
+						  key: 'gamesPerLoad'
+						  from: 10
+						  to: 100
+						  by: 10) });
+		addChild: (widgets
+				 section: 'Board'
+				 help: 'The look of the pieces on every board of the app.'
+				 rows: { self pieceSetRow });
+		addChild: (widgets
+				 section: 'Analysis (Stockfish)'
+				 help:
+				 'Stockfish analyses your games in the background to find mistakes and only moves. Depth is how far it looks (higher is slower and stronger); lines is how many alternatives it keeps per position (2 or more are needed to detect only moves).'
+				 rows: {
+						 self stockfishRow.
+						 (self
+							  numberRow: 'Depth'
+							  key: 'depth'
+							  from: 10
+							  to: 30
+							  by: 1).
+						 (self
+							  numberRow: 'Lines (MultiPV)'
+							  key: 'multiPV'
+							  from: 1
+							  to: 5
+							  by: 1).
+						 (multiPVNote := ToLabel new).
+						 (self note:
+							  'Changes apply to games analysed from now on; stored analyses are kept.') });
+		addChild: (widgets
+				 section: 'Coach (local LLM)'
+				 help:
+				 'A local model, run by Ollama on this computer, sorts your written answers into mistake types. Load models lists the installed ones; Test classifies a sample answer and shows how long it took.'
+				 rows: {
+						 self ollamaRow.
+						 (modelsZone := self row: #(  )).
+						 (llmStatus := ToLabel new
+							               beMultiLine;
+							               hMatchParent;
+							               yourself) }).
 	self addChild: (content asScrollableElement
 			 matchParent;
 			 yourself).

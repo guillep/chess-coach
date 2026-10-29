@@ -222,18 +222,48 @@ MistakesDashboardElement >> rebuild [
 
 	content removeChildren.
 	detail removeChildren.
+	content addChild: (ChessCoachWidgets
+			 pageTitle: 'Stats'
+			 subtitle:
+			 'Your typical mistakes and how long your reviews take, from every review with the coach.').
 	database records ifEmpty: [ ^ self buildEmptyState ].
-	content addChild: (self title: 'Your most frequent mistakes').
-	self buildBars.
-	content addChild: (self title: 'By phase').
-	self buildPhases.
-	content addChild:
-		(self title: 'Trend (blocks of 10 games, oldest first)').
-	self buildTrend.
+	self
+		section: 'Your most frequent mistakes'
+		help:
+		'The mistake types you confirmed (or didn''t reject) most often. Click a bar to see those mistakes.'
+		build: [ self buildBars ].
+	self
+		section: 'By phase'
+		help:
+		'The three most frequent mistake types in the opening (first 12 moves), the middlegame and the endgame (6 or fewer pieces).'
+		build: [ self buildPhases ].
+	self
+		section: 'Trend'
+		help:
+		'One digit per block of 10 games, oldest first: 0 is the least frequent, 9 the most, for each of your top mistake types.'
+		build: [ self buildTrend ].
 	(times notNil and: [ times reviewedMomentCount > 0 ]) ifTrue: [
-			content addChild: (self title: 'Time').
-			self buildTimes ].
+			self
+				section: 'Time'
+				help:
+				'Averages over every reviewed moment: per moment kind, per question, and for the marking pass. The last line shows how the time per moment changes, block by block.'
+				build: [ self buildTimes ] ].
 	selectedTag ifNotNil: [ self buildDetail ]
+]
+
+{ #category : 'building' }
+MistakesDashboardElement >> section: aTitle help: aHelpString build: aBlock [
+	"Build a section into a bordered group: aBlock adds its rows to content, which points to the group meanwhile"
+
+	| page box |
+	page := content.
+	box := ChessCoachWidgets
+		       section: aTitle
+		       help: aHelpString
+		       rows: #(  ).
+	content := box.
+	aBlock ensure: [ content := page ].
+	content addChild: box
 ]
 
 { #category : 'actions' }

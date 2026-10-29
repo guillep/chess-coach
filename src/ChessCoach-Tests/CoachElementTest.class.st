@@ -255,12 +255,14 @@ CoachElementTest >> testReportAProblem [
 
 { #category : 'helpers' }
 CoachElementTest >> zoneTexts [
-	"The texts of the labels and buttons in the current question zone"
+	"The texts of the labels, paragraphs and buttons in the current question zone"
 
 	| texts |
 	texts := OrderedCollection new.
 	coach currentZone allChildrenBreadthFirstDo: [ :each |
 			(each isKindOf: ToLabel) ifTrue: [ texts add: each text asString ].
+			(each isKindOf: ToTextField) ifTrue: [
+				texts add: each text asString ].
 			(each isKindOf: ToButton) ifTrue: [
 				texts add: each labelText asString ] ].
 	^ texts

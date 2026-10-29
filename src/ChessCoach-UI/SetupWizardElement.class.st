@@ -141,11 +141,19 @@ SetupWizardElement >> next [
 
 { #category : 'building' }
 SetupWizardElement >> paragraph: aString [
+	"A label for short texts. Longer ones are read-only text fields, which wrap at word boundaries (Toplo labels don't wrap)."
 
-	^ ToLabel new
-		  beMultiLine;
+	aString size <= 45 ifTrue: [
+			^ ToLabel new
+				  hMatchParent;
+				  text: aString;
+				  yourself ].
+	^ ToTextField new
+		  wrappingMode: true;
 		  hMatchParent;
+		  vFitContent;
 		  text: aString;
+		  beReadonlyWithoutSelection;
 		  yourself
 ]
 
@@ -198,12 +206,14 @@ SetupWizardElement >> steps [
 
 { #category : 'accessing' }
 SetupWizardElement >> texts [
-	"Every label and button text shown (for tests)"
+	"Every label, paragraph and button text shown (for tests)"
 
 	| texts |
 	texts := OrderedCollection new.
 	self allChildrenBreadthFirstDo: [ :each |
 			(each isKindOf: ToLabel) ifTrue: [ texts add: each text asString ].
+			(each isKindOf: ToTextField) ifTrue: [
+				texts add: each text asString ].
 			(each isKindOf: ToButton) ifTrue: [
 				texts add: each labelText asString ] ].
 	^ texts

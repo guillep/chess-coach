@@ -829,11 +829,19 @@ CoachElement >> noteField [
 
 { #category : 'private' }
 CoachElement >> paragraph: aString [
+	"A label for short texts. Longer ones are read-only text fields, which wrap at word boundaries. Workaround: Toplo labels don't wrap (logged as an upstream candidate)."
 
-	^ ToLabel new
-		  beMultiLine;
+	aString size <= 45 ifTrue: [
+			^ ToLabel new
+				  hMatchParent;
+				  text: aString;
+				  yourself ].
+	^ ToTextField new
+		  wrappingMode: true;
 		  hMatchParent;
+		  vFitContent;
 		  text: aString;
+		  beReadonlyWithoutSelection;
 		  yourself
 ]
 

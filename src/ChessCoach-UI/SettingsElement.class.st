@@ -248,11 +248,14 @@ SettingsElement >> loginOrLogout [
 
 { #category : 'building' }
 SettingsElement >> note: aString [
+	"A read-only text that wraps at word boundaries (Toplo labels don't wrap)"
 
-	^ ToLabel new
-		  beMultiLine;
+	^ ToTextField new
+		  wrappingMode: true;
 		  hMatchParent;
+		  vFitContent;
 		  text: aString;
+		  beReadonlyWithoutSelection;
 		  yourself
 ]
 

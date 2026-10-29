@@ -278,6 +278,24 @@ CoachElementTest >> testReportAProblem [
 ]
 
 { #category : 'tests' }
+CoachElementTest >> testShiftReturnAnswers [
+
+	coach continueReview.
+	scripter pulse.
+	coach answerField text: 'The bishop'.
+	coach answerField requestFocus.
+	scripter pulse.
+	scripter keyDown: KeyboardKey shiftLeft.
+	scripter keyClick: KeyboardKey enter.
+	scripter keyUp: KeyboardKey shiftLeft.
+	scripter syncContinue.
+	scripter pulse.
+	self assert: (coach history children anySatisfy: [ :each |
+				 (each isKindOf: ToTextField) and: [
+					 each text asString includesSubstring: 'The bishop' ] ])
+]
+
+{ #category : 'tests' }
 CoachElementTest >> testTheListShowsTheFinalPosition [
 
 	self assert: coach mode equals: #list.

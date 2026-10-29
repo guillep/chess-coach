@@ -257,7 +257,7 @@ ChessCoachAppElement >> inUIDo: aBlock [
 
 { #category : 'initialization' }
 ChessCoachAppElement >> initialize [
-	"Pages in a tab pane with the tabs in a left column, the notification bell over its top right corner, and a status line below"
+	"A top bar with the notification bell on the right, the pages in a tab pane with the tabs in a left column, and a status line below"
 
 	super initialize.
 	backgroundRunner := [ :aBlock |
@@ -270,11 +270,17 @@ ChessCoachAppElement >> initialize [
 	navigation := self newNavigation.
 	self
 		addChild: (ToElement new
-				 layout: BlFrameLayout new;
-				 matchParent;
-				 addChild: navigation;
+				 layout: BlLinearLayout horizontal alignCenterRight;
+				 hMatchParent;
+				 vFitContent;
+				 padding: (BlInsets
+						  top: 8
+						  left: 16
+						  bottom: 0
+						  right: 16);
 				 addChild: self newBell;
 				 yourself);
+		addChild: navigation;
 		addChild: self newStatusLine
 ]
 
@@ -318,7 +324,8 @@ ChessCoachAppElement >> navigation [
 
 { #category : 'initialization' }
 ChessCoachAppElement >> newBell [
-	"The notification bell, top right, with a red dot while there are unread notifications. Clicking it pops up the notifications below it, to its left (they would leave the window otherwise), and marks them read"
+	"The notification bell, with a red dot while there are unread notifications. Clicking it pops up the notifications below it, to its left (they would leave the window otherwise), and marks them read.
+	The popup stays open on mouse up (a menu would close), so its buttons get their clicks"
 
 	bellBadge := BlElement new
 		             geometry: BlCircleGeometry new;
@@ -340,6 +347,7 @@ ChessCoachAppElement >> newBell [
 		        yourself.
 	notificationsWindow := ToPopupWindowManager new.
 	notificationsWindow placement: ToAnchoredBottomLeftPlacement new.
+	notificationsWindow closeOnReleased: false.
 	notificationsWindow windowBuilder: [ :window :element |
 			window root addChild: self newNotificationsPanel.
 			session notifications markAllRead ].
@@ -347,10 +355,6 @@ ChessCoachAppElement >> newBell [
 	^ ToElement new
 		  layout: BlFrameLayout new;
 		  fitContent;
-		  margin: (BlInsets all: 8);
-		  constraintsDo: [ :c |
-				  c frame horizontal alignRight.
-				  c frame vertical alignTop ];
 		  addChild: bell;
 		  addChild: bellBadge;
 		  yourself
@@ -699,13 +703,18 @@ ChessCoachAppElement >> openReview: aCoachReview of: aGameIndexEntry [
 
 { #category : 'navigation' }
 ChessCoachAppElement >> openTab: aString icon: anIconName page: anElement [
-	"Add a closable page after the fixed ones and show it"
+	"Add a closable page after the fixed ones and show it, with the margins every page has"
 
 	| button |
 	button := (self
 		           newPageButton: aString
 		           icon: anIconName
-		           page: anElement)
+		           page: (ToElement new
+				            layout: BlFrameLayout new;
+				            matchParent;
+				            padding: (BlInsets all: 16);
+				            addChild: anElement;
+				            yourself))
 		          removable: true;
 		          yourself.
 	navigation addItem: button.

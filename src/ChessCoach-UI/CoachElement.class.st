@@ -27,7 +27,8 @@ Class {
 		'addingTag',
 		'replay',
 		'draft',
-		'draftQuestion'
+		'draftQuestion',
+		'panelScroller'
 	],
 	#category : 'ChessCoach-UI-Coach',
 	#package : 'ChessCoach-UI',
@@ -501,7 +502,7 @@ CoachElement >> buildTagsOf: aMomentReview [
 
 { #category : 'building' }
 CoachElement >> buildTextAnswer [
-	"Quick answers that fit the question; clicking one adds it to the field. The field starts with the draft of this question, if any."
+	"Quick answers that fit the question; clicking one adds it to the field. The field starts with the draft of this question, if any. Shift+Enter answers, as the Answer button does."
 
 	| chips |
 	chips := ToElement new
@@ -522,6 +523,9 @@ CoachElement >> buildTextAnswer [
 		               height: 100;
 		               text: draft;
 		               yourself.
+	answerField addShortcut: (BlShortcutWithAction new
+			 combination: BlKeyCombination shiftReturn;
+			 action: [ self submitText ]).
 	currentZone
 		addChild: chips;
 		addChild: answerField;
@@ -814,7 +818,8 @@ CoachElement >> initialize [
 				 width: 380;
 				 vMatchParent;
 				 addChild: (ChessCoachWidgets scrollable: panel);
-				 yourself)
+				 yourself).
+	panelScroller := panel parent
 ]
 
 { #category : 'private' }
@@ -1080,6 +1085,14 @@ CoachElement >> runInBackground: aBlock then: aUIBlock [
 			self enqueueTask: (BlTaskAction new action: aUIBlock) ]
 ]
 
+{ #category : 'updating' }
+CoachElement >> scrollToNewest [
+	"Once the panel is laid out again, scroll to its end: the new question and the answer field. scrollBy: clamps to the content"
+
+	panelScroller ifNil: [ ^ self ].
+	currentZone whenLayoutedDoOnce: [ panelScroller scrollBy: 0 @ 100000 ]
+]
+
 { #category : 'accessing' }
 CoachElement >> session: aChessCoachSession entry: aGameIndexEntry review: aCoachReview [
 	"Open on the marking pass when it is not done, on the list of moments otherwise"
@@ -1285,12 +1298,13 @@ CoachElement >> updateBoard [
 
 { #category : 'updating' }
 CoachElement >> updateCurrentZone [
-	"Rebuild the panel below the history. The answer being typed is kept as a draft of its question, so that a refresh (a classification finishing, a progress update) doesn't empty the field."
+	"Rebuild the panel below the history and scroll down to it. The answer being typed is kept as a draft of its question, so that a refresh (a classification finishing, a progress update) doesn't empty the field."
 
 	answerField ifNotNil: [ draft := answerField text asString ].
 	currentZone removeChildren.
 	answerField := nil.
 	noteField := nil.
+	self scrollToNewest.
 	busy ifNotNil: [ ^ currentZone addChild: (self paragraph: busy) ].
 	mode = #marking ifTrue: [ self buildMarking ].
 	mode = #list ifTrue: [ self buildList ].

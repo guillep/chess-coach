@@ -25,6 +25,17 @@ ChessCoachAppElementTest >> click: anElement [
 ]
 
 { #category : 'helpers' }
+ChessCoachAppElementTest >> isInATab: anElement [
+
+	| each |
+	each := anElement.
+	[ each notNil ] whileTrue: [
+			(each isKindOf: ToTabButton) ifTrue: [ ^ true ].
+			each := each parent ].
+	^ false
+]
+
+{ #category : 'helpers' }
 ChessCoachAppElementTest >> newAppElement [
 
 	^ ChessCoachAppElement new
@@ -125,7 +136,7 @@ ChessCoachAppElementTest >> testCoachAndPlayThroughOpenInClosableTabs [
 
 { #category : 'tests' }
 ChessCoachAppElementTest >> testEveryPageTitleIsAtTheSamePlace [
-	"The page titles, not the tab labels with the same text (those sit lower, under their icons)"
+	"The page titles, not the tab labels with the same text"
 
 	| places |
 	places := #( #Stats #Games #Settings ) collect: [ :page |
@@ -137,7 +148,7 @@ ChessCoachAppElementTest >> testEveryPageTitleIsAtTheSamePlace [
 					          ((each isKindOf: ToLabel) and: [
 							           each text asString = page asString and: [
 								           each isAttachedToSceneGraph and: [
-									           each bounds inSpace top < 40 ] ] ]) ifTrue: [
+									           (self isInATab: each) not ] ] ]) ifTrue: [
 						          title := each ] ].
 			          title bounds inSpace topLeft ].
 	self assert: places asSet size = 1 description: places printString
@@ -435,7 +446,7 @@ ChessCoachAppElementTest >> testSettingsPage [
 					  '{"tags":[{"tag":"missed-opponent-threat","confidence":0.9}]}')
 			 taxonomy: MistakeTaxonomy default).
 	"The whole page fits without scrolling"
-	scripter space extent: 1200 @ 1200.
+	scripter space extent: 1200 @ 1400.
 	app showPage: #Settings.
 	scripter pulse.
 	settings := app settingsElement.

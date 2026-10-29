@@ -620,7 +620,8 @@ CoachReview >> restoreFromJSON: aString analysis: aBlock [
 	number := dictionary at: 'number' ifAbsent: [ 1 ].
 	date := (dictionary at: 'date' ifAbsent: [ nil ])
 		        ifNil: [ Date today ]
-		        ifNotNil: [ :string | string asDate ].
+		        ifNotNil: [ :string |
+		        Date readFrom: string pattern: 'yyyy-mm-dd' ].
 	marks := (dictionary at: 'marks' ifAbsent: [ #(  ) ])
 		         asOrderedCollection.
 	plySeconds := Dictionary new.

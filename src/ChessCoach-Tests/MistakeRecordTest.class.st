@@ -35,3 +35,25 @@ MistakeRecordTest >> testJSONRoundTrip [
 	self assert: copy labels first isConfirmed.
 	self deny: (copy hasTag: 'hope-chess')
 ]
+
+{ #category : 'tests' }
+MistakeRecordTest >> testReadingSignalsNoDeprecation [
+	"A Deprecation signalled inside a Bloc pulse starts a second UI loop"
+
+	| dictionary |
+	dictionary := (MistakeRecord new
+		               gameId: 'abcd1234';
+		               ply: 23;
+		               date: (Date year: 2026 month: 10 day: 28);
+		               phase: 'middlegame';
+		               kinds: #( #blunder );
+		               playedMove: 'e1g1';
+		               bestMove: 'd4e5';
+		               winDrop: 31.5;
+		               explanation: '';
+		               labels: #(  );
+		               yourself) asDictionary.
+	self
+		shouldnt: [ MistakeRecord fromDictionary: dictionary ]
+		raise: Deprecation
+]

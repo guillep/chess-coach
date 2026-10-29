@@ -28,7 +28,8 @@ MistakeRecord class >> fromDictionary: aDictionary [
 	^ self new
 		  gameId: (aDictionary at: 'game');
 		  ply: (aDictionary at: 'ply');
-		  date: (aDictionary at: 'date') asDate;
+		  date:
+			  (Date readFrom: (aDictionary at: 'date') pattern: 'yyyy-mm-dd');
 		  phase: (aDictionary at: 'phase');
 		  kinds: (aDictionary at: 'kinds') asArray;
 		  playedMove: (aDictionary at: 'played');

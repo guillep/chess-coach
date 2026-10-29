@@ -7,7 +7,8 @@ Class {
 	#instVars : [
 		'scores',
 		'analysedCount',
-		'moveScores'
+		'moveScores',
+		'missing'
 	],
 	#category : 'ChessCoach-Tests',
 	#package : 'ChessCoach-Tests'
@@ -45,6 +46,13 @@ StockfishEngineStub >> at: aFEN whiteCentipawns: someScores [
 	scores at: aFEN put: someScores
 ]
 
+{ #category : 'accessing' }
+StockfishEngineStub >> beMissing [
+	"Behave as if the Stockfish binary were not installed"
+
+	missing := true
+]
+
 { #category : 'initialization' }
 StockfishEngineStub >> initialize [
 
@@ -52,6 +60,12 @@ StockfishEngineStub >> initialize [
 	scores := Dictionary new.
 	moveScores := Dictionary new.
 	analysedCount := 0
+]
+
+{ #category : 'testing' }
+StockfishEngineStub >> isAvailable [
+
+	^ missing ~= true
 ]
 
 { #category : 'accessing' }

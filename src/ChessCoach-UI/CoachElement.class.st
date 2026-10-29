@@ -96,6 +96,42 @@ CoachElement >> buildBoardAnswer [
 ]
 
 { #category : 'building' }
+CoachElement >> buildEngineRevealOf: reveal before: before after: after [
+	"Win chances, my candidates, the engine line and the reply I missed"
+
+	| line |
+	line := (review analysis atPly: shownMoment ply - 1) bestLine.
+	currentZone addChild: ((self paragraph:
+				  ('Win chance: {1}% before your move, {2}% after it' format: {
+							   ((reveal at: 'winBefore') printShowingDecimalPlaces: 0).
+							   ((reveal at: 'winAfter') printShowingDecimalPlaces: 0) }))
+			 tooltipString:
+				 'Your chance of winning, from the engine evaluation (Lichess formula: +1.00 is about 59%, +3.00 about 75%). It shows how much a move changes the game better than pawns do.';
+			 yourself).
+	(reveal at: 'candidates') ifNotEmpty: [
+			currentZone addChild:
+				(self paragraph: 'Your candidates (win chance after each):') ].
+	(reveal at: 'candidates') keysAndValuesDo: [ :move :win |
+			currentZone addChild: (self paragraph: ('  {1}: {2}%' format: {
+							  (before sanForUCI: move).
+							  (win printShowingDecimalPlaces: 0) })) ].
+	currentZone addChild:
+		(self paragraph: ('Engine line ({1}): {2}' format: {
+					  line scoreString.
+					  (self lineInSAN: (reveal at: 'bestLine') from: before) })).
+	(reveal at: 'engineReply') ifNotNil: [ :reply |
+			currentZone addChild: (self paragraph:
+					 ('Engine''s reply: {1} · you expected: {2}' format: {
+							  (after sanForUCI: reply).
+							  ((reveal at: 'expectedReply') isEmpty
+								   ifTrue: [ 'nothing' ]
+								   ifFalse: [
+										   ', ' join:
+											   ((reveal at: 'expectedReply') collect: [ :each |
+												    after sanForUCI: each ]) ]) })) ]
+]
+
+{ #category : 'building' }
 CoachElement >> buildList [
 
 	| moments |
@@ -311,39 +347,16 @@ CoachElement >> buildReportTime [
 { #category : 'building' }
 CoachElement >> buildReveal [
 
-	| reveal before after line |
+	| reveal before after |
 	reveal := review revealOf: shownMoment.
 	before := self positionBefore: shownMoment.
 	after := game positionAfterPly: shownMoment ply.
-	line := (review analysis atPly: shownMoment ply - 1) bestLine.
-	currentZone addChild: ((self paragraph:
-				  ('Win chance: {1}% before your move, {2}% after it' format: {
-							   ((reveal at: 'winBefore') printShowingDecimalPlaces: 0).
-							   ((reveal at: 'winAfter') printShowingDecimalPlaces: 0) }))
-			 tooltipString:
-				 'Your chance of winning, from the engine evaluation (Lichess formula: +1.00 is about 59%, +3.00 about 75%). It shows how much a move changes the game better than pawns do.';
-			 yourself).
-	(reveal at: 'candidates') ifNotEmpty: [
-			currentZone addChild:
-				(self paragraph: 'Your candidates (win chance after each):') ].
-	(reveal at: 'candidates') keysAndValuesDo: [ :move :win |
-			currentZone addChild: (self paragraph: ('  {1}: {2}%' format: {
-							  (before sanForUCI: move).
-							  (win printShowingDecimalPlaces: 0) })) ].
-	currentZone addChild:
-		(self paragraph: ('Engine line ({1}): {2}' format: {
-					  line scoreString.
-					  (self lineInSAN: (reveal at: 'bestLine') from: before) })).
-	(reveal at: 'engineReply') ifNotNil: [ :reply |
-			currentZone addChild: (self paragraph:
-					 ('Engine''s reply: {1} · you expected: {2}' format: {
-							  (after sanForUCI: reply).
-							  ((reveal at: 'expectedReply') isEmpty
-								   ifTrue: [ 'nothing' ]
-								   ifFalse: [
-										   ', ' join:
-											   ((reveal at: 'expectedReply') collect: [ :each |
-												    after sanForUCI: each ]) ]) })) ].
+	review hasEngine
+		ifTrue: [
+		self buildEngineRevealOf: reveal before: before after: after ]
+		ifFalse: [
+				currentZone addChild: (self paragraph:
+						 'Stockfish isn''t available, so there is no engine evaluation for this moment.') ].
 	currentZone addChild: (self paragraph:
 			 'Time on this moment: ' , (self minutes: shownMoment seconds)).
 	self buildTagsOf: shownMoment.
@@ -409,17 +422,24 @@ CoachElement >> buildTagPickerFor: aMomentReview [
 
 { #category : 'building' }
 CoachElement >> buildTagsOf: aMomentReview [
-	"Each proposed tag is a toggle with a check box icon: checked counts as a mistake, unchecked doesn't. The tag's description is its tooltip. When time trouble counts, it is shown as the main cause."
+	"Each proposed tag is a toggle with a check box icon: checked counts as a mistake, unchecked doesn't. The tag's description is its tooltip. When time trouble counts, it is shown as the main cause. Without the local model, the tag picker opens so the tags are chosen by hand."
 
-	| taxonomy labels |
+	| taxonomy labels manual |
 	aMomentReview isSuccess ifTrue: [
 			^ currentZone addChild:
 				  (self paragraph: 'Well found: no mistake to tag.') ].
 	taxonomy := MistakeTaxonomy default.
+	manual := review isClassifierUnavailable and: [
+		          aMomentReview isClassifying ].
 	currentZone addChild: (self paragraph:
 			 'Tags: checked ones count as mistakes. Click to change; hover for help.').
-	aMomentReview isClassifying ifTrue: [
-		currentZone addChild: (self paragraph: '  classifying…') ].
+	manual
+		ifTrue: [
+				currentZone addChild: (self paragraph:
+						 'Ollama isn''t available, so your answers can''t be classified: choose the tags yourself.') ]
+		ifFalse: [
+				aMomentReview isClassifying ifTrue: [
+					currentZone addChild: (self paragraph: '  classifying…') ] ].
 	labels := aMomentReview labels asArray sort: [ :a :b |
 			          a tagId = 'clock-management' or: [
 				          b tagId ~= 'clock-management' and: [
@@ -442,7 +462,7 @@ CoachElement >> buildTagsOf: aMomentReview [
 					  do: [ self toggleTag: label tagId ])
 					 tooltipString: tag description;
 					 yourself) ].
-	addingTag == true
+	(manual or: [ addingTag == true ])
 		ifTrue: [ self buildTagPickerFor: aMomentReview ]
 		ifFalse: [
 				currentZone addChild: (self button: 'Add a tag' do: [
@@ -1128,10 +1148,12 @@ CoachElement >> updateBoard [
 				shownMoment candidateWinPercents keysDo: [ :each |
 						each = self playedMove ifFalse: [
 							arrows add: (ChessArrow uci: each style: #candidate) ] ].
-				arrows add: (ChessArrow
-						 uci:
-						 (review analysis atPly: shownMoment ply - 1) bestLine firstMove
-						 style: #engine) ]
+				review hasEngine ifTrue: [
+						arrows add: (ChessArrow
+								 uci:
+								 (review analysis atPly: shownMoment ply - 1) bestLine
+									 firstMove
+								 style: #engine) ] ]
 		ifFalse: [
 				markedMoves do: [ :each |
 					arrows add: (ChessArrow uci: each style: #candidate) ].

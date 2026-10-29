@@ -435,6 +435,50 @@ CoachReviewTest >> testTimings [
 		equals: 90
 ]
 
+{ #category : 'tests' }
+CoachReviewTest >> testWithoutOllama [
+
+	| review |
+	client replyContent: nil.
+	review := self newReview.
+	self answerFirstMoment: review.
+	self assert: review isClassifierUnavailable.
+	self assert: review currentMoment isClassifying.
+	client replyContent: '{"tags":[]}'.
+	review classifyPending.
+	self deny: review isClassifierUnavailable
+]
+
+{ #category : 'tests' }
+CoachReviewTest >> testWithoutStockfish [
+
+	| review moment record |
+	review := self newReviewMarking.
+	review mark: 7 note: 'unsure'.
+	review
+		finishMarkingWith: (GameAnalysis withoutEngineFor: game)
+		moments: { (ChessMoment
+				 ply: 7
+				 color: #white
+				 kind: #marked
+				 source: #marks
+				 note: 'unsure') }.
+	self deny: review hasEngine.
+	moment := review moments first.
+	review start: moment.
+	review answerMoves: #( 'f3g5' ).
+	review answerText: 'attack'.
+	review answerMoves: #( 'h7h6' ).
+	self
+		assert: moment isReviewed
+		description: 'no engine questions are added'.
+	self assert: ((review revealOf: moment) at: 'bestLine') isEmpty.
+	review classifyPending.
+	record := review mistakeRecords first.
+	self assert: record bestMove isNil.
+	self assert: record winDrop equals: 0
+]
+
 { #category : 'helpers' }
 CoachReviewTest >> wait: seconds [
 

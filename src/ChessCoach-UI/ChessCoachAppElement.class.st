@@ -21,7 +21,8 @@ Class {
 		'speedButtons',
 		'navigation',
 		'gamesPage',
-		'settingsElement'
+		'settingsElement',
+		'dependencyLabel'
 	],
 	#category : 'ChessCoach-UI-App',
 	#package : 'ChessCoach-UI',
@@ -114,6 +115,12 @@ ChessCoachAppElement >> coach [
 ChessCoachAppElement >> dashboard [
 
 	^ dashboard
+]
+
+{ #category : 'accessing' }
+ChessCoachAppElement >> dependencyLabel [
+
+	^ dependencyLabel
 ]
 
 { #category : 'coach' }
@@ -366,10 +373,11 @@ ChessCoachAppElement >> newSpeedBar [
 
 { #category : 'initialization' }
 ChessCoachAppElement >> newStatusLine [
-	"Background work, errors and the analysis queue, shared by every page"
+	"Background work, errors, the analysis queue and missing dependencies, shared by every page"
 
 	statusLabel := ToLabel text: ''.
 	analysisLabel := ToLabel text: ''.
+	dependencyLabel := ToLabel text: ''.
 	^ ToElement new
 		  layout: (BlLinearLayout horizontal cellSpacing: 16);
 		  hMatchParent;
@@ -381,6 +389,7 @@ ChessCoachAppElement >> newStatusLine [
 				   right: 8);
 		  addChild: statusLabel;
 		  addChild: analysisLabel;
+		  addChild: dependencyLabel;
 		  yourself
 ]
 
@@ -575,6 +584,16 @@ ChessCoachAppElement >> showDefaultPane [
 					 yourself ])
 ]
 
+{ #category : 'analysis queue' }
+ChessCoachAppElement >> showDegradedModeNotes [
+	"Check Stockfish and Ollama off the UI thread and say what is off in the status line"
+
+	backgroundRunner value: [
+			| notes |
+			notes := session degradedModeNotes.
+			self inUIDo: [ dependencyLabel text: (' · ' join: notes) ] ]
+]
+
 { #category : 'private' }
 ChessCoachAppElement >> showInPane: anElement [
 
@@ -637,11 +656,13 @@ ChessCoachAppElement >> speeds [
 
 { #category : 'analysis queue' }
 ChessCoachAppElement >> startBackgroundAnalysis [
-	"Queue every unanalysed game and analyse them in the background; rows show their state"
+	"Queue every unanalysed game and analyse them in the background when Stockfish is there; show what is degraded in the status line"
 
-	session analysisQueue
-		enqueueUnanalysed;
-		start
+	session isEngineAvailable ifTrue: [
+			session analysisQueue
+				enqueueUnanalysed;
+				start ].
+	self showDegradedModeNotes
 ]
 
 { #category : 'accessing' }

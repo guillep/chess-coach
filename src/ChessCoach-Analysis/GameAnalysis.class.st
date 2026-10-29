@@ -33,6 +33,17 @@ GameAnalysis class >> fromJSON: aString [
 		  yourself
 ]
 
+{ #category : 'instance creation' }
+GameAnalysis class >> withoutEngineFor: aGame [
+	"An analysis with the positions of aGame but no engine lines, used when Stockfish is not available"
+
+	^ self depth: 0 plies: ((0 to: aGame moves size) collect: [ :ply |
+				   PlyAnalysis
+					   ply: ply
+					   fen: (aGame positionAfterPly: ply) fen
+					   lines: #(  ) ])
+]
+
 { #category : 'converting' }
 GameAnalysis >> asJSON [
 
@@ -54,6 +65,13 @@ GameAnalysis >> atPly: aNumber [
 GameAnalysis >> depth [
 
 	^ depth
+]
+
+{ #category : 'testing' }
+GameAnalysis >> hasEngineLines [
+	"False for an analysis made without Stockfish"
+
+	^ plies anySatisfy: [ :each | each lines notEmpty ]
 ]
 
 { #category : 'accessing' }

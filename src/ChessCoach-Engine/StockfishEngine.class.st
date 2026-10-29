@@ -83,6 +83,13 @@ StockfishEngine >> ensureStarted [
 		(line beginsWith: 'id name ') ifTrue: [ name := line allButFirst: 8 ] ]
 ]
 
+{ #category : 'testing' }
+StockfishEngine >> isAvailable [
+	"Whether the Stockfish binary is where the settings say"
+
+	^ path exists
+]
+
 { #category : 'private - io' }
 StockfishEngine >> nextLine [
 	"OSSubprocess pipes are non-blocking, so poll stdout until a whole line has arrived"

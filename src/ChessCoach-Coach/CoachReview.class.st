@@ -28,7 +28,8 @@ Class {
 		'momentClosedBlock',
 		'timeBox',
 		'planned',
-		'plannedSeconds'
+		'plannedSeconds',
+		'classifierUnavailable'
 	],
 	#category : 'ChessCoach-Coach',
 	#package : 'ChessCoach-Coach'
@@ -124,9 +125,10 @@ CoachReview >> asJSON [
 
 { #category : 'private - questions' }
 CoachReview >> askAboutCandidates [
-	"Evaluate my candidates with the engine and ask about good moves I missed, bad candidates and better alternatives"
+	"Evaluate my candidates with the engine and ask about good moves I missed, bad candidates and better alternatives. Without Stockfish there is nothing to compare with."
 
 	| moment before played candidates best playedWin questions better |
+	self hasEngine ifFalse: [ ^ self ].
 	moment := self currentMoment.
 	before := analysis atPly: moment ply - 1.
 	played := game uciMoves at: moment ply.
@@ -184,7 +186,7 @@ CoachReview >> changed [
 { #category : 'answering' }
 CoachReview >> classifyPending [
 	"Classify every written answer not classified yet. Slow (local LLM): call it off the UI thread.
-	The design keeps answers unclassified while Ollama is not running, so a connection failure stops this round without an error; the next call retries."
+	When Ollama or its model is not available the answers stay unclassified and isClassifierUnavailable is true until a later call succeeds."
 
 	reviews do: [ :moment |
 			moment answers
@@ -196,8 +198,11 @@ CoachReview >> classifyPending [
 								          classify: answer text
 								          question: answer question text
 								          context: (self contextOf: moment) ]
-							          on: NetworkError
-							          do: [ ^ self ].
+							          on: NetworkError , ZnHttpUnsuccessful
+							          do: [
+									          classifierUnavailable := true.
+									          ^ self ].
+						classifierUnavailable := false.
 						answer classifiedAs: labels.
 						moment proposeLabels: labels.
 						self changed ] ]
@@ -223,12 +228,13 @@ CoachReview >> contextOf: aMomentReview [
 
 	| before |
 	before := analysis atPly: aMomentReview ply - 1.
-	^ 'Position (FEN): {1}. I played {2} ({3}); the engine''s best move was {4}.'
-		  format: {
-				  before fen.
-				  (game moves at: aMomentReview ply) san.
-				  (', ' join: aMomentReview kinds).
-				  (before sanOf: before bestLine firstMove) }
+	^ 'Position (FEN): {1}. I played {2} ({3}){4}.' format: {
+			  before fen.
+			  (game moves at: aMomentReview ply) san.
+			  (', ' join: aMomentReview kinds).
+			  (before lines ifEmpty: [ '' ] ifNotEmpty: [
+					   '; the engine''s best move was '
+					   , (before sanOf: before bestLine firstMove) ]) }
 ]
 
 { #category : 'navigating' }
@@ -319,6 +325,20 @@ CoachReview >> gameId [
 	^ gameId
 ]
 
+{ #category : 'testing' }
+CoachReview >> hasEngine [
+	"Whether the game was analysed by Stockfish; without it there are no evaluations or engine questions"
+
+	^ analysis notNil and: [ analysis hasEngineLines ]
+]
+
+{ #category : 'testing' }
+CoachReview >> isClassifierUnavailable [
+	"Whether the last classification failed because Ollama or its model was not available"
+
+	^ classifierUnavailable == true
+]
+
 { #category : 'marking' }
 CoachReview >> isMarked: aPly [
 
@@ -393,7 +413,7 @@ CoachReview >> marks [
 
 { #category : 'mistakes' }
 CoachReview >> mistakeRecordFor: aMomentReview [
-	"Rejected tags are left out"
+	"Rejected tags are left out. Without Stockfish there is no best move or win drop."
 
 	| before after explanation move |
 	before := analysis atPly: aMomentReview ply - 1.
@@ -409,7 +429,9 @@ CoachReview >> mistakeRecordFor: aMomentReview [
 		  phase: (self phaseOf: before fen ply: aMomentReview ply);
 		  kinds: aMomentReview kinds;
 		  playedMove: (game uciMoves at: aMomentReview ply);
-		  bestMove: before bestLine firstMove;
+		  bestMove: (before lines
+				   ifEmpty: [ nil ]
+				   ifNotEmpty: [ before bestLine firstMove ]);
 		  winDrop: ((before winPercentFor: aMomentReview color)
 			   - (after winPercentFor: aMomentReview color) max: 0);
 		  explanation: explanation;
@@ -589,7 +611,7 @@ CoachReview >> restoreFromJSON: aString analysis: aBlock [
 
 { #category : 'revealing' }
 CoachReview >> revealOf: aMomentReview [
-	"What the engine says about a finished moment: my candidates' win %, the best line, the reply I missed and the proposed tags"
+	"What the engine says about a finished moment: my candidates' win %, the best line, the reply I missed and the proposed tags. Without Stockfish only my expected reply and the tags."
 
 	| before after |
 	self assert: aMomentReview isRevealed.
@@ -597,7 +619,11 @@ CoachReview >> revealOf: aMomentReview [
 	after := analysis atPly: aMomentReview ply.
 	^ Dictionary new
 		  at: 'candidates' put: aMomentReview candidateWinPercents;
-		  at: 'bestLine' put: before bestLine moves;
+		  at: 'bestLine'
+		  put:
+			  (before lines
+				   ifEmpty: [ #(  ) ]
+				   ifNotEmpty: [ before bestLine moves ]);
 		  at: 'winBefore' put: (before winPercentFor: aMomentReview color);
 		  at: 'winAfter' put: (after winPercentFor: aMomentReview color);
 		  at: 'engineReply'

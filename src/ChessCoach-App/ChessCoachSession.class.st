@@ -82,11 +82,13 @@ ChessCoachSession >> analysisFor: aGameIndexEntry [
 
 { #category : 'moments' }
 ChessCoachSession >> analysisFor: aGameIndexEntry onProgress: aBlock [
-	"The engine analysis of the game, computed once and kept next to its PGN. aBlock receives (plies done, total) while it is computed."
+	"The engine analysis of the game, computed once and kept next to its PGN. aBlock receives (plies done, total) while it is computed. Without Stockfish, an analysis with no engine lines (not stored)."
 
 	(self isAnalysed: aGameIndexEntry) ifTrue: [
 			^ GameAnalysis fromJSON:
 				  (self analysisFileFor: aGameIndexEntry) contents ].
+	self isEngineAvailable ifFalse: [
+		^ GameAnalysis withoutEngineFor: (self gameFor: aGameIndexEntry) ].
 	^ self
 		  analyse: aGameIndexEntry
 		  with: self analyser
@@ -211,6 +213,21 @@ ChessCoachSession >> configure: aGameAnalyser [
 	^ aGameAnalyser
 ]
 
+{ #category : 'degraded mode' }
+ChessCoachSession >> degradedModeNotes [
+	"One sentence per missing dependency, saying what is off. Slow (checks Ollama): call it off the UI thread."
+
+	| notes |
+	notes := OrderedCollection new.
+	self isEngineAvailable ifFalse: [
+			notes add:
+				'Stockfish not found: moments come only from your marks and long thinks.' ].
+	self isClassifierAvailable ifFalse: [
+			notes add:
+				'Ollama or its model not available: choose the tags yourself.' ].
+	^ notes
+]
+
 { #category : 'errors' }
 ChessCoachSession >> errorLog [
 	"Errors the app showed instead of opening a debugger, newest last"
@@ -298,6 +315,23 @@ ChessCoachSession >> isAnalysed: aGameIndexEntry [
 	"Whether the game has its Stockfish analysis. It is kept even when the analysis settings change."
 
 	^ (self analysisFileFor: aGameIndexEntry) exists
+]
+
+{ #category : 'degraded mode' }
+ChessCoachSession >> isClassifierAvailable [
+	"Whether Ollama answers and has the chosen model. Slow (network): call it off the UI thread."
+
+	^ [
+		  self classifier client installedModels includes:
+			  self settings ollamaModel ]
+		  on: NetworkError , ZnHttpUnsuccessful
+		  do: [ :error | false ]
+]
+
+{ #category : 'degraded mode' }
+ChessCoachSession >> isEngineAvailable [
+
+	^ self analyser engine isAvailable
 ]
 
 { #category : 'settings' }
@@ -449,10 +483,15 @@ ChessCoachSession >> momentsFor: aGameIndexEntry marks: someMarks problems: aCol
 	analysis := self analysisFor: aGameIndexEntry.
 	colors := self myColorsIn: game.
 	finders := OrderedCollection new.
-	finders
-		add: (EvaluationJumpFinder on: analysis);
-		add: (OnlyMoveFinder on: analysis);
-		add: (LongThinkFinder on: game).
+	analysis hasEngineLines
+		ifTrue: [
+				finders
+					add: (EvaluationJumpFinder on: analysis);
+					add: (OnlyMoveFinder on: analysis) ]
+		ifFalse: [
+				aCollection add:
+					'Stockfish not found: moments come only from your marks and long thinks.' ].
+	finders add: (LongThinkFinder on: game).
 	(explorer notNil or: [ self isLoggedIn ])
 		ifTrue: [
 				finders add: (opening := OpeningWinRateFinder

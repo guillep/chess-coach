@@ -89,7 +89,8 @@ PlyAnalysis >> sideToMove [
 
 { #category : 'accessing' }
 PlyAnalysis >> winPercentFor: aColor [
-	"aColor's winning chance with best play from here"
+	"aColor's winning chance with best play from here; even (50) when the engine didn't analyse this position"
 
+	lines ifEmpty: [ ^ 50 ].
 	^ self bestLine winPercentFor: aColor
 ]

@@ -353,3 +353,34 @@ ChessCoachSessionTest >> testStartsLoggedOutWithNoGames [
 	self deny: session isLoggedIn.
 	self assert: session games isEmpty
 ]
+
+{ #category : 'tests' }
+ChessCoachSessionTest >> testWithoutStockfishMomentsComeFromMarksAndClocks [
+
+	| entry engine problems moments |
+	session login.
+	session loadMoreGames.
+	entry := session games first.
+	engine := StockfishEngineStub new.
+	engine beMissing.
+	session analyser: (GameAnalyser engine: engine).
+	session classifier: (AnswerClassifier
+			 client: OllamaClientStub new
+			 taxonomy: MistakeTaxonomy default).
+	problems := OrderedCollection new.
+	moments := session
+		           momentsFor: entry
+		           marks: { (Dictionary new
+				            at: 'ply' put: 1;
+				            at: 'note' put: '';
+				            yourself) }
+		           problems: problems.
+	self
+		assert: (moments collect: [ :each | each ply ]) asArray
+		equals: #( 1 ).
+	self assert: (problems includes:
+			 'Stockfish not found: moments come only from your marks and long thinks.').
+	self deny: (session isAnalysed: entry).
+	self assert:
+		(session degradedModeNotes first beginsWith: 'Stockfish not found')
+]

@@ -10,6 +10,26 @@ Class {
 }
 
 { #category : 'building' }
+ChessCoachWidgets class >> bigButton: aString icon: anIconName do: aBlock [
+	"A main action: a full-width primary button with a larger label and icon"
+
+	| button |
+	button := ToButton new
+		          labelText: aString;
+		          icon:
+			          ((ToMaterialDesignIconProvider iconNamed: anIconName)
+				           extent: 24 @ 24;
+				           yourself);
+		          clickAction: aBlock;
+		          hMatchParent;
+		          padding: (BlInsets all: 12);
+		          addStamp: #primary;
+		          yourself.
+	button label addStamp: #H4.
+	^ button
+]
+
+{ #category : 'building' }
 ChessCoachWidgets class >> group: someElements [
 	"A bordered, padded box that keeps related rows together"
 
@@ -58,6 +78,20 @@ ChessCoachWidgets class >> help: aString [
 ]
 
 { #category : 'building' }
+ChessCoachWidgets class >> page: someElements [
+	"A page's top-level column, with the same margins on every page"
+
+	| page |
+	page := ToElement new
+		        layout: BlLinearLayout vertical;
+		        matchParent;
+		        padding: (BlInsets all: 16);
+		        yourself.
+	someElements do: [ :each | page addChild: each ].
+	^ page
+]
+
+{ #category : 'building' }
 ChessCoachWidgets class >> pageTitle: aTitle subtitle: aSubtitle [
 	"The title on top of a page, in a larger font, with one line of context"
 
@@ -100,7 +134,7 @@ ChessCoachWidgets class >> paragraph: aString [
 
 { #category : 'building' }
 ChessCoachWidgets class >> scrollable: anElement [
-	"anElement in a vertically scrollable area filling its parent, with a scrollbar on the right"
+	"anElement in a vertically scrollable area filling its parent, with a scrollbar along its right side"
 
 	| scrollable scrollbar |
 	scrollable := anElement asScrollableElement.
@@ -110,6 +144,8 @@ ChessCoachWidgets class >> scrollable: anElement [
 	scrollbar := ToScrollbarElement horizontal: false.
 	scrollbar constraintsDo: [ :c |
 			c ignoreByLayout.
+			c vertical matchParent.
+			c horizontal exact: 10.
 			c ignored horizontal alignRight.
 			c ignored vertical alignTop ].
 	scrollbar attachTo: scrollable.

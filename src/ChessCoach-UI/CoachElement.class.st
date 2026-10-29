@@ -696,15 +696,21 @@ CoachElement >> inUIDo: aBlock [
 
 { #category : 'initialization' }
 CoachElement >> initialize [
-	"The panel has a fixed width so that its multi-line labels wrap inside the scrollable column"
+	"The panel has a fixed width so that its multi-line labels wrap inside the scrollable column. A close button at the top right pauses the review and closes its page. Review time counts only while the coach is shown."
 
-	| panel |
+	| panel closeButton |
 	super initialize.
 	markedMoves := OrderedCollection new.
 	walking := false.
 	exitBlock := [ ].
 	backgroundRunner := [ :aBlock |
 	                    aBlock forkAt: Processor userBackgroundPriority ].
+	self
+		addEventHandlerOn: BlElementRemovedFromSceneGraphEvent
+		do: [ :event | review ifNotNil: [ review pauseClock ] ].
+	self
+		addEventHandlerOn: BlElementAddedToSceneGraphEvent
+		do: [ :event | review ifNotNil: [ review resumeClock ] ].
 	self layout: BlLinearLayout horizontal.
 	self matchParent.
 	board := ChessBoardElement new
@@ -715,6 +721,14 @@ CoachElement >> initialize [
 		          beMultiLine;
 		          hMatchParent;
 		          yourself.
+	closeButton := ToButton new
+		               icon:
+			               (ToMaterialDesignIconProvider iconNamed:
+					                'outlined_close');
+		               tooltipString:
+			               'Close the coach; the review is saved and continues next time';
+		               clickAction: [ self pause ];
+		               yourself.
 	history := ToElement new
 		           layout: (BlLinearLayout vertical cellSpacing: 4);
 		           hMatchParent;
@@ -732,7 +746,13 @@ CoachElement >> initialize [
 		         padding: (BlInsets all: 10);
 		         yourself.
 	panel
-		addChild: header;
+		addChild: (ToElement new
+				 layout: (BlLinearLayout horizontal cellSpacing: 6);
+				 hMatchParent;
+				 vFitContent;
+				 addChild: header;
+				 addChild: closeButton;
+				 yourself);
 		addChild: history;
 		addChild: currentZone.
 	self

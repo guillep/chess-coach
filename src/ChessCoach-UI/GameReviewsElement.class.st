@@ -8,12 +8,12 @@ Class {
 		'session',
 		'entry',
 		'game',
-		'replay',
 		'reviewsZone',
 		'openBlock',
 		'timeBoxField',
 		'timeBoxNote',
-		'infoZone'
+		'infoZone',
+		'playThroughBlock'
 	],
 	#category : 'ChessCoach-UI-Coach',
 	#package : 'ChessCoach-UI',
@@ -29,12 +29,6 @@ GameReviewsElement >> analysisStateText [
 	state = #analysing ifTrue: [ ^ 'analysing now' ].
 	state = #queued ifTrue: [ ^ 'waiting in the queue' ].
 	^ 'not analysed yet'
-]
-
-{ #category : 'accessing' }
-GameReviewsElement >> board [
-
-	^ replay boardElement
 ]
 
 { #category : 'private' }
@@ -91,13 +85,19 @@ GameReviewsElement >> infoLines [
 
 { #category : 'initialization' }
 GameReviewsElement >> initialize [
+	"The selected game: its information on top, its analyses with the coach in the middle, and the two main actions at the bottom"
 
-	| panel |
+	| analyses actions |
 	super initialize.
 	openBlock := [ :review |  ].
-	self layout: BlLinearLayout horizontal.
+	playThroughBlock := [ ].
+	self layout: (BlLinearLayout vertical cellSpacing: 12).
 	self matchParent.
-	replay := GameAnalysisElement new.
+	self padding: (BlInsets
+			 top: 0
+			 left: 12
+			 bottom: 8
+			 right: 12).
 	infoZone := ToElement new
 		            layout: (BlLinearLayout vertical cellSpacing: 4);
 		            hMatchParent;
@@ -112,35 +112,58 @@ GameReviewsElement >> initialize [
 		                width: 60;
 		                yourself.
 	timeBoxNote := ToLabel text: ''.
-	panel := ToElement new
-		         layout: (BlLinearLayout vertical cellSpacing: 10);
-		         width: 300;
-		         vMatchParent;
-		         padding: (BlInsets all: 10);
-		         yourself.
-	panel
+	analyses := ToElement new
+		            layout: BlLinearLayout vertical;
+		            matchParent;
+		            addChild: (ChessCoachWidgets
+				             heading: 'Analyses with the coach'
+				             help:
+					             'Each analysis is one pass with the coach: you mark the moves you found interesting, then answer questions about the important moments. Click one to continue it or look at it again.');
+		            addChild: (ChessCoachWidgets scrollable: reviewsZone);
+		            yourself.
+	actions := ToElement new
+		           layout: (BlLinearLayout vertical cellSpacing: 8);
+		           hMatchParent;
+		           vFitContent;
+		           addChild: (ChessCoachWidgets
+				            bigButton: 'Play through'
+				            icon: 'outlined_slideshow'
+				            do: [ playThroughBlock value ]);
+		           addChild: (ToElement new
+				            layout: (BlLinearLayout horizontal cellSpacing: 6);
+				            hMatchParent;
+				            vFitContent;
+				            addChild: (ToLabel text: 'Time box (min):');
+				            addChild: timeBoxField;
+				            addChild: timeBoxNote;
+				            yourself);
+		           addChild: (ChessCoachWidgets
+				            bigButton: 'New analysis'
+				            icon: 'outlined_school'
+				            do: [ self newAnalysis ]);
+		           yourself.
+	self
 		addChild: (ChessCoachWidgets
 				 section: 'Game'
 				 help:
-					 'From the game''s PGN headers. Stockfish shows the state of the background analysis, which the end of the marking pass needs.'
+					 'From the game''s PGN headers. Stockfish shows the state of the analysis, which the end of the marking pass needs.'
 				 rows: { infoZone });
-		addChild: (ToLabel text: 'Analyses with the coach');
-		addChild: reviewsZone;
-		addChild: (ToElement new
-				 layout: (BlLinearLayout horizontal cellSpacing: 6);
-				 hMatchParent;
-				 vFitContent;
-				 addChild: (ToLabel text: 'Time box (min):');
-				 addChild: timeBoxField;
-				 addChild: timeBoxNote;
-				 yourself);
-		addChild: (ToButton new
-				 labelText: 'New analysis';
-				 clickAction: [ self newAnalysis ];
-				 yourself).
-	self
-		addChild: replay;
-		addChild: panel
+		addChild: analyses;
+		addChild: actions
+]
+
+{ #category : 'building' }
+GameReviewsElement >> linkTo: aUrl [
+	"A blue text element rather than a label: the label skin replaces the text colour. Blue reads on light and dark themes."
+
+	^ BlTextElement new
+		  text: (('Site: ' , aUrl) asRopedText
+				   foreground: (Color fromHexString: '#3b82f6');
+				   yourself);
+		  mouseCursor: Cursor webLink;
+		  addEventHandlerOn: BlClickEvent
+		  do: [ :event | WebBrowser openOn: aUrl ];
+		  yourself
 ]
 
 { #category : 'actions' }
@@ -163,15 +186,9 @@ GameReviewsElement >> reviewsZone [
 { #category : 'accessing' }
 GameReviewsElement >> session: aChessCoachSession entry: aGameIndexEntry [
 
-	| colors |
 	session := aChessCoachSession.
 	entry := aGameIndexEntry.
 	game := session gameFor: aGameIndexEntry.
-	colors := session myColorsIn: game.
-	self board orientation: (colors size = 1
-			 ifTrue: [ colors first ]
-			 ifFalse: [ #white ]).
-	replay game: game.
 	session canTimeBox
 		ifTrue: [
 				timeBoxField enabled: true.
@@ -191,10 +208,13 @@ GameReviewsElement >> timeBoxField [
 
 { #category : 'updating' }
 GameReviewsElement >> updateInfo [
+	"The site is a link that opens the game in the web browser"
 
 	infoZone removeChildren.
 	self infoLines do: [ :line |
-		infoZone addChild: (ChessCoachWidgets paragraph: line) ]
+			infoZone addChild: ((line beginsWith: 'Site: http')
+					 ifTrue: [ self linkTo: (line allButFirst: 'Site: ' size) ]
+					 ifFalse: [ ChessCoachWidgets paragraph: line ]) ]
 ]
 
 { #category : 'updating' }
@@ -217,4 +237,10 @@ GameReviewsElement >> whenOpenDo: aBlock [
 	"aBlock receives the CoachReview to open"
 
 	openBlock := aBlock
+]
+
+{ #category : 'accessing' }
+GameReviewsElement >> whenPlayThroughDo: aBlock [
+
+	playThroughBlock := aBlock
 ]

@@ -29,7 +29,9 @@ Class {
 		'timeBox',
 		'planned',
 		'plannedSeconds',
-		'classifierUnavailable'
+		'classifierUnavailable',
+		'pausedAt',
+		'pausedTime'
 	],
 	#category : 'ChessCoach-Coach',
 	#package : 'ChessCoach-Coach'
@@ -489,6 +491,14 @@ CoachReview >> nextMomentAfter: aPly passing: aFilter [
 		  ifNone: [ nil ]
 ]
 
+{ #category : 'private - timing' }
+CoachReview >> now [
+	"The clock's time minus the time spent paused, so that pauses don't count as review time"
+
+	^ (pausedAt ifNil: [ clock value ])
+	  - (pausedTime ifNil: [ Duration zero ])
+]
+
 { #category : 'accessing' }
 CoachReview >> number [
 	"Which review of the game this is: 1 for the first"
@@ -532,6 +542,13 @@ CoachReview >> openingQuestionsFor: aMoment [
 	^ { (CoachQuestion
 		   kind: #why
 		   text: 'Why did you play ' , played , '?') }
+]
+
+{ #category : 'timing' }
+CoachReview >> pauseClock [
+	"Stop counting time, as when the coach is hidden"
+
+	pausedAt ifNil: [ pausedAt := clock value ]
 ]
 
 { #category : 'mistakes' }
@@ -621,6 +638,15 @@ CoachReview >> restoreFromJSON: aString analysis: aBlock [
 		analysis := aBlock value ]
 ]
 
+{ #category : 'timing' }
+CoachReview >> resumeClock [
+
+	pausedAt ifNil: [ ^ self ].
+	pausedTime := (pausedTime ifNil: [ Duration zero ])
+	              + (clock value - pausedAt).
+	pausedAt := nil
+]
+
 { #category : 'revealing' }
 CoachReview >> revealOf: aMomentReview [
 	"What the engine says about a finished moment: my candidates' win %, the best line, the reply I missed and the proposed tags. Without Stockfish only my expected reply and the tags."
@@ -679,7 +705,7 @@ CoachReview >> reviews [
 { #category : 'private - timing' }
 CoachReview >> secondsSince: aDateAndTime [
 
-	^ (clock value - aDateAndTime) asMilliSeconds / 1000 roundTo: 0.1
+	^ (self now - aDateAndTime) asMilliSeconds / 1000 roundTo: 0.1
 ]
 
 { #category : 'initialization' }
@@ -706,7 +732,7 @@ CoachReview >> showPly: aPly [
 
 	self recordShownPly.
 	shownPly := aPly.
-	shownAt := clock value
+	shownAt := self now
 ]
 
 { #category : 'navigating' }
@@ -717,7 +743,7 @@ CoachReview >> start: aMomentReview [
 	current := aMomentReview.
 	aMomentReview isStarted ifFalse: [
 		aMomentReview ask: (self openingQuestionsFor: aMomentReview) ].
-	momentStartedAt := questionShownAt := clock value.
+	momentStartedAt := questionShownAt := self now.
 	self changed
 ]
 
@@ -755,7 +781,7 @@ CoachReview >> takeAnswerSeconds [
 
 	| seconds |
 	seconds := self secondsSince: questionShownAt.
-	questionShownAt := clock value.
+	questionShownAt := self now.
 	^ seconds
 ]
 

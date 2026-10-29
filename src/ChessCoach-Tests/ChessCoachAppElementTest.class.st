@@ -77,6 +77,53 @@ ChessCoachAppElementTest >> testAppTheme [
 ]
 
 { #category : 'tests' }
+ChessCoachAppElementTest >> testArrowKeysMoveTheGameSelection [
+
+	self click: app loginButton.
+	self click: app loadMoreButton.
+	app selectGameAt: 1.
+	scripter pulse.
+	app gameList requestFocus.
+	scripter keyClick: KeyboardKey down.
+	scripter syncContinue.
+	self assert: app selectedEntry equals: app games second.
+	scripter keyClick: KeyboardKey up.
+	scripter syncContinue.
+	self assert: app selectedEntry equals: app games first
+]
+
+{ #category : 'tests' }
+ChessCoachAppElementTest >> testCoachAndPlayThroughOpenInClosableTabs [
+
+	| coach coachTab |
+	self click: app loginButton.
+	self click: app loadMoreButton.
+	app selectGameAt: 1.
+	scripter pulse.
+	app gameView newAnalysis.
+	scripter pulse.
+	coach := app coach.
+	self assert: coach isAttachedToSceneGraph.
+	self
+		assert: (app navigation items asArray collect: [ :each | each id ])
+		equals: #( #Stats #Games #Settings #Coach ).
+	coachTab := app navigation items asArray last.
+	app showPage: #Stats.
+	scripter pulse.
+	self assert: (coach review instVarNamed: #pausedAt) notNil.
+	app showTab: coachTab.
+	scripter pulse.
+	self assert: (coach review instVarNamed: #pausedAt) isNil.
+	app playThrough: app selectedEntry.
+	scripter pulse.
+	self assert: app navigation items size equals: 5.
+	app navigation removeItem: coachTab.
+	scripter pulse.
+	self assert: app coach isNil.
+	self assert: app navigation items size equals: 4
+]
+
+{ #category : 'tests' }
 ChessCoachAppElementTest >> testGamesListedWhileOnStatsShowLater [
 	"As at startup with reviews: the list is filled while the app is on Stats, then the Games page is opened"
 
@@ -137,7 +184,7 @@ ChessCoachAppElementTest >> testLoadMoreButtonIsVisibleBelowTheList [
 	buttonBounds := app loadMoreButton bounds inSpace bounds.
 	self assert: buttonBounds height > 0.
 	self assert: buttonBounds bottom <= 700.
-	self assert: app gameList width equals: 280.
+	self assert: app gameList width equals: 300.
 	target := app space root findMouseEventTargetAt: buttonBounds center.
 	self assert: (target == app loadMoreButton or: [
 			 target allParentsInclude: app loadMoreButton ])

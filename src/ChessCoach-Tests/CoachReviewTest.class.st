@@ -317,6 +317,20 @@ CoachReviewTest >> testMistakeRecordsAndJSON [
 ]
 
 { #category : 'tests' }
+CoachReviewTest >> testPausedTimeIsNotCounted [
+
+	| time start review |
+	start := time := DateAndTime year: 2026 month: 10 day: 29.
+	review := CoachReview new.
+	review clock: [ time ].
+	review pauseClock.
+	time := time + 30 seconds.
+	review resumeClock.
+	time := time + 5 seconds.
+	self assert: review now - start equals: 5 seconds
+]
+
+{ #category : 'tests' }
 CoachReviewTest >> testTagsMoreThanUsual [
 
 	| review others database |

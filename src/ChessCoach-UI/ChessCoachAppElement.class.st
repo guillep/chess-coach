@@ -30,7 +30,9 @@ Class {
 		'playThrough',
 		'bell',
 		'bellBadge',
-		'notificationsWindow'
+		'notificationsWindow',
+		'reviewedIds',
+		'notReviewedButton'
 	],
 	#category : 'ChessCoach-UI-App',
 	#package : 'ChessCoach-UI',
@@ -256,6 +258,12 @@ ChessCoachAppElement >> initialize [
 		addChild: self newStatusLine
 ]
 
+{ #category : 'private' }
+ChessCoachAppElement >> isReviewed: aGameIndexEntry [
+
+	^ (reviewedIds ifNil: [ #(  ) ]) includes: aGameIndexEntry gameId
+]
+
 { #category : 'updating' }
 ChessCoachAppElement >> listSelectionChanged [
 	"The list selected another game, by a click or the arrow keys"
@@ -343,7 +351,7 @@ ChessCoachAppElement >> newDashboard [
 
 { #category : 'initialization' }
 ChessCoachAppElement >> newGamesPage [
-	"A title, a bar with the speed filters, Refresh and Load more; below it the game list and the selected game.
+	"A title, a bar with the speed filters, the Not reviewed filter, Refresh and Load more; below it the game list and the selected game.
 	The list is a Toplo list, which brings its look, scrollbar and arrow keys"
 
 	| title bar body |
@@ -351,6 +359,13 @@ ChessCoachAppElement >> newGamesPage [
 		         pageTitle: 'Games'
 		         subtitle:
 		         'Your downloaded games. Pick one to see it, or start a new analysis with the coach.'.
+	notReviewedButton := ToToggleButton new
+		                     labelText: 'Not reviewed';
+		                     tooltipString:
+			                     'Only the games you have not reviewed with the coach yet';
+		                     yourself.
+	notReviewedButton newCheckAction: [
+		session ifNotNil: [ self updateFromSession ] ].
 	refreshButton := ToButton new
 		                 labelText: 'Refresh';
 		                 tooltipString:
@@ -371,6 +386,7 @@ ChessCoachAppElement >> newGamesPage [
 		       vFitContent;
 		       padding: (BlInsets bottom: 8);
 		       addChild: self newSpeedBar;
+		       addChild: notReviewedButton;
 		       addChild: refreshButton;
 		       addChild: loadMoreButton;
 		       yourself.
@@ -564,6 +580,12 @@ ChessCoachAppElement >> newStatusLine [
 ]
 
 { #category : 'accessing' }
+ChessCoachAppElement >> notReviewedButton [
+
+	^ notReviewedButton
+]
+
+{ #category : 'accessing' }
 ChessCoachAppElement >> notificationsWindow [
 
 	^ notificationsWindow
@@ -653,12 +675,25 @@ ChessCoachAppElement >> refreshButton [
 
 { #category : 'private' }
 ChessCoachAppElement >> rowElementFor: aGameIndexEntry [
-	"Players, result and date. A label, so that its text follows the app theme."
+	"Players, result and date, with a coach icon when the game has a review. A label, so that its text follows the app theme."
 
-	^ ToLabel new
-		  text: (self rowTextFor: aGameIndexEntry);
-		  hMatchParent;
-		  yourself
+	| row |
+	row := ToElement new
+		       layout: (BlLinearLayout horizontal cellSpacing: 6);
+		       hMatchParent;
+		       vFitContent;
+		       addChild: (ToLabel new
+				        text: (self rowTextFor: aGameIndexEntry);
+				        hMatchParent;
+				        yourself);
+		       yourself.
+	(self isReviewed: aGameIndexEntry) ifTrue: [
+			row addChild:
+				((ToMaterialDesignIconProvider iconNamed: 'outlined_school')
+					 extent: 16 @ 16;
+					 tooltipText: 'Reviewed with the coach';
+					 yourself) ].
+	^ row
 ]
 
 { #category : 'private' }
@@ -953,14 +988,17 @@ ChessCoachAppElement >> updateDashboard [
 
 { #category : 'updating' }
 ChessCoachAppElement >> updateFromSession [
-	"Reload the list, keeping the selected game selected when it is still listed"
+	"Reload the list, keeping the selected game selected when it is still listed. With Not reviewed checked, reviewed games are left out"
 
 	| selectedId index |
 	refreshButton enabled: session canImport.
 	loadMoreButton enabled: session canImport.
 	self updateDashboard.
 	selectedId := self selectedEntry ifNotNil: [ :entry | entry gameId ].
+	reviewedIds := session reviewedGameIds.
 	listedGames := (session gamesWithSpeed: speedFilter) asArray.
+	notReviewedButton isChecked ifTrue: [
+		listedGames := listedGames reject: [ :each | self isReviewed: each ] ].
 	index := listedGames findFirst: [ :each | each gameId = selectedId ].
 	selectedIndex := index = 0
 		                 ifTrue: [ nil ]

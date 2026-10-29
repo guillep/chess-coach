@@ -383,6 +383,23 @@ ChessCoachSessionTest >> testReviewIsSavedAndFeedsTheMistakeDatabase [
 ]
 
 { #category : 'tests' }
+ChessCoachSessionTest >> testReviewedGameIds [
+
+	self assert: session reviewedGameIds isEmpty.
+	(session errorLog parent / 'games') ensureCreateDirectory.
+	(session errorLog parent / 'games' / 'g1.review-1.json')
+		ensureCreateFile.
+	(session errorLog parent / 'games' / 'g1.review-2.json')
+		ensureCreateFile.
+	(session errorLog parent / 'games' / 'chesscom-7.review-1.json')
+		ensureCreateFile.
+	(session errorLog parent / 'games' / 'g2.pgn') ensureCreateFile.
+	self
+		assert: session reviewedGameIds
+		equals: #( 'g1' 'chesscom-7' ) asSet
+]
+
+{ #category : 'tests' }
 ChessCoachSessionTest >> testShutDownStopsTheScheduledChecks [
 
 	session startScheduledChecks.

@@ -709,6 +709,18 @@ ChessCoachSession >> reviewTimes [
 ]
 
 { #category : 'coach' }
+ChessCoachSession >> reviewedGameIds [
+	"The ids of the games with at least one coach review, from one listing of the games directory"
+
+	| directory |
+	directory := importer fileStore baseDirectory / 'games'.
+	directory exists ifFalse: [ ^ Set new ].
+	^ (directory filesMatching: '*.review-*.json')
+		  collect: [ :file | file basename copyUpToSubstring: '.review-' ]
+		  as: Set
+]
+
+{ #category : 'coach' }
 ChessCoachSession >> reviewsFor: aGameIndexEntry [
 	"The game's coach reviews (games/<id>.review-<n>.json), oldest first. A review.json and marks.json from before reviews had numbers become review 1."
 

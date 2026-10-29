@@ -323,6 +323,38 @@ ChessCoachAppElementTest >> testOnlyReviewedGamesAreQueuedForAnalysis [
 ]
 
 { #category : 'tests' }
+ChessCoachAppElementTest >> testReviewedGamesHaveAnIconAndCanBeLeftOut [
+
+	| games reviewedId |
+	session login.
+	session loadMoreGames.
+	scripter pulse.
+	games := app games.
+	reviewedId := games first gameId.
+	session saveReview: (session newReviewFor: games first).
+	scripter pulse.
+	self assert: (app isReviewed: games first).
+	self deny: (app isReviewed: games second).
+	self assert:
+		((app rowElementFor: games first) children anySatisfy: [ :each |
+			 each isKindOf: ToImage ]).
+	self deny:
+		((app rowElementFor: games second) children anySatisfy: [ :each |
+			 each isKindOf: ToImage ]).
+	self click: app notReviewedButton.
+	self assert: app notReviewedButton isChecked.
+	self assert: app games size equals: games size - 1.
+	self deny:
+		(app games anySatisfy: [ :each | each gameId = reviewedId ]).
+	(Delay forMilliseconds: 600) wait.
+	self click: app notReviewedButton.
+	self
+		deny: app notReviewedButton isChecked
+		description: 'unchecked by the second click'.
+	self assert: app games size equals: games size
+]
+
+{ #category : 'tests' }
 ChessCoachAppElementTest >> testRowsShowTheAnalysisState [
 
 	| queue first |

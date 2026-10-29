@@ -30,6 +30,15 @@ ChessComGameImporter >> apiClient [
 ]
 
 { #category : 'private' }
+ChessComGameImporter >> chessGamesIn: anArchiveUrl [
+	"The standard-chess games of one archive, newest first"
+
+	^ ((apiClient gamesInArchive: anArchiveUrl) select: [ :gameData |
+		   (gameData at: 'rules' ifAbsent: [ 'chess' ]) = 'chess' ]) asArray
+		  sort: [ :a :b | (a at: 'end_time') > (b at: 'end_time') ]
+]
+
+{ #category : 'private' }
 ChessComGameImporter >> gameIdOf: gameData [
 	"chesscom-<number> from the game URL, so ids never clash with Lichess ones"
 
@@ -41,26 +50,28 @@ ChessComGameImporter >> importArchive: anArchiveUrl upTo: aCount [
 	"Import the newest aCount standard-chess games of one archive that are not in the index yet"
 
 	| missing |
-	missing := ((apiClient gamesInArchive: anArchiveUrl) select: [
-			            :gameData |
-			            (gameData at: 'rules' ifAbsent: [ 'chess' ]) = 'chess'
-				            and: [
-				            (indexManager index findById:
-					             (self gameIdOf: gameData)) isNil ] ]) asArray sort: [
-		           :a
-		           :b | (a at: 'end_time') > (b at: 'end_time') ].
+	missing := (self chessGamesIn: anArchiveUrl) reject: [ :gameData |
+		           self isIndexed: gameData ].
 	^ (missing first: (aCount min: missing size)) collect: [ :gameData |
 		  self saveGameFromData: gameData ]
 ]
 
 { #category : 'importing' }
 ChessComGameImporter >> importNewerGames [
-	"Import the games of the current month I don't have yet. Answer the new entries."
+	"Import every game newer than the ones I have, walking back through the monthly archives until one holds a game already in the index. With no games yet, import nothing (Load more does). Answer the new entries."
 
-	| archives |
-	archives := apiClient archivesOf: self username.
-	archives ifEmpty: [ ^ #(  ) ].
-	^ self importArchive: archives first upTo: SmallInteger maxVal
+	| entries |
+	entries := OrderedCollection new.
+	self ownGames ifEmpty: [ ^ #(  ) ].
+	(apiClient archivesOf: self username) do: [ :archive |
+			| games missing |
+			games := self chessGamesIn: archive.
+			missing := games select: [ :gameData |
+				           (self isIndexed: gameData) not ].
+			entries addAll:
+				(missing collect: [ :gameData | self saveGameFromData: gameData ]).
+			missing size < games size ifTrue: [ ^ entries asArray ] ].
+	^ entries asArray
 ]
 
 { #category : 'importing' }
@@ -74,6 +85,12 @@ ChessComGameImporter >> importOlderGames: aCount [
 				(self importArchive: archive upTo: aCount - entries size).
 			entries size >= aCount ifTrue: [ ^ entries asArray ] ].
 	^ entries asArray
+]
+
+{ #category : 'private' }
+ChessComGameImporter >> isIndexed: gameData [
+
+	^ (indexManager index findById: (self gameIdOf: gameData)) notNil
 ]
 
 { #category : 'accessing' }

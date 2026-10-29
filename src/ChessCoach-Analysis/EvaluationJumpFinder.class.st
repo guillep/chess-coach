@@ -20,6 +20,18 @@ EvaluationJumpFinder class >> on: aGameAnalysis [
 ]
 
 { #category : 'private' }
+EvaluationJumpFinder >> allowsMate: mover before: before after: after [
+	"Whether mover's move turned a position without a forced mate against it into one"
+
+	| opponent |
+	opponent := mover = #white
+		            ifTrue: [ #black ]
+		            ifFalse: [ #white ].
+	^ (after bestLine isMateFor: opponent) and: [
+		  (before bestLine isMateFor: opponent) not ]
+]
+
+{ #category : 'private' }
 EvaluationJumpFinder >> kindForDrop: aNumber [
 
 	aNumber >= 30 ifTrue: [ ^ #blunder ].
@@ -41,7 +53,9 @@ EvaluationJumpFinder >> moments [
 						  mover := before sideToMove.
 						  drop := (before winPercentFor: mover)
 						          - (after winPercentFor: mover).
-						  (self kindForDrop: drop) ifNotNil: [ :kind |
+						  ((self allowsMate: mover before: before after: after)
+							   ifTrue: [ #blunder ]
+							   ifFalse: [ self kindForDrop: drop ]) ifNotNil: [ :kind |
 								  moments add: (ChessMoment
 										   ply: ply
 										   color: mover

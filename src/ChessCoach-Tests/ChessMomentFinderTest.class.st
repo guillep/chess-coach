@@ -8,25 +8,47 @@ Class {
 { #category : 'helpers' }
 ChessMomentFinderTest >> analysisWithWhiteCentipawns: lineScores [
 	"lineScores holds, per position from ply 0, the engine lines' scores in centipawns from White's point of view.
+	A score written as a string such as '#-3' is a mate in 3 for Black ('#3' for White).
 	Every line starts with a rook-pawn move, legal for the side to move."
 
 	^ GameAnalysis
 		  depth: 18
 		  plies: (lineScores withIndexCollect: [ :scores :index |
-					   | ply |
+					   | ply moves |
 					   ply := index - 1.
+					   moves := ply even
+						            ifTrue: [ #( 'a2a3' ) ]
+						            ifFalse: [ #( 'a7a6' ) ].
 					   PlyAnalysis
 						   ply: ply
 						   fen: '4k3/p7/8/8/8/8/P7/4K3 ' , (ply even
 								    ifTrue: [ 'w' ]
 								    ifFalse: [ 'b' ]) , ' - - 0 1'
-						   lines: (scores collect: [ :cp |
-									    EngineLine
-										    moves: (ply even
-												     ifTrue: [ #( 'a2a3' ) ]
-												     ifFalse: [ #( 'a7a6' ) ])
-										    centipawns: cp
-										    sideToMove: #white ]) ])
+						   lines: (scores collect: [ :score |
+									    score isString
+										    ifTrue: [
+												    EngineLine
+													    moves: moves
+													    mate: score allButFirst asNumber
+													    sideToMove: #white ]
+										    ifFalse: [
+										    EngineLine
+											    moves: moves
+											    centipawns: score
+											    sideToMove: #white ] ]) ])
+]
+
+{ #category : 'tests' }
+ChessMomentFinderTest >> testAllowingAForcedMateIsABlunder [
+	"-2.50 is 28.5% for White: allowing mate is only a 28 point drop, still a blunder"
+
+	| moments |
+	moments := (EvaluationJumpFinder on:
+		            (self analysisWithWhiteCentipawns:
+			             #( #( -250 ) #( '#-3' ) #( '#-2' ) ))) moments.
+	self assert: moments size equals: 1.
+	self assert: moments first ply equals: 1.
+	self assert: moments first kinds asArray equals: #( #blunder )
 ]
 
 { #category : 'tests' }
@@ -102,4 +124,14 @@ ChessMomentFinderTest >> testSmallDropsAreIgnoredAndBlackDropsCount [
 	self assert: moments first ply equals: 2.
 	self assert: moments first color equals: #black.
 	self assert: (moments first kinds includes: #inaccuracy)
+]
+
+{ #category : 'tests' }
+ChessMomentFinderTest >> testStayingInAForcedMateIsNotAMoment [
+
+	| moments |
+	moments := (EvaluationJumpFinder on:
+		            (self analysisWithWhiteCentipawns:
+			             #( #( '#-3' ) #( '#-2' ) #( '#-2' ) ))) moments.
+	self assert: moments isEmpty
 ]

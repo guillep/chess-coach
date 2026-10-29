@@ -182,6 +182,49 @@ ChessComImportTest >> testImportsMonthByMonthNewestFirst [
 ]
 
 { #category : 'tests' }
+ChessComImportTest >> testRefreshWalksBackUntilAKnownGame [
+
+	| base |
+	session loadMoreGames.
+	session loadMoreGames.
+	self assert: session games size equals: 3.
+	base := 'https://api.chess.com/pub/player/bob/games/'.
+	api at: base , 'archives' answer: (Dictionary new
+			 at: 'archives' put: {
+					 (base , '2026/09').
+					 (base , '2026/10').
+					 (base , '2026/11').
+					 (base , '2026/12') };
+			 yourself).
+	api at: base , '2026/12' answer: (Dictionary new
+			 at: 'games' put: { (self
+					  game: '121'
+					  white: 'Bob'
+					  black: 'gus'
+					  winner: #white
+					  timeControl: '600'
+					  endTime: 1796000000
+					  rules: 'chess') };
+			 yourself).
+	api at: base , '2026/11' answer: (Dictionary new
+			 at: 'games' put: { (self
+					  game: '111'
+					  white: 'hal'
+					  black: 'Bob'
+					  winner: #white
+					  timeControl: '600'
+					  endTime: 1793000000
+					  rules: 'chess') };
+			 yourself).
+	session refresh.
+	self assert: session games size equals: 5.
+	self assert: session games first gameId equals: 'chesscom-121'.
+	self
+		assert: (api requests count: [ :url | url endsWith: '2026/09' ])
+		equals: 1
+]
+
+{ #category : 'tests' }
 ChessComImportTest >> testUsernameDecidesMyColorsAndIsRemembered [
 
 	session loadMoreGames.

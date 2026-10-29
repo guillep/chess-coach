@@ -89,12 +89,28 @@ LichessGameImporter >> importGamesUntil: untilMillis since: sinceMillis [
 
 { #category : 'importing' }
 LichessGameImporter >> importNewerGames [
-	"Import games created after the newest one we have (at most one page). Answer the new entries."
+	"Import every game created after the newest one we have, page by page from the newest down. Answer the new entries."
 
-	| games |
+	| games since until entries page |
 	games := self ownGames.
 	games ifEmpty: [ ^ self importOlderGames ].
-	^ self importGamesUntil: nil since: games first createdAt + 1
+	since := games first createdAt + 1.
+	entries := OrderedCollection new.
+	[
+		page := apiClient
+			        fetchUserGames: self username
+			        max: self pageSize
+			        until: until
+			        since: since.
+		entries addAll: (page
+				 reject: [ :gameData |
+					 (indexManager index findById: (gameData at: 'id')) notNil ]
+				 thenCollect: [ :gameData | self saveGameFromData: gameData ]).
+		page size < self pageSize ] whileFalse: [
+			until := (page detectMin: [ :gameData | gameData at: 'createdAt' ])
+				         at: 'createdAt'.
+			until := until - 1 ].
+	^ entries asArray
 ]
 
 { #category : 'importing' }

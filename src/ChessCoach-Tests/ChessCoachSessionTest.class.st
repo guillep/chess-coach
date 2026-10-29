@@ -168,6 +168,21 @@ ChessCoachSessionTest >> testMyColorsComeFromMyUsername [
 ]
 
 { #category : 'tests' }
+ChessCoachSessionTest >> testRefreshFetchesEveryNewerGameWithoutGaps [
+
+	session login.
+	session settings at: 'gamesPerLoad' put: 10.
+	session loadMoreGames.
+	26 to: 50 do: [ :number |
+		api addNewestGame: (LichessAPIClientStub gameNumber: number) ].
+	session refresh.
+	self assert: session games size equals: 35.
+	self assert: session games first gameId equals: 'g50'.
+	self assert:
+		(session games anySatisfy: [ :each | each gameId = 'g26' ])
+]
+
+{ #category : 'tests' }
 ChessCoachSessionTest >> testRefreshFetchesNewerGames [
 
 	session login.

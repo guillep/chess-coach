@@ -214,9 +214,9 @@ CoachElement >> buildMarking [
 								 icon: 'outlined_flag'
 								 do: [ self unmarkShown ]) ]
 				ifFalse: [
-						noteField := ToTextField new
-							             hMatchParent;
-							             yourself.
+						noteField := ChessCoachWidgets prose: (ToTextField new
+								              hMatchParent;
+								              yourself).
 						currentZone
 							addChild: (self paragraph: 'Note (optional):');
 							addChild: noteField;
@@ -518,11 +518,11 @@ CoachElement >> buildTextAnswer [
 	draftQuestion == review currentQuestion ifFalse: [
 			draftQuestion := review currentQuestion.
 			draft := '' ].
-	answerField := ToAlbum new
-		               hMatchParent;
-		               height: 100;
-		               text: draft;
-		               yourself.
+	answerField := ChessCoachWidgets prose: (ToAlbum new
+			                hMatchParent;
+			                height: 100;
+			                text: draft;
+			                yourself).
 	answerField addShortcut: (BlShortcutWithAction new
 			 combination: BlKeyCombination shiftReturn;
 			 action: [ self submitText ]).

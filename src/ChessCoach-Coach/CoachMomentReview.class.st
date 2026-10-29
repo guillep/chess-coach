@@ -215,13 +215,13 @@ CoachMomentReview >> labels: someMistakeLabels [
 
 { #category : 'testing' }
 CoachMomentReview >> passes: aFilter [
-	"aFilter is #all, #mistakes (mistakes, blunders, only moves) or #blunders. My marks always pass."
+	"aFilter is #all, #mistakes (mistakes, blunders, only moves, long thinks) or #blunders. My marks always pass."
 
 	aFilter = #all ifTrue: [ ^ true ].
 	aFilter = #mistakes ifTrue: [
 			^ kinds includesAny:
 				  #( #mistake #blunder #onlyMoveMissed #onlyMoveFound
-				     #marked ) ].
+				     #longThink #marked ) ].
 	aFilter = #blunders ifTrue: [
 		^ kinds includesAny: #( #blunder #marked ) ].
 	self error: 'Unknown moment filter: ' , aFilter printString

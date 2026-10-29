@@ -81,6 +81,24 @@ ChessMomentFinderTest >> testGameAnalysisRoundTripsThroughJSON [
 ]
 
 { #category : 'tests' }
+ChessMomentFinderTest >> testLongThinksComeFromTheClocks [
+	"3+2: White uses 5, 5, 60 and 5 s; Black 4 s per move"
+
+	| game moments |
+	game := PGNParser new parse: '[TimeControl "180+2"]
+
+1. e4 { [%clk 0:02:57] } e5 { [%clk 0:02:58] } 2. Nf3 { [%clk 0:02:54] } Nc6 { [%clk 0:02:56] } 3. Bc4 { [%clk 0:01:56] } Nf6 { [%clk 0:02:54] } 4. d3 { [%clk 0:01:53] } Be7 { [%clk 0:02:52] }'.
+	moments := (LongThinkFinder on: game) moments.
+	self assert: moments size equals: 1.
+	self assert: moments first ply equals: 5.
+	self assert: moments first color equals: #white.
+	self assert: moments first kinds asArray equals: #( #longThink ).
+	self assert:
+		(LongThinkFinder on: (PGNParser new parse: '1. e4 e5')) moments
+			isEmpty
+]
+
+{ #category : 'tests' }
 ChessMomentFinderTest >> testNoOnlyMoveWhenSeveralMovesAreGoodOrTheGameIsDecided [
 
 	self assert: (OnlyMoveFinder on:

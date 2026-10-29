@@ -460,21 +460,21 @@ CoachReview >> openingQuestionsFor: aMoment [
 	| played |
 	played := (game moves at: aMoment ply) san.
 	(aMoment kinds includesAny:
-		 #( #inaccuracy #mistake #blunder #onlyMoveMissed #marked ))
-		ifTrue: [
-				^ {
-					  (CoachQuestion
-						   kind: #candidates
-						   text:
-						   'Which candidate moves did you consider? Mark them on the board.').
-					  (CoachQuestion
-						   kind: #why
-						   text: 'Why did you play ' , played , '?').
-					  (CoachQuestion
-						   kind: #expectedReply
-						   text:
-						   'After ' , played
-						   , ', what did you expect your opponent to play?') } ].
+		 #( #inaccuracy #mistake #blunder #onlyMoveMissed #longThink
+		    #marked )) ifTrue: [
+			^ {
+				  (CoachQuestion
+					   kind: #candidates
+					   text:
+					   'Which candidate moves did you consider? Mark them on the board.').
+				  (CoachQuestion
+					   kind: #why
+					   text: 'Why did you play ' , played , '?').
+				  (CoachQuestion
+					   kind: #expectedReply
+					   text:
+					   'After ' , played
+					   , ', what did you expect your opponent to play?') } ].
 	(aMoment kinds includes: #onlyMoveFound) ifTrue: [
 			^ { (CoachQuestion
 				   kind: #whatDidYouSee

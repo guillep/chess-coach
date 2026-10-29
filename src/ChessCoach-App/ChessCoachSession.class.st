@@ -377,7 +377,8 @@ ChessCoachSession >> momentsFor: aGameIndexEntry marks: someMarks [
 				   (OpeningWinRateFinder
 					    game: game
 					    explorer: self explorer
-					    colors: colors) }
+					    colors: colors).
+				   (LongThinkFinder on: game) }
 		   marksFinder: (MarkedMomentsFinder game: game marks: someMarks)
 		   colors: colors) moments
 ]

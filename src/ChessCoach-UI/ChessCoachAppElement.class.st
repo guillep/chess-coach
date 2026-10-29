@@ -94,13 +94,15 @@ ChessCoachAppElement >> analysisStateChangedOf: aGameIdOrNil [
 
 { #category : 'settings' }
 ChessCoachAppElement >> applyAppTheme [
-	"Toplo's light or dark theme for the whole app, with a matching page background"
+	"Toplo's light or dark theme for the whole window, with a matching page background.
+	The theme goes on the space: under an element's local theme, Toplo installs no skin on a list's scrollbar (logged as an upstream candidate)."
 
 	| dark |
 	dark := session settings appTheme = 'Dark'.
-	self localTheme: (dark
-			 ifTrue: [ ToRawDarkTheme new ]
-			 ifFalse: [ ToRawTheme new ]).
+	self isAttachedToSceneGraph ifTrue: [
+			self space toTheme: (dark
+					 ifTrue: [ ToRawDarkTheme new ]
+					 ifFalse: [ ToRawTheme new ]) ].
 	self background: (Color fromHexString: (dark
 				  ifTrue: [ '#1f2124' ]
 				  ifFalse: [ '#ffffff' ]))
@@ -603,7 +605,8 @@ ChessCoachAppElement >> selectedGameChanged [
 
 { #category : 'accessing' }
 ChessCoachAppElement >> session: aChessCoachSession [
-	"Connect to the session. The first time, run the setup wizard; otherwise open on Stats when there are reviewed mistakes, on Games otherwise."
+	"Connect to the session. The first time, run the setup wizard; otherwise open on Stats when there are reviewed mistakes, on Games otherwise.
+	The app theme is applied again when I am added to a space."
 
 	session := aChessCoachSession.
 	session announcer
@@ -628,6 +631,9 @@ ChessCoachAppElement >> session: aChessCoachSession [
 					self enqueueTask:
 						(BlTaskAction new action: [ self applyAppTheme ]) ] ]
 		for: self.
+	self
+		addEventHandlerOn: BlElementAddedToSceneGraphEvent
+		do: [ :event | self applyAppTheme ].
 	self applyAppTheme.
 	settingsElement backgroundRunner: backgroundRunner.
 	settingsElement session: session.

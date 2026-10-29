@@ -64,16 +64,16 @@ ChessCoachAppElementTest >> testAppTheme [
 	app showPage: #Settings.
 	scripter pulse.
 	settings := app settingsElement.
-	self assert: (app localTheme isKindOf: ToRawDarkTheme) not.
+	self deny: (app space root localTheme isKindOf: ToRawDarkTheme).
 	self click: (settings buttonLabeled: 'Dark').
 	scripter pulse.
 	self assert: session settings appTheme equals: 'Dark'.
 	self assert: (settings texts includes: '[Dark]').
-	self assert: (app localTheme isKindOf: ToRawDarkTheme).
+	self assert: (app space root localTheme isKindOf: ToRawDarkTheme).
 	self click: (settings buttonLabeled: 'Light').
 	scripter pulse.
 	self assert: session settings appTheme equals: 'Light'.
-	self deny: (app localTheme isKindOf: ToRawDarkTheme)
+	self deny: (app space root localTheme isKindOf: ToRawDarkTheme)
 ]
 
 { #category : 'tests' }
@@ -515,6 +515,22 @@ ChessCoachAppElementTest >> testSwitchingBackToGamesWithGamesListed [
 	scripter pulse.
 	self deny: scripter space hasLayoutError.
 	self assert: app gameView isAttachedToSceneGraph
+]
+
+{ #category : 'tests' }
+ChessCoachAppElementTest >> testTheGameListScrollbarIsBesideTheRows [
+
+	| scrollbar |
+	self click: app loginButton.
+	self click: app loadMoreButton.
+	scripter pulse.
+	scrollbar := app gameList children detect: [ :each |
+		             each isKindOf: ToScrollbarElement ].
+	self assert: scrollbar constraints ignoredByLayout.
+	self
+		assert: app gameList innerElement bounds inSpace bottom
+		closeTo:
+		app gameList bounds inSpace bottom - app gameList padding bottom
 ]
 
 { #category : 'tests' }

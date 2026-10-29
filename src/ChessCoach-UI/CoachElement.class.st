@@ -24,7 +24,8 @@ Class {
 		'shownMoment',
 		'walking',
 		'noteField',
-		'addingTag'
+		'addingTag',
+		'replay'
 	],
 	#category : 'ChessCoach-UI-Coach',
 	#package : 'ChessCoach-UI',
@@ -133,10 +134,10 @@ CoachElement >> buildMarking [
 
 	| marked |
 	currentZone addChild: (self paragraph:
-			 'Go through the game and mark the moves you want to talk about. The engine''s view stays hidden.').
+			 'Go through the game and mark the moves you want to talk about. The engine''s view stays hidden. Keys: left/right arrows to move, Enter or Space to mark or unmark.').
 	currentZone addChild: (self row: {
-				 (self button: '◀' do: [ self showPly: shownPly - 1 ]).
-				 (self button: '▶' do: [ self showPly: shownPly + 1 ]) }).
+				 (self button: '<' do: [ self showPly: shownPly - 1 ]).
+				 (self button: '>' do: [ self showPly: shownPly + 1 ]) }).
 	shownPly > 0 ifTrue: [
 			marked := review isMarked: shownPly.
 			currentZone addChild:
@@ -192,6 +193,20 @@ CoachElement >> buildMoment [
 	currentZone addChild: (self row: {
 				 (self button: 'Stop' do: [ self stop ]).
 				 (self button: 'Pause' do: [ self pause ]) })
+]
+
+{ #category : 'building' }
+CoachElement >> buildReplay [
+	"The marking pass shows the game with its move list: arrow keys step through it, Enter or Space marks the selected move"
+
+	replay := GameAnalysisElement new.
+	replay boardElement pieceSet: board pieceSet.
+	replay boardElement orientation: self myColor.
+	replay game: game.
+	replay moveList markedPlies:
+		(review marks collect: [ :each | each at: 'ply' ]).
+	replay moveList whenMoveSelectedDo: [ :ply | self markingShows: ply ].
+	replay moveList whenMarkRequestedDo: [ :ply | self toggleMarkAt: ply ]
 ]
 
 { #category : 'building' }
@@ -596,13 +611,30 @@ CoachElement >> lineInSAN: someUCIMoves from: aChessPosition [
 CoachElement >> markShown [
 
 	review mark: shownPly note: noteField text asString trimBoth.
-	self refresh
+	self marksChanged
 ]
 
 { #category : 'accessing' }
 CoachElement >> markedMoves [
 
 	^ markedMoves
+]
+
+{ #category : 'actions' }
+CoachElement >> markingShows: aPly [
+
+	shownPly := aPly.
+	review showPly: aPly.
+	self refresh
+]
+
+{ #category : 'private' }
+CoachElement >> marksChanged [
+
+	replay moveList markedPlies:
+		(review marks collect: [ :each | each at: 'ply' ]).
+	replay moveList requestFocus.
+	self refresh
 ]
 
 { #category : 'accessing' }
@@ -726,10 +758,37 @@ CoachElement >> quickAnswersFor: aCoachQuestion [
 { #category : 'updating' }
 CoachElement >> refresh [
 
+	self updateLeftPane.
 	self updateHeader.
 	self updateHistory.
 	self updateBoard.
 	self updateCurrentZone
+]
+
+{ #category : 'accessing' }
+CoachElement >> replay [
+	"The game with its move list, during the marking pass"
+
+	^ replay
+]
+
+{ #category : 'actions' }
+CoachElement >> reportProblem [
+	"Save a report folder with the game, its analysis, this review and the error log"
+
+	| directory |
+	directory := session
+		             writeReportFor: entry
+		             review: review
+		             note:
+			             ('mode: {1}, moment: {2}, message: {3}' format: {
+					              mode.
+					              (shownMoment
+						               ifNil: [ '-' ]
+						               ifNotNil: [ :m | m ply ]).
+					              (message ifNil: [ '-' ]) }).
+	message := 'Report saved in ' , directory fullName.
+	self refresh
 ]
 
 { #category : 'accessing' }
@@ -777,6 +836,7 @@ CoachElement >> session: aChessCoachSession entry: aGameIndexEntry review: aCoac
 	review isMarking
 		ifTrue: [
 				mode := #marking.
+				self buildReplay.
 				review showPly: 0 ]
 		ifFalse: [ mode := #list ].
 	self refresh
@@ -806,11 +866,9 @@ CoachElement >> showMomentAtPly: aPly [
 
 { #category : 'actions' }
 CoachElement >> showPly: aPly [
-	"Marking pass: show the position after aPly"
+	"Marking pass: show the position after aPly, as selecting it in the move list does"
 
-	shownPly := (aPly max: 0) min: game moves size.
-	review showPly: shownPly.
-	self refresh
+	replay selectPly: ((aPly max: 0) min: game moves size)
 ]
 
 { #category : 'actions' }
@@ -889,6 +947,19 @@ CoachElement >> submitText [
 ]
 
 { #category : 'actions' }
+CoachElement >> toggleMarkAt: aPly [
+	"Enter or Space: mark the move (with the note being written), or unmark it"
+
+	(review isMarked: aPly)
+		ifTrue: [ review unmark: aPly ]
+		ifFalse: [
+				review mark: aPly note: (noteField
+						 ifNil: [ '' ]
+						 ifNotNil: [ noteField text asString trimBoth ]) ].
+	self marksChanged
+]
+
+{ #category : 'actions' }
 CoachElement >> toggleTag: aTagId [
 
 	review toggleTag: aTagId of: shownMoment.
@@ -899,7 +970,7 @@ CoachElement >> toggleTag: aTagId [
 CoachElement >> unmarkShown [
 
 	review unmark: shownPly.
-	self refresh
+	self marksChanged
 ]
 
 { #category : 'updating' }
@@ -907,9 +978,7 @@ CoachElement >> updateBoard [
 
 	| question arrows |
 	mode = #marking ifTrue: [
-			board orientation: self myColor.
-			board chessPosition: (game positionAfterPly: shownPly).
-			^ board arrows: (shownPly = 0
+			^ replay boardElement arrows: (shownPly = 0
 					   ifTrue: [ #(  ) ]
 					   ifFalse: [
 					   { (ChessArrow uci: (game uciMoves at: shownPly) style: #played) } ]) ].
@@ -947,10 +1016,14 @@ CoachElement >> updateCurrentZone [
 	answerField := nil.
 	noteField := nil.
 	busy ifNotNil: [ ^ currentZone addChild: (ToLabel text: busy) ].
-	mode = #marking ifTrue: [ ^ self buildMarking ].
-	mode = #list ifTrue: [ ^ self buildList ].
-	mode = #summary ifTrue: [ ^ self buildSummary ].
-	self buildMoment
+	mode = #marking ifTrue: [ self buildMarking ].
+	mode = #list ifTrue: [ self buildList ].
+	mode = #summary ifTrue: [ self buildSummary ].
+	mode = #moment ifTrue: [ self buildMoment ].
+	(mode ~= #moment and: [ message notNil ]) ifTrue: [
+		currentZone addChild: (self paragraph: message) ].
+	currentZone addChild:
+		(self button: 'Report a problem' do: [ self reportProblem ])
 ]
 
 { #category : 'updating' }
@@ -1002,6 +1075,20 @@ CoachElement >> updateHistory [
 									  self describeMoves: answer moves in: answer question ]
 								  ifFalse: [ answer text ]);
 					 yourself) ]
+]
+
+{ #category : 'updating' }
+CoachElement >> updateLeftPane [
+	"The marking pass shows the game with its move list; the other modes show the coach's board"
+
+	| wanted |
+	wanted := mode = #marking
+		          ifTrue: [ replay ]
+		          ifFalse: [ board ].
+	self children first == wanted ifTrue: [ ^ self ].
+	self children first removeFromParent.
+	self addChildFirst: wanted.
+	mode = #marking ifTrue: [ replay moveList requestFocus ]
 ]
 
 { #category : 'accessing' }

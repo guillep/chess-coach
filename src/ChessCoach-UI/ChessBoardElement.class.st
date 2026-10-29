@@ -14,7 +14,8 @@ Class {
 		'arrowLayer',
 		'pressedSquare',
 		'selectedSquare',
-		'moveBlock'
+		'moveBlock',
+		'coordinateLabels'
 	],
 	#category : 'ChessCoach-UI-Board',
 	#package : 'ChessCoach-UI',
@@ -103,6 +104,37 @@ ChessBoardElement >> chessPosition: aChessPosition [
 	self redrawPieces
 ]
 
+{ #category : 'drawing' }
+ChessBoardElement >> coordinateLabel: aString in: aSquareElement alignedTop: aBoolean [
+	"A small label in a corner of the square: top-left for ranks, bottom-right for files"
+
+	| label |
+	label := BlTextElement new
+		         text: (aString asRopedText
+				          fontSize: 11;
+				          foreground: (Color black alpha: 0.6);
+				          yourself);
+		         padding: (BlInsets all: 2);
+		         preventMeAndChildrenMouseEvents;
+		         constraintsDo: [ :c |
+				         c frame horizontal alignLeft.
+				         aBoolean
+					         ifTrue: [ c frame vertical alignTop ]
+					         ifFalse: [
+							         c frame horizontal alignRight.
+							         c frame vertical alignBottom ] ];
+		         yourself.
+	aSquareElement addChild: label.
+	^ label
+]
+
+{ #category : 'accessing' }
+ChessBoardElement >> coordinateTexts [
+	"The coordinates shown, top-left to bottom-right (for tests)"
+
+	^ coordinateLabels collect: [ :each | each text asString ]
+]
+
 { #category : 'initialization' }
 ChessBoardElement >> initialize [
 
@@ -115,6 +147,7 @@ ChessBoardElement >> initialize [
 	arrows := #(  ).
 	moveBlock := [ :uci |  ].
 	self buildBoard.
+	self redrawCoordinates.
 	self buildArrowLayer
 ]
 
@@ -142,6 +175,7 @@ ChessBoardElement >> orientation: aColor [
 	"Show the board from aColor's side (#white or #black)"
 
 	orientation := aColor.
+	self redrawCoordinates.
 	self redrawPieces.
 	self redrawArrows
 ]
@@ -224,6 +258,30 @@ ChessBoardElement >> redrawArrows [
 							 dashArray: #( 6 4 );
 							 build) ].
 			arrowLayer addChild: element ]
+]
+
+{ #category : 'drawing' }
+ChessBoardElement >> redrawCoordinates [
+	"Rank numbers in the left column and file letters in the bottom row, as seen from orientation's side"
+
+	coordinateLabels ifNotNil: [
+		coordinateLabels do: [ :each | each removeFromParent ] ].
+	coordinateLabels := OrderedCollection new.
+	1 to: 64 do: [ :index |
+			| name row column |
+			name := self squareNameAt: index.
+			row := index - 1 // 8.
+			column := index - 1 \\ 8.
+			column = 0 ifTrue: [
+					coordinateLabels add: (self
+							 coordinateLabel: name second asString
+							 in: (squares at: index)
+							 alignedTop: true) ].
+			row = 7 ifTrue: [
+					coordinateLabels add: (self
+							 coordinateLabel: name first asString
+							 in: (squares at: index)
+							 alignedTop: false) ] ]
 ]
 
 { #category : 'initialization' }

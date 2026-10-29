@@ -71,6 +71,22 @@ ChessBoardInteractionTest >> testClickClickMarksAMove [
 ]
 
 { #category : 'tests' }
+ChessBoardInteractionTest >> testCoordinatesFollowTheOrientation [
+
+	| fresh |
+	fresh := ChessBoardElement new.
+	self
+		assert: fresh coordinateTexts asArray
+		equals:
+		#( '8' '7' '6' '5' '4' '3' '2' '1' 'a' 'b' 'c' 'd' 'e' 'f' 'g' 'h' ).
+	fresh orientation: #black.
+	self
+		assert: fresh coordinateTexts asArray
+		equals:
+		#( '1' '2' '3' '4' '5' '6' '7' '8' 'h' 'g' 'f' 'e' 'd' 'c' 'b' 'a' )
+]
+
+{ #category : 'tests' }
 ChessBoardInteractionTest >> testDragMarksAMove [
 
 	scripter mouseMoveOver onChildFromBlock: [ :root |

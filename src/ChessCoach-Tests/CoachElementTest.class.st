@@ -169,6 +169,55 @@ CoachElementTest >> testListShowsPastMomentsAndReviewsOneMoment [
 	self assert: review currentQuestion kind equals: #expectedReply
 ]
 
+{ #category : 'tests' }
+CoachElementTest >> testMarkingWithTheKeyboard [
+
+	| fixture marking session keys |
+	fixture := CoachReviewTest new.
+	fixture setUp.
+	marking := fixture newReviewMarking.
+	session := (LichessAPIClientStub withGames: 0) newSessionOn:
+		           FileSystem memory root.
+	coach := CoachElement new.
+	coach session: session entry: nil review: marking.
+	keys := BlDevScripter new.
+	keys element: coach.
+	keys space extent: 1100 @ 700.
+	self assert: coach mode equals: #marking.
+	keys keyClick: KeyboardKey right.
+	keys keyClick: KeyboardKey right.
+	keys keyClick: KeyboardKey enter.
+	keys syncContinue.
+	self assert: (marking isMarked: 2).
+	self assert: (coach replay moveList moveTexts at: 2) equals: '*e5'.
+	keys keyClick: KeyboardKey space.
+	keys syncContinue.
+	self deny: (marking isMarked: 2).
+	self assert: (coach replay moveList moveTexts at: 2) equals: 'e5'
+]
+
+{ #category : 'tests' }
+CoachElementTest >> testReportAProblem [
+
+	| session entry marking reportedCoach |
+	session := (LichessAPIClientStub withGames: 1) newSessionOn:
+		           FileSystem memory root.
+	session login.
+	session loadMoreGames.
+	entry := session games first.
+	marking := session newReviewFor: entry.
+	reportedCoach := CoachElement new.
+	reportedCoach session: session entry: entry review: marking.
+	reportedCoach reportProblem.
+	self assert: (reportedCoach message beginsWith: 'Report saved in ').
+	self assert:
+		(((session errorLog parent / 'reports') children first children
+			  collect: [ :each | each basename ]) includesAll: {
+				 'note.txt'.
+				 (entry gameId , '.pgn').
+				 'current-review-1.json' })
+]
+
 { #category : 'helpers' }
 CoachElementTest >> zoneTexts [
 	"The texts of the labels and buttons in the current question zone"

@@ -641,3 +641,25 @@ ChessCoachSession >> validateChessComUsername: aString [
 	self chessComUsername: aString trimBoth.
 	^ true
 ]
+
+{ #category : 'errors' }
+ChessCoachSession >> writeReportFor: aGameIndexEntry review: aCoachReview note: aString [
+	"Copy what is needed to look into a problem to reports/<timestamp>/: my note, the game, its analysis, the review and errors.log. Answer the directory."
+
+	| directory games |
+	directory := importer fileStore baseDirectory / 'reports'
+	             /
+	             (DateAndTime now asString copyReplaceAll: ':' with: '-').
+	directory ensureCreateDirectory.
+	directory / 'note.txt' writeStreamDo: [ :stream |
+		stream nextPutAll: aString ].
+	games := importer fileStore baseDirectory / 'games'.
+	(games filesMatching: aGameIndexEntry gameId , '.*') do: [ :file |
+		file copyTo: directory / file basename ].
+	directory
+	/ ('current-review-' , aCoachReview number printString , '.json')
+		writeStreamDo: [ :stream | stream nextPutAll: aCoachReview asJSON ].
+	self errorLog exists ifTrue: [
+		self errorLog copyTo: directory / 'errors.log' ].
+	^ directory
+]

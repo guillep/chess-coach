@@ -10,7 +10,9 @@ Class {
 		'compactContainer',
 		'rigidContainer',
 		'toggleButton',
-		'rigidMoveElements'
+		'rigidMoveElements',
+		'markedPlies',
+		'markBlock'
 	],
 	#category : 'ChessCoach-UI-Board',
 	#package : 'ChessCoach-UI',
@@ -111,6 +113,8 @@ MoveListElement >> initialize [
 	layoutMode := #compact.
 	moveElements := Dictionary new.
 	rigidMoveElements := Dictionary new.
+	markedPlies := Set new.
+	markBlock := [ :ply |  ].
 	self layout: BlLinearLayout vertical.
 	self constraintsDo: [ :c |
 			c horizontal matchParent.
@@ -121,7 +125,7 @@ MoveListElement >> initialize [
 
 { #category : 'initialization' }
 MoveListElement >> initializeShortcuts [
-	"Arrow keys step through the moves. Clicking anywhere in the list (including on a move) gives it the keyboard focus"
+	"Arrow keys step through the moves; Enter or Space asks to mark the selected one. Clicking anywhere in the list (including on a move) gives it the keyboard focus"
 
 	self addShortcut: (BlShortcutWithAction new
 			 combination: BlKeyCombination arrowRight;
@@ -129,6 +133,14 @@ MoveListElement >> initializeShortcuts [
 	self addShortcut: (BlShortcutWithAction new
 			 combination: BlKeyCombination arrowLeft;
 			 action: [ self selectPreviousMove ]).
+	{
+		BlKeyCombination return.
+		BlKeyCombination space } do: [ :each |
+			self addShortcut: (BlShortcutWithAction new
+					 combination: each;
+					 action: [
+						 selectedMoveIndex > 0 ifTrue: [
+								 markBlock value: selectedMoveIndex ] ]) ].
 	self
 		addEventHandlerOn: BlClickEvent
 		do: [ :event | self requestFocus ]
@@ -140,11 +152,29 @@ MoveListElement >> layoutMode [
 	^ layoutMode
 ]
 
+{ #category : 'accessing' }
+MoveListElement >> markedPlies: someIntegers [
+	"Show a * before the marked moves"
+
+	markedPlies := someIntegers asSet.
+	game ifNotNil: [ self rebuildMoves ]
+]
+
+{ #category : 'accessing' }
+MoveListElement >> moveTexts [
+	"The texts of the moves, in order (for tests)"
+
+	^ (1 to: moveElements size) collect: [ :each |
+		  (moveElements at: each) text asString ]
+]
+
 { #category : 'building' }
 MoveListElement >> newMoveElementFor: aMove at: anIndex [
 
 	^ BlTextElement new
-		  text: aMove san asRopedText;
+		  text: ((markedPlies includes: anIndex)
+				   ifTrue: [ '*' , aMove san ]
+				   ifFalse: [ aMove san ]) asRopedText;
 		  margin: (BlInsets all: 4);
 		  padding: (BlInsets all: 2);
 		  addEventHandlerOn: BlClickEvent
@@ -207,6 +237,12 @@ MoveListElement >> selectedMoveIndex [
 	^ selectedMoveIndex
 ]
 
+{ #category : 'selection' }
+MoveListElement >> selectedPly [
+
+	^ selectedMoveIndex
+]
+
 { #category : 'actions' }
 MoveListElement >> toggleLayout [
 
@@ -220,6 +256,13 @@ MoveListElement >> toggleLayout [
 	self applyLayout.
 	self highlightSelected.
 	^ self
+]
+
+{ #category : 'accessing' }
+MoveListElement >> whenMarkRequestedDo: aBlock [
+	"aBlock receives the selected ply when Enter or Space is pressed"
+
+	markBlock := aBlock
 ]
 
 { #category : 'selection' }

@@ -82,13 +82,20 @@ SettingsElement >> build [
 		addChild: (widgets
 				 section: 'Games'
 				 help:
-				 'How many games Load more downloads from each site at a time. Refresh always downloads every newer game.'
-				 rows: { (self
-						  numberRow: 'Games per Load more'
-						  key: 'gamesPerLoad'
-						  from: 10
-						  to: 100
-						  by: 10) });
+				 'How many games Load more downloads from each site at a time, and how often new games are looked for while the app is open (they are also looked for when it opens). Refresh always downloads every newer game.'
+				 rows: {
+						 (self
+							  numberRow: 'Games per Load more'
+							  key: 'gamesPerLoad'
+							  from: 10
+							  to: 100
+							  by: 10).
+						 (self
+							  numberRow: 'Check for new games every (minutes)'
+							  key: 'gamesCheckMinutes'
+							  from: 5
+							  to: 120
+							  by: 5) });
 		addChild: (widgets
 				 section: 'Appearance'
 				 help:

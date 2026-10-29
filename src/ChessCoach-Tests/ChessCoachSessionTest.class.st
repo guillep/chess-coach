@@ -399,6 +399,22 @@ ChessCoachSessionTest >> testStartsLoggedOutWithNoGames [
 ]
 
 { #category : 'tests' }
+ChessCoachSessionTest >> testTheGamesCheckIntervalIsASetting [
+
+	session settings at: 'gamesCheckMinutes' put: 10.
+	session startScheduledChecks.
+	self
+		assert: session scheduler intervals asArray
+		equals: { 10 minutes }.
+	session settings at: 'gamesCheckMinutes' put: 45.
+	self
+		assert: session scheduler intervals asArray
+		equals: { 45 minutes }.
+	self assert: session scheduler isRunning.
+	session shutDown
+]
+
+{ #category : 'tests' }
 ChessCoachSessionTest >> testWithoutStockfishMomentsComeFromMarksAndClocks [
 
 	| entry engine problems moments |

@@ -740,9 +740,15 @@ ChessCoachSession >> saveReviewFile: aCoachReview [
 		writeStreamDo: [ :stream | stream nextPutAll: aCoachReview asJSON ]
 ]
 
+{ #category : 'running' }
+ChessCoachSession >> scheduler [
+
+	^ scheduler
+]
+
 { #category : 'settings' }
 ChessCoachSession >> settingChanged: aKey [
-	"Apply a changed setting to the engines and the classifier already created, then announce it. Stored analyses are kept."
+	"Apply a changed setting to the engines, the classifier and the scheduled checks already running, then announce it. Stored analyses are kept."
 
 	(#( 'depth' 'multiPV' 'stockfishPath' ) includes: aKey) ifTrue: [
 			{
@@ -752,6 +758,9 @@ ChessCoachSession >> settingChanged: aKey [
 			self classifier client
 				baseUrl: self settings ollamaUrl;
 				model: self settings ollamaModel ].
+	(aKey = 'gamesCheckMinutes' and: [
+		 scheduler notNil and: [ scheduler isRunning ] ]) ifTrue: [
+		self startScheduledChecks ].
 	announcer announce: (ChessCoachSettingsChanged new
 			 key: aKey;
 			 yourself)
@@ -779,11 +788,14 @@ ChessCoachSession >> shutDown [
 
 { #category : 'running' }
 ChessCoachSession >> startScheduledChecks [
-	"Check for new games now and every 30 minutes, until shutDown. Unexpected errors go to errors.log"
+	"Check for new games now and every so many minutes (a setting), until shutDown. Unexpected errors go to errors.log"
 
+	scheduler ifNotNil: [ scheduler stop ].
 	scheduler := ChessCoachScheduler new.
 	scheduler onErrorDo: [ :error | self logError: error ].
-	scheduler every: 30 minutes do: [ self checkForNewGames ].
+	scheduler
+		every: self settings gamesCheckMinutes minutes
+		do: [ self checkForNewGames ].
 	scheduler start
 ]
 

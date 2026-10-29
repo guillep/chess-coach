@@ -21,6 +21,7 @@ ChessCoachSettings class >> defaults [
 		  at: 'pieceSet' put: 'Meridian';
 		  at: 'boardTheme' put: 'Brown';
 		  at: 'gamesPerLoad' put: 20;
+		  at: 'gamesCheckMinutes' put: 30;
 		  at: 'stockfishPath' put: '/opt/homebrew/bin/stockfish';
 		  at: 'depth' put: 18;
 		  at: 'multiPV' put: 3;
@@ -78,6 +79,12 @@ ChessCoachSettings >> boardTheme [
 ChessCoachSettings >> depth [
 
 	^ self at: 'depth'
+]
+
+{ #category : 'accessing' }
+ChessCoachSettings >> gamesCheckMinutes [
+
+	^ self at: 'gamesCheckMinutes'
 ]
 
 { #category : 'accessing' }

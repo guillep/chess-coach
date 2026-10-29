@@ -32,6 +32,12 @@ ChessCoachScheduler >> initialize [
 	errorBlock := [ :error |  ]
 ]
 
+{ #category : 'accessing' }
+ChessCoachScheduler >> intervals [
+
+	^ tasks collect: [ :task | task first ]
+]
+
 { #category : 'testing' }
 ChessCoachScheduler >> isRunning [
 

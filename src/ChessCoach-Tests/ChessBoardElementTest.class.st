@@ -80,3 +80,22 @@ ChessBoardElementTest >> testSetStateProgrammatically [
 		(ChessPosition fromFEN: '8/8/8/8/4P3/8/8/8 w - - 0 1').
 	self assert: board pieceElements size equals: 1
 ]
+
+{ #category : 'tests' }
+ChessBoardElementTest >> testTheme [
+
+	| board |
+	board := ChessBoardElement new.
+	self assert: board theme equals: 'Brown'.
+	board theme: 'Green'.
+	self assert: board theme equals: 'Green'.
+	"The squares are the first children, from a8; the 57th is a1, a dark square"
+	self
+		assert: (board children at: 57) background paint color
+		equals: (Color fromHexString: '#769656').
+	self
+		assert: (board children at: 64) background paint color
+		equals: (Color fromHexString: '#eeeed2').
+	board theme: 'Unknown'.
+	self assert: board theme equals: 'Brown'
+]

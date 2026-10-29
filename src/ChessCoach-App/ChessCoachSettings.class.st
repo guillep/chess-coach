@@ -18,6 +18,7 @@ ChessCoachSettings class >> defaults [
 
 	^ Dictionary new
 		  at: 'pieceSet' put: 'Meridian';
+		  at: 'boardTheme' put: 'Brown';
 		  at: 'gamesPerLoad' put: 20;
 		  at: 'stockfishPath' put: '/opt/homebrew/bin/stockfish';
 		  at: 'depth' put: 18;
@@ -56,6 +57,13 @@ ChessCoachSettings >> at: aKey put: aValue [
 			stream nextPutAll: (STONJSON toStringPretty: values) ].
 	changedBlock value: aKey.
 	^ aValue
+]
+
+{ #category : 'accessing' }
+ChessCoachSettings >> boardTheme [
+	"The name of the board's colour theme (see ChessBoardElement class>>themes)"
+
+	^ self at: 'boardTheme'
 ]
 
 { #category : 'accessing' }

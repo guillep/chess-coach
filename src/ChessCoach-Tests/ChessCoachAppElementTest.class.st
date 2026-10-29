@@ -267,6 +267,9 @@ ChessCoachAppElementTest >> testSettingsPage [
 	self assert: session settings pieceSet equals: 'Livius'.
 	self assert:
 		(settings previewBoard pieceSet isKindOf: LiviusPieceSet).
+	self click: (settings buttonLabeled: 'Blue').
+	self assert: session settings boardTheme equals: 'Blue'.
+	self assert: settings previewBoard theme equals: 'Blue'.
 	settings chessComField text: 'nobody'.
 	self click: (settings buttonLabeled: 'Validate').
 	self assert:

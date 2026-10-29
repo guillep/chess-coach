@@ -88,12 +88,19 @@ ChessCoachAppElement >> analysisStateChangedOf: aGameIdOrNil [
 
 { #category : 'settings' }
 ChessCoachAppElement >> applyPieceSet [
-	"Every open board uses the piece set of the settings"
+	"Every open board uses the piece set and the colour theme of the settings"
 
-	| pieceSet |
+	| pieceSet theme |
 	pieceSet := ChessPieceSet named: session settings pieceSet.
-	gameView ifNotNil: [ gameView board pieceSet: pieceSet ].
-	coach ifNotNil: [ coach board pieceSet: pieceSet ]
+	theme := session settings boardTheme.
+	gameView ifNotNil: [
+			gameView board
+				pieceSet: pieceSet;
+				theme: theme ].
+	coach ifNotNil: [
+			coach board
+				pieceSet: pieceSet;
+				theme: theme ]
 ]
 
 { #category : 'accessing' }
@@ -436,8 +443,7 @@ ChessCoachAppElement >> openReview: aCoachReview of: aGameIndexEntry [
 			queue prioritise: aGameIndexEntry ].
 	coach := CoachElement new.
 	coach backgroundRunner: backgroundRunner.
-	coach board pieceSet:
-		(ChessPieceSet named: session settings pieceSet).
+	self applyPieceSet.
 	coach session: session entry: aGameIndexEntry review: aCoachReview.
 	coach whenExitDo: [ self exitCoach ].
 	self showInPane: coach.
@@ -533,8 +539,7 @@ ChessCoachAppElement >> selectedGameChanged [
 	entry := self selectedEntry ifNil: [ ^ self ].
 	coach := nil.
 	gameView := GameReviewsElement new.
-	gameView board pieceSet:
-		(ChessPieceSet named: session settings pieceSet).
+	self applyPieceSet.
 	gameView session: session entry: entry.
 	gameView whenOpenDo: [ :review | self openReview: review of: entry ].
 	self showInPane: gameView
@@ -560,7 +565,7 @@ ChessCoachAppElement >> session: aChessCoachSession [
 	session announcer
 		when: ChessCoachSettingsChanged
 		do: [ :announcement |
-				announcement key = 'pieceSet' ifTrue: [
+				(#( 'pieceSet' 'boardTheme' ) includes: announcement key) ifTrue: [
 					self enqueueTask:
 						(BlTaskAction new action: [ self applyPieceSet ]) ] ]
 		for: self.

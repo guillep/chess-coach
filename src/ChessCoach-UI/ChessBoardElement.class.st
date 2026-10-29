@@ -15,12 +15,26 @@ Class {
 		'pressedSquare',
 		'selectedSquare',
 		'moveBlock',
-		'coordinateLabels'
+		'coordinateLabels',
+		'theme'
 	],
 	#category : 'ChessCoach-UI-Board',
 	#package : 'ChessCoach-UI',
 	#tag : 'Board'
 }
+
+{ #category : 'themes' }
+ChessBoardElement class >> themes [
+	"Board colour themes by name: the light and the dark square colours, as hex strings"
+
+	^ OrderedDictionary new
+		  at: 'Brown' put: #( '#f0d9b5' '#b58863' );
+		  at: 'Green' put: #( '#eeeed2' '#769656' );
+		  at: 'Blue' put: #( '#dee3e6' '#8ca2ad' );
+		  at: 'Grey' put: #( '#e6e6e6' '#a8a8a8' );
+		  at: 'Purple' put: #( '#e8e0f0' '#9a7fb5' );
+		  yourself
+]
 
 { #category : 'accessing' }
 ChessBoardElement >> arrows [
@@ -51,34 +65,26 @@ ChessBoardElement >> buildArrowLayer [
 { #category : 'initialization' }
 ChessBoardElement >> buildBoard [
 
-	| light dark |
-	light := Color fromHexString: '#f0d9b5'.
-	dark := Color fromHexString: '#b58863'.
 	self layout:
 		(BlSquaredLayout on: (BlGridLayout horizontal columnCount: 8))
 			beTight.
-	0 to: 7 do: [ :displayRank |
-			0 to: 7 do: [ :file |
-					| square isLight rank |
-					rank := 7 - displayRank.
-					isLight := (file + rank) even.
-					square := BlElement new
-						          layout: BlFrameLayout new;
-						          background: (isLight
-								           ifTrue: [ light ]
-								           ifFalse: [ dark ]);
-						          constraintsDo: [ :c |
-								          c horizontal matchParent.
-								          c vertical matchParent ];
-						          yourself.
-					square
-						addEventHandlerOn: BlMouseDownEvent
-						do: [ :event | self pressedOn: (self squareNameOf: square) ].
-					square
-						addEventHandlerOn: BlMouseUpEvent
-						do: [ :event | self releasedOn: (self squareNameOf: square) ].
-					self addChild: square.
-					squares add: square ] ]
+	64 timesRepeat: [
+			| square |
+			square := BlElement new
+				          layout: BlFrameLayout new;
+				          constraintsDo: [ :c |
+						          c horizontal matchParent.
+						          c vertical matchParent ];
+				          yourself.
+			square
+				addEventHandlerOn: BlMouseDownEvent
+				do: [ :event | self pressedOn: (self squareNameOf: square) ].
+			square
+				addEventHandlerOn: BlMouseUpEvent
+				do: [ :event | self releasedOn: (self squareNameOf: square) ].
+			self addChild: square.
+			squares add: square ].
+	self theme: 'Brown'
 ]
 
 { #category : 'drawing' }
@@ -370,6 +376,32 @@ ChessBoardElement >> squareNameAt: anIndex [
 ChessBoardElement >> squareNameOf: aSquareElement [
 
 	^ self squareNameAt: (squares indexOf: aSquareElement)
+]
+
+{ #category : 'accessing' }
+ChessBoardElement >> theme [
+
+	^ theme
+]
+
+{ #category : 'accessing' }
+ChessBoardElement >> theme: aThemeName [
+	"Paint the squares with the colours of one of the class-side themes; an unknown name falls back to Brown. a1 is dark, from either side."
+
+	| colors light dark |
+	theme := (self class themes includesKey: aThemeName)
+		         ifTrue: [ aThemeName ]
+		         ifFalse: [ 'Brown' ].
+	colors := self class themes at: theme.
+	light := Color fromHexString: colors first.
+	dark := Color fromHexString: colors second.
+	squares doWithIndex: [ :square :index |
+			| file rank |
+			file := index - 1 \\ 8.
+			rank := 7 - (index - 1 // 8).
+			square background: ((file + rank) odd
+					 ifTrue: [ light ]
+					 ifFalse: [ dark ]) ]
 ]
 
 { #category : 'input' }

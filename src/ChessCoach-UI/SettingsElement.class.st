@@ -23,7 +23,8 @@ Class {
 		'multiPVNote',
 		'setupBlock',
 		'lichessField',
-		'lichessUserStatus'
+		'lichessUserStatus',
+		'themeButtons'
 	],
 	#category : 'ChessCoach-UI-App',
 	#package : 'ChessCoach-UI',
@@ -219,6 +220,7 @@ SettingsElement >> initialize [
 	setupBlock := [ ].
 	numberLabels := Dictionary new.
 	pieceSetButtons := Dictionary new.
+	themeButtons := Dictionary new.
 	self layout: BlLinearLayout vertical.
 	self matchParent
 ]
@@ -369,16 +371,18 @@ SettingsElement >> ollamaRow [
 
 { #category : 'building' }
 SettingsElement >> pieceSetRow [
+	"The piece-set and colour-theme choices on the left, a large preview board on the right"
 
-	| buttons |
+	| pieceSets themes |
 	previewBoard := ChessBoardElement new
-		                extent: 160 @ 160;
+		                extent: 280 @ 280;
 		                chessPosition: ChessPosition initial;
 		                yourself.
-	buttons := ToElement new
-		           layout: (BlLinearLayout vertical cellSpacing: 4);
-		           fitContent;
-		           yourself.
+	pieceSets := ToElement new
+		             layout: (BlLinearLayout vertical cellSpacing: 4);
+		             fitContent;
+		             addChild: (ToLabel text: 'Pieces');
+		             yourself.
 	ChessPieceSet byName keysDo: [ :name |
 			| button |
 			button := ToButton new
@@ -387,9 +391,24 @@ SettingsElement >> pieceSetRow [
 						          self updatePieceSet ];
 				          yourself.
 			pieceSetButtons at: name put: button.
-			buttons addChild: button ].
+			pieceSets addChild: button ].
+	themes := ToElement new
+		          layout: (BlLinearLayout vertical cellSpacing: 4);
+		          fitContent;
+		          addChild: (ToLabel text: 'Colours');
+		          yourself.
+	ChessBoardElement themes keysDo: [ :name |
+			| button |
+			button := ToButton new
+				          clickAction: [
+						          session settings at: 'boardTheme' put: name.
+						          self updatePieceSet ];
+				          yourself.
+			themeButtons at: name put: button.
+			themes addChild: button ].
 	^ self row: {
-			  buttons.
+			  pieceSets.
+			  themes.
 			  previewBoard }
 ]
 
@@ -599,13 +618,19 @@ SettingsElement >> updateNumbers [
 
 { #category : 'updating' }
 SettingsElement >> updatePieceSet [
+	"Bracket the chosen piece set and colour theme, and show them on the preview board"
 
 	pieceSetButtons keysAndValuesDo: [ :name :button |
 			button labelText: (name = session settings pieceSet
 					 ifTrue: [ '[' , name , ']' ]
 					 ifFalse: [ name ]) ].
-	previewBoard pieceSet:
-		(ChessPieceSet named: session settings pieceSet)
+	themeButtons keysAndValuesDo: [ :name :button |
+			button labelText: (name = session settings boardTheme
+					 ifTrue: [ '[' , name , ']' ]
+					 ifFalse: [ name ]) ].
+	previewBoard
+		pieceSet: (ChessPieceSet named: session settings pieceSet);
+		theme: session settings boardTheme
 ]
 
 { #category : 'actions' }

@@ -127,11 +127,13 @@ CoachReview >> asJSON [
 
 { #category : 'private - questions' }
 CoachReview >> askAboutCandidates [
-	"Evaluate my candidates with the engine and ask about good moves I missed, bad candidates and better alternatives. The played move's win % comes from the stored analysis, so the engine only runs for my other candidates. Without Stockfish there is nothing to compare with."
+	"Evaluate my candidates with the engine and ask about good moves I didn't consider and about a better candidate I discarded. Bad candidates I discarded were discarded rightly: no question. Only asked when the moment asked for candidates (a bad move). The played move's win % comes from the stored analysis, so the engine only runs for my other candidates. Without Stockfish there is nothing to compare with."
 
 	| moment before played others best playedWin questions better |
 	self hasEngine ifFalse: [ ^ self ].
 	moment := self currentMoment.
+	(moment answers anySatisfy: [ :each |
+		 each question kind = #candidates ]) ifFalse: [ ^ self ].
 	before := analysis atPly: moment ply - 1.
 	played := game uciMoves at: moment ply.
 	others := ((moment answerTo: #candidates) moves reject: [ :each |
@@ -162,22 +164,14 @@ CoachReview >> askAboutCandidates [
 							 'You didn''t consider ' , (before sanOf: line firstMove)
 							 , '. Why?'
 							 move: line firstMove) ] ].
-	moment candidateWinPercents keysAndValuesDo: [ :move :win |
-			(move ~= played and: [ win <= (best - 10) ]) ifTrue: [
-					questions add: (CoachQuestion
-							 kind: #whyBadCandidate
-							 text:
-							 (before sanOf: move)
-							 , ' was a bad candidate. Why did it look good?'
-							 move: move) ] ].
 	better := (moment candidateWinPercents associations reject: [ :each |
 		           each key = played ]) detectMax: [ :each | each value ].
 	(better notNil and: [ better value > playedWin ]) ifTrue: [
 			questions add: (CoachQuestion
 					 kind: #whyNotBetter
-					 text: 'You also considered ' , (before sanOf: better key)
-						 , ', which was better. Why did you choose '
-						 , (before sanOf: played) , '?'
+					 text: 'You discarded ' , (before sanOf: better key)
+						 , ', which was better than ' , (before sanOf: played)
+						 , '. Why did you discard it?'
 					 move: better key) ].
 	moment ask: questions
 ]
@@ -514,17 +508,27 @@ CoachReview >> number: anInteger [
 
 { #category : 'private - questions' }
 CoachReview >> openingQuestionsFor: aMoment [
+	"Candidates are the moves I considered before calculating; the bad ones I discarded were discarded rightly. So only a bad move asks for them, to find a better move I discarded wrongly. A good move I thought long about, or marked, only asks why and what I expected"
 
 	| played |
 	played := (game moves at: aMoment ply) san.
 	(aMoment kinds includesAny:
-		 #( #inaccuracy #mistake #blunder #onlyMoveMissed #longThink
-		    #marked )) ifTrue: [
+		 #( #inaccuracy #mistake #blunder #onlyMoveMissed )) ifTrue: [
 			^ {
 				  (CoachQuestion
 					   kind: #candidates
 					   text:
-					   'Which candidate moves did you consider? Mark them on the board.').
+					   'Your move was bad. Which other candidate moves did you evaluate and discard here? Mark them on the board.').
+				  (CoachQuestion
+					   kind: #why
+					   text: 'Why did you play ' , played , '?').
+				  (CoachQuestion
+					   kind: #expectedReply
+					   text:
+					   'After ' , played
+					   , ', what did you expect your opponent to play?') } ].
+	(aMoment kinds includesAny: #( #longThink #marked )) ifTrue: [
+			^ {
 				  (CoachQuestion
 					   kind: #why
 					   text: 'Why did you play ' , played , '?').

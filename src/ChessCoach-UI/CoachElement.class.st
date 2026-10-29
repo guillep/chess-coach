@@ -998,7 +998,7 @@ CoachElement >> questionTitle: aCoachQuestion [
 
 { #category : 'private' }
 CoachElement >> quickAnswersFor: aCoachQuestion [
-	"Answers that fit the question: why I played a move, why I missed another, or what I saw"
+	"Answers that fit the question: why I played a move, why I missed or discarded another, or what I saw"
 
 	| kind |
 	kind := aCoachQuestion kind.
@@ -1006,9 +1006,9 @@ CoachElement >> quickAnswersFor: aCoachQuestion [
 			^ #( 'I didn''t see it' 'I saw it but thought it was worse'
 			     'I saw it but miscalculated it'
 			     'No time' ) ].
-	kind = #whyBadCandidate ifTrue: [
-			^ #( 'I miscalculated it' 'I missed the reply' 'I didn''t check it'
-			     'No time' ) ].
+	kind = #whyNotBetter ifTrue: [
+			^ #( 'I miscalculated it' 'I missed a resource in that line'
+			     'I thought my move was better' 'No time' ) ].
 	kind = #whatDidYouSee ifTrue: [
 			^ #( 'I calculated the line' 'It was the only move that didn''t lose'
 			     'Intuition' ) ].

@@ -154,6 +154,8 @@ CoachReviewTest >> testDialogue [
 	moment := review moments second.
 	review start: moment.
 	self assert: review currentQuestion kind equals: #candidates.
+	self assert:
+		(review currentQuestion text beginsWith: 'Your move was bad.').
 	review answerMoves: #( 'f3g5' 'd2d3' ).
 	self
 		assert: review currentQuestion text
@@ -174,7 +176,7 @@ CoachReviewTest >> testDialogue [
 	self
 		assert: moment pending last text
 		equals:
-		'You also considered d3, which was better. Why did you choose Ng5?'.
+		'You discarded d3, which was better than Ng5. Why did you discard it?'.
 	3 timesRepeat: [ review answerText: 'I did not see it' ].
 	self assert: moment isReviewed.
 	self assert: moment isClassifying.
@@ -193,6 +195,28 @@ CoachReviewTest >> testDialogue [
 	self assert: review currentMoment isNil.
 	self assert: (review nextMomentAfter: 7 passing: #all) isNil.
 	self assert: (review nextMomentAfter: 0 passing: #all) ply equals: 3
+]
+
+{ #category : 'tests' }
+CoachReviewTest >> testDiscardedBadCandidatesAreNotQuestioned [
+	"Candidates are considered before calculating: a bad one I discarded was discarded rightly. Only moves I missed and a better move I discarded are asked about"
+
+	| review moment |
+	review := self newReview.
+	moment := review moments second.
+	review start: moment.
+	review answerMoves: #( 'f3g5' 'b1a3' 'd2d3' ).
+	review answerText: 'I wanted to attack f7'.
+	review answerMoves: #( 'h7h6' ).
+	self assert:
+		((moment pending collect: [ :each | each kind ]) asSet includesAll:
+			 #( #whyNotConsidered #whyNotBetter )).
+	self assert: ((moment pending collect: [ :each | each kind ]) asSet
+			 copyWithoutAll: #( #whyNotConsidered #whyNotBetter )) isEmpty.
+	self
+		assert:
+		(moment pending count: [ :each | each kind = #whyNotBetter ])
+		equals: 1
 ]
 
 { #category : 'tests' }
@@ -480,7 +504,9 @@ CoachReviewTest >> testWithoutStockfish [
 	self deny: review hasEngine.
 	moment := review moments first.
 	review start: moment.
-	review answerMoves: #( 'f3g5' ).
+	self
+		deny: review currentQuestion kind = #candidates
+		description: 'a marked move is not known to be bad: no candidates'.
 	review answerText: 'attack'.
 	review answerMoves: #( 'h7h6' ).
 	self

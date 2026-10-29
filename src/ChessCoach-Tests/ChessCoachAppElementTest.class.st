@@ -46,10 +46,12 @@ ChessCoachAppElementTest >> scripterOn: anAppElement [
 
 { #category : 'running' }
 ChessCoachAppElementTest >> setUp [
+	"Setup is marked done: the wizard has its own test"
 
 	super setUp.
 	api := LichessAPIClientStub withGames: 25.
 	session := api newSessionOn: FileSystem memory root.
+	session settings at: 'setupDone' put: true.
 	app := self newAppElement.
 	scripter := self scripterOn: app
 ]
@@ -265,6 +267,35 @@ ChessCoachAppElementTest >> testSettingsPage [
 	self assert: session settings ollamaModel equals: 'llama3.1:8b'.
 	self assert:
 		(settings texts includes: 'Validated only with qwen2.5:7b-instruct')
+]
+
+{ #category : 'tests' }
+ChessCoachAppElementTest >> testSetupWizard [
+
+	| wizard |
+	session settings at: 'setupDone' put: false.
+	self assert: session isFirstRun.
+	wizard := app showWizard.
+	scripter pulse.
+	self deny: app navigation isAttachedToSceneGraph.
+	self assert: wizard currentStep equals: #welcome.
+	wizard next.
+	self assert: wizard currentStep equals: #accounts.
+	self assert: (wizard texts includes: 'Login').
+	session login.
+	wizard next.
+	self assert: (wizard texts includes:
+			 'If Test fails, install it with: brew install stockfish').
+	wizard next.
+	self assert: wizard currentStep equals: #ollama.
+	wizard next.
+	self assert: wizard currentStep equals: #done.
+	wizard finish.
+	scripter pulse.
+	self assert: (session settings at: 'setupDone').
+	self assert: app navigation isAttachedToSceneGraph.
+	self assert: app gameList dataAccessor size equals: 20.
+	self deny: session isFirstRun
 ]
 
 { #category : 'tests' }

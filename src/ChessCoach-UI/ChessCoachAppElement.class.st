@@ -534,7 +534,7 @@ ChessCoachAppElement >> selectedGameChanged [
 
 { #category : 'accessing' }
 ChessCoachAppElement >> session: aChessCoachSession [
-	"Connect to the session and open on Stats when there are reviewed mistakes, on Games otherwise"
+	"Connect to the session. The first time, run the setup wizard; otherwise open on Stats when there are reviewed mistakes, on Games otherwise."
 
 	session := aChessCoachSession.
 	session announcer
@@ -558,10 +558,12 @@ ChessCoachAppElement >> session: aChessCoachSession [
 		for: self.
 	settingsElement backgroundRunner: backgroundRunner.
 	settingsElement session: session.
+	settingsElement whenSetupRequestedDo: [ self showWizard ].
 	self updateFromSession.
 	self showPage: (session mistakeDatabase records
 			 ifEmpty: [ #Games ]
-			 ifNotEmpty: [ #Stats ])
+			 ifNotEmpty: [ #Stats ]).
+	session isFirstRun ifTrue: [ self showWizard ]
 ]
 
 { #category : 'accessing' }
@@ -602,6 +604,24 @@ ChessCoachAppElement >> showPage: aPageId [
 
 	navigation selecter selectIndex:
 		(navigation items asArray findFirst: [ :each | each id = aPageId ])
+]
+
+{ #category : 'navigation' }
+ChessCoachAppElement >> showWizard [
+	"The first-run setup replaces the pages until it is finished"
+
+	| wizard |
+	wizard := SetupWizardElement new.
+	wizard backgroundRunner: backgroundRunner.
+	wizard session: session.
+	wizard whenFinishedDo: [
+			wizard removeFromParent.
+			self addChildFirst: navigation.
+			self updateFromSession.
+			self showPage: #Games ].
+	navigation removeFromParent.
+	self addChildFirst: wizard.
+	^ wizard
 ]
 
 { #category : 'accessing' }

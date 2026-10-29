@@ -25,6 +25,7 @@ ChessCoachSettings class >> defaults [
 		  at: 'ollamaUrl' put: 'http://localhost:11434';
 		  at: 'ollamaModel' put: 'qwen2.5:7b-instruct';
 		  at: 'momentFilter' put: 'mistakes';
+		  at: 'setupDone' put: false;
 		  yourself
 ]
 

@@ -300,6 +300,13 @@ ChessCoachSession >> isAnalysed: aGameIndexEntry [
 	^ (self analysisFileFor: aGameIndexEntry) exists
 ]
 
+{ #category : 'settings' }
+ChessCoachSession >> isFirstRun [
+	"The setup wizard has never been finished and there are no games yet"
+
+	^ (self settings at: 'setupDone') not and: [ self games isEmpty ]
+]
+
 { #category : 'testing' }
 ChessCoachSession >> isLoggedIn [
 

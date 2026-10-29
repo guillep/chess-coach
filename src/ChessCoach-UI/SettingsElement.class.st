@@ -20,7 +20,8 @@ Class {
 		'ollamaField',
 		'modelsZone',
 		'llmStatus',
-		'multiPVNote'
+		'multiPVNote',
+		'setupBlock'
 	],
 	#category : 'ChessCoach-UI-App',
 	#package : 'ChessCoach-UI',
@@ -46,7 +47,12 @@ SettingsElement >> build [
 		           padding: (BlInsets all: 16);
 		           yourself.
 	content
-		addChild: (self heading: 'Settings');
+		addChild: (self row: {
+						 (self heading: 'Settings').
+						 (ToButton new
+							  labelText: 'Run setup again';
+							  clickAction: [ setupBlock value ];
+							  yourself) });
 		addChild: (self heading: 'Accounts');
 		addChild: self lichessRow;
 		addChild: self chessComRow;
@@ -75,7 +81,7 @@ SettingsElement >> build [
 				 by: 1);
 		addChild: (multiPVNote := ToLabel new);
 		addChild: (self note:
-					 'Changes apply to games analysed from now on; stored analyses are kept.');
+				 'Changes apply to games analysed from now on; stored analyses are kept.');
 		addChild: (self heading: 'Coach (local LLM)');
 		addChild: self ollamaRow;
 		addChild: (modelsZone := self row: #(  ));
@@ -180,6 +186,7 @@ SettingsElement >> initialize [
 	super initialize.
 	backgroundRunner := [ :aBlock |
 	                    aBlock forkAt: Processor userBackgroundPriority ].
+	setupBlock := [ ].
 	numberLabels := Dictionary new.
 	pieceSetButtons := Dictionary new.
 	self layout: BlLinearLayout vertical.
@@ -343,6 +350,41 @@ SettingsElement >> row: someElements [
 	^ row
 ]
 
+{ #category : 'building' }
+SettingsElement >> sectionElement: aSection [
+	"The rows of one section, with their state"
+
+	| content |
+	content := ToElement new
+		           layout: (BlLinearLayout vertical cellSpacing: 8);
+		           hMatchParent;
+		           vFitContent;
+		           yourself.
+	aSection = #accounts ifTrue: [
+			content
+				addChild: self lichessRow;
+				addChild: self chessComRow.
+			self updateAccounts ].
+	aSection = #stockfish ifTrue: [
+			content
+				addChild: self stockfishRow;
+				addChild:
+					(self note:
+							 'If Test fails, install it with: brew install stockfish') ].
+	aSection = #ollama ifTrue: [
+			content
+				addChild: self ollamaRow;
+				addChild: (modelsZone := self row: #(  ));
+				addChild: (llmStatus := ToLabel new
+						              beMultiLine;
+						              hMatchParent;
+						              yourself);
+				addChild: (self note:
+						 'If Ollama is missing: brew install ollama, then ollama pull qwen2.5:7b-instruct').
+			self updateModels: { session settings ollamaModel } ].
+	^ content
+]
+
 { #category : 'accessing' }
 SettingsElement >> session: aChessCoachSession [
 
@@ -354,6 +396,22 @@ SettingsElement >> session: aChessCoachSession [
 				(BlTaskAction new action: [ self updateAccounts ]) ]
 		for: self.
 	self build
+]
+
+{ #category : 'accessing' }
+SettingsElement >> session: aChessCoachSession section: aSection [
+	"Show only one section (#accounts, #stockfish or #ollama), as the setup wizard does"
+
+	session := aChessCoachSession.
+	aSection = #accounts ifTrue: [
+			session announcer
+				when: ChessCoachSessionChanged
+				do: [ :announcement |
+					self enqueueTask:
+						(BlTaskAction new action: [ self updateAccounts ]) ]
+				for: self ].
+	self removeChildren.
+	self addChild: (self sectionElement: aSection)
 ]
 
 { #category : 'building' }
@@ -498,4 +556,11 @@ SettingsElement >> validateChessCom [
 						 ifTrue: [ 'OK: ' , name ]
 						 ifFalse: [ 'Not found: no such Chess.com player' ]) ]
 		showingErrorsIn: chessComStatus
+]
+
+{ #category : 'accessing' }
+SettingsElement >> whenSetupRequestedDo: aBlock [
+	"aBlock runs when Run setup again is pressed"
+
+	setupBlock := aBlock
 ]

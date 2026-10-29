@@ -22,7 +22,10 @@ Class {
 		'navigation',
 		'gamesPage',
 		'settingsElement',
-		'dependencyLabel'
+		'dependencyLabel',
+		'listedGames',
+		'selectedIndex',
+		'rowsColumn'
 	],
 	#category : 'ChessCoach-UI-App',
 	#package : 'ChessCoach-UI',
@@ -154,6 +157,12 @@ ChessCoachAppElement >> gameList [
 ]
 
 { #category : 'accessing' }
+ChessCoachAppElement >> gameRows [
+
+	^ rowsColumn children
+]
+
+{ #category : 'accessing' }
 ChessCoachAppElement >> gameView [
 	"The view of the selected game, or nil before one is selected"
 
@@ -162,8 +171,9 @@ ChessCoachAppElement >> gameView [
 
 { #category : 'private' }
 ChessCoachAppElement >> games [
+	"The listed games, in list order"
 
-	^ gameList dataAccessor asArray
+	^ listedGames ifNil: [ #(  ) ]
 ]
 
 { #category : 'accessing' }
@@ -230,7 +240,8 @@ ChessCoachAppElement >> newDashboard [
 
 { #category : 'initialization' }
 ChessCoachAppElement >> newGamesPage [
-	"A title, a bar with the speed filters, Refresh and Load more; below it the game list and the selected game or the coach"
+	"A title, a bar with the speed filters, Refresh and Load more; below it the game list and the selected game or the coach.
+	The list is a plain scrollable column of rows. Workaround: Toplo's ToListElement recycles nodes during layout and skin installation, which left nodes without a space (logged as an upstream candidate)."
 
 	| title bar body |
 	title := ChessCoachWidgets
@@ -265,14 +276,14 @@ ChessCoachAppElement >> newGamesPage [
 		       addChild: refreshButton;
 		       addChild: loadMoreButton;
 		       yourself.
-	gameList := ToListElement new
-		            useScrollbar: true;
-		            vMatchParent;
+	rowsColumn := ToElement new
+		              layout: BlLinearLayout vertical;
+		              hMatchParent;
+		              vFitContent;
+		              yourself.
+	gameList := rowsColumn asScrollableElement
 		            width: 280;
-		            nodeBuilder: [ :node :entry :holder |
-			            node addChild: (self rowElementFor: entry) ];
-		            addEventHandlerOn: ToListPrimarySelectionChangedEvent
-		            do: [ :event | self selectedGameChanged ];
+		            vMatchParent;
 		            yourself.
 	analysisPane := ToElement new
 		                layout: BlFrameLayout new;
@@ -292,38 +303,6 @@ ChessCoachAppElement >> newGamesPage [
 		  addChild: bar;
 		  addChild: body;
 		  yourself
-]
-
-{ #category : 'initialization' }
-ChessCoachAppElement >> newGamesPane [
-
-	| pane |
-	pane := ToElement new
-		        layout: BlLinearLayout vertical;
-		        vMatchParent;
-		        width: 280;
-		        yourself.
-	gameList := ToListElement new
-		            useScrollbar: true;
-		            matchParent;
-		            nodeBuilder: [ :node :entry :holder |
-				            node addChild: (ToLabel new
-							             text: (self rowTextFor: entry);
-							             hMatchParent;
-							             yourself) ];
-		            addEventHandlerOn: ToListPrimarySelectionChangedEvent
-		            do: [ :event | self selectedGameChanged ];
-		            yourself.
-	loadMoreButton := ToButton new
-		                  labelText: 'Load more';
-		                  clickAction: [
-			                  self runInBackground: [ session loadMoreGames ] ];
-		                  yourself.
-	pane
-		addChild: self newSpeedBar;
-		addChild: gameList;
-		addChild: loadMoreButton.
-	^ pane
 ]
 
 { #category : 'initialization' }
@@ -457,6 +436,15 @@ ChessCoachAppElement >> pageButton: aPageId [
 	^ navigation items asArray detect: [ :each | each id = aPageId ]
 ]
 
+{ #category : 'updating' }
+ChessCoachAppElement >> rebuildRows [
+
+	rowsColumn removeChildren.
+	listedGames doWithIndex: [ :entry :index |
+		rowsColumn addChild: (self rowElementFor: entry at: index) ].
+	self updateRowSelection
+]
+
 { #category : 'accessing' }
 ChessCoachAppElement >> refreshButton [
 
@@ -464,15 +452,21 @@ ChessCoachAppElement >> refreshButton [
 ]
 
 { #category : 'private' }
-ChessCoachAppElement >> rowElementFor: aGameIndexEntry [
-	"Players, result and date. A plain Bloc text: a Toplo label inside a list node kept the selected text colour after deselection, which made rows unreadable."
+ChessCoachAppElement >> rowElementFor: aGameIndexEntry at: anIndex [
+	"Players, result and date; a click selects the game"
 
 	^ BlTextElement new
 		  text: (self rowTextFor: aGameIndexEntry) asRopedText;
-		  padding: (BlInsets top: 2 bottom: 2);
+		  padding: (BlInsets
+				   top: 4
+				   left: 6
+				   bottom: 4
+				   right: 6);
 		  constraintsDo: [ :c |
 				  c horizontal matchParent.
 				  c vertical fitContent ];
+		  addEventHandlerOn: BlClickEvent
+		  do: [ :event | self selectGameAt: anIndex ];
 		  yourself
 ]
 
@@ -512,14 +506,22 @@ ChessCoachAppElement >> runInBackground: aBlock [
 ]
 
 { #category : 'actions' }
+ChessCoachAppElement >> selectGameAt: anIndex [
+	"Select the listed game at anIndex and show it"
+
+	selectedIndex := anIndex.
+	self updateRowSelection.
+	self selectedGameChanged
+]
+
+{ #category : 'actions' }
 ChessCoachAppElement >> selectGameId: aGameId [
 	"Select the game in the list; answer whether it is listed"
 
 	| index |
 	index := self games findFirst: [ :each | each gameId = aGameId ].
 	index = 0 ifTrue: [ ^ false ].
-	gameList selecter selectIndex: index.
-	self selectedGameChanged.
+	self selectGameAt: index.
 	^ true
 ]
 
@@ -527,10 +529,9 @@ ChessCoachAppElement >> selectGameId: aGameId [
 ChessCoachAppElement >> selectedEntry [
 	"The index entry of the selected game, or nil"
 
-	| index |
-	index := gameList selectionModel firstIndex.
-	(index isNil or: [ index = 0 ]) ifTrue: [ ^ nil ].
-	^ gameList dataAccessor at: index
+	(selectedIndex isNil or: [ selectedIndex > self games size ])
+		ifTrue: [ ^ nil ].
+	^ self games at: selectedIndex
 ]
 
 { #category : 'updating' }
@@ -707,7 +708,9 @@ ChessCoachAppElement >> updateAnalysisStatus [
 
 { #category : 'updating' }
 ChessCoachAppElement >> updateFromSession [
+	"Reload the list, keeping the selected game selected when it is still listed"
 
+	| selectedId index |
 	refreshButton enabled: session canImport.
 	loadMoreButton enabled: session canImport.
 	session analysisQueue isRunning ifTrue: [
@@ -715,7 +718,21 @@ ChessCoachAppElement >> updateFromSession [
 	dashboard
 		database: session mistakeDatabase
 		times: session reviewTimes.
-	gameList dataAccessor removeAll.
-	gameList dataAccessor addAll: (session gamesWithSpeed: speedFilter).
+	selectedId := self selectedEntry ifNotNil: [ :entry | entry gameId ].
+	listedGames := (session gamesWithSpeed: speedFilter) asArray.
+	index := listedGames findFirst: [ :each | each gameId = selectedId ].
+	selectedIndex := index = 0
+		                 ifTrue: [ nil ]
+		                 ifFalse: [ index ].
+	self rebuildRows.
 	self updateAnalysisStatus
+]
+
+{ #category : 'updating' }
+ChessCoachAppElement >> updateRowSelection [
+
+	rowsColumn children doWithIndex: [ :row :index |
+			row background: (index = selectedIndex
+					 ifTrue: [ Color fromHexString: '#cfe2ff' ]
+					 ifFalse: [ Color transparent ]) ]
 ]

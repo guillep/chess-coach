@@ -115,9 +115,7 @@ ChessComImportTest >> testAppFiltersTheListBySpeed [
 	scripter element: app.
 	scripter space extent: 1200 @ 700.
 	scripter pulse.
-	ids := [
-	       app gameList dataAccessor asArray collect: [ :each |
-		       each gameId ] ].
+	ids := [ app games collect: [ :each | each gameId ] ].
 	self assert: ids value size equals: 3.
 	scripter testClick onChildFromBlock: [ :root |
 		app speedButtonFor: 'blitz' ].

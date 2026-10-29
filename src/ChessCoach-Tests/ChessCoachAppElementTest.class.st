@@ -57,6 +57,23 @@ ChessCoachAppElementTest >> setUp [
 ]
 
 { #category : 'tests' }
+ChessCoachAppElementTest >> testGamesListedWhileOnStatsShowLater [
+	"As at startup with reviews: the list is filled while the app is on Stats, then the Games page is opened"
+
+	app showPage: #Stats.
+	scripter pulse.
+	self click: app loginButton.
+	self click: app loadMoreButton.
+	scripter pulse.
+	app showPage: #Games.
+	scripter pulse.
+	app selectGameAt: 1.
+	scripter pulse.
+	self deny: scripter space hasLayoutError.
+	self assert: app gameView isAttachedToSceneGraph
+]
+
+{ #category : 'tests' }
 ChessCoachAppElementTest >> testLichessErrorIsShownInline [
 
 	self click: app loginButton.
@@ -87,9 +104,9 @@ ChessCoachAppElementTest >> testLoadMoreAddsRows [
 
 	self click: app loginButton.
 	self click: app loadMoreButton.
-	self assert: app gameList dataAccessor size equals: 20.
+	self assert: app games size equals: 20.
 	self
-		assert: (app rowTextFor: app gameList dataAccessor first)
+		assert: (app rowTextFor: app games first)
 		equals: 'alice – Stockfish level 3, 1-0, 1970-01-01'
 ]
 
@@ -121,7 +138,7 @@ ChessCoachAppElementTest >> testLogoutKeepsGamesListed [
 	self click: app loadMoreButton.
 	self click: app loginButton.
 	self assert: app loginButton labelText asString equals: 'Login'.
-	self assert: app gameList dataAccessor size equals: 20
+	self assert: app games size equals: 20
 ]
 
 { #category : 'tests' }
@@ -165,7 +182,7 @@ ChessCoachAppElementTest >> testNewAnalysisMarksThenReviewsAndIsListed [
 		         session: session
 		         analyser: (GameAnalyser engine: engine).
 	session analysisQueue: queue.
-	app gameList selecter selectIndex: 2.
+	app selectGameAt: 2.
 	scripter pulse.
 	app gameView newAnalysis.
 	scripter pulse.
@@ -173,7 +190,7 @@ ChessCoachAppElementTest >> testNewAnalysisMarksThenReviewsAndIsListed [
 	self assert: coach mode equals: #marking.
 	self
 		assert: queue pendingGameIds first
-		equals: app gameList dataAccessor second gameId.
+		equals: app games second gameId.
 	coach showPly: 1.
 	coach noteField text: 'felt wrong'.
 	coach markShown.
@@ -208,7 +225,7 @@ ChessCoachAppElementTest >> testRowsShowTheAnalysisState [
 	session analysisQueue: queue.
 	queue enqueueUnanalysed.
 	scripter pulse.
-	first := app gameList dataAccessor first.
+	first := app games first.
 	self
 		assert: (app analysisIconNameFor: first)
 		equals: 'outlined_hourglassempty'.
@@ -230,9 +247,10 @@ ChessCoachAppElementTest >> testSelectingARowOpensTheGameView [
 	| info |
 	self click: app loginButton.
 	self click: app loadMoreButton.
-	app gameList selecter selectIndex: 1.
 	scripter pulse.
+	self click: app gameRows first.
 	self assert: app gameView isAttachedToSceneGraph.
+	self assert: app selectedEntry == app games first.
 	self
 		assert: app gameView reviewsZone children first text asString
 		equals: 'No analysis yet.'.
@@ -320,7 +338,7 @@ ChessCoachAppElementTest >> testSetupWizard [
 	scripter pulse.
 	self assert: (session settings at: 'setupDone').
 	self assert: app navigation isAttachedToSceneGraph.
-	self assert: app gameList dataAccessor size equals: 20.
+	self assert: app games size equals: 20.
 	self deny: session isFirstRun
 ]
 
@@ -349,8 +367,29 @@ ChessCoachAppElementTest >> testStartsLoggedOut [
 
 	self assert: app loginButton labelText asString equals: 'Login'.
 	self assert: app loadMoreButton isDisabled.
-	self assert: app gameList dataAccessor isEmpty.
+	self assert: app games isEmpty.
 	self assert: app gameView isNil
+]
+
+{ #category : 'tests' }
+ChessCoachAppElementTest >> testSwitchingBackToGamesWithGamesListed [
+	"The list is reloaded while its page is hidden; the selection is kept and the page lays out again when it comes back"
+
+	self click: app loginButton.
+	self click: app loadMoreButton.
+	app selectGameAt: 3.
+	scripter pulse.
+	app showPage: #Stats.
+	scripter pulse.
+	app updateFromSession.
+	scripter pulse.
+	app showPage: #Games.
+	scripter pulse.
+	self assert: app selectedEntry == app games third.
+	app selectGameAt: 2.
+	scripter pulse.
+	self deny: scripter space hasLayoutError.
+	self assert: app gameView isAttachedToSceneGraph
 ]
 
 { #category : 'tests' }

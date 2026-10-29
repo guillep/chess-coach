@@ -467,6 +467,16 @@ ChessCoachSession >> reviewFilesOf: aGameId [
 ]
 
 { #category : 'coach' }
+ChessCoachSession >> reviewTimes [
+	"How long my reviews take, from every saved review"
+
+	^ ReviewTimes fromReviewDictionaries:
+		  ((importer fileStore baseDirectory / 'games' filesMatching:
+			    '*.review-*.json') collect: [ :file |
+			   STONJSON fromString: file contents ])
+]
+
+{ #category : 'coach' }
 ChessCoachSession >> reviewsFor: aGameIndexEntry [
 	"The game's coach reviews (games/<id>.review-<n>.json), oldest first. A review.json and marks.json from before reviews had numbers become review 1."
 

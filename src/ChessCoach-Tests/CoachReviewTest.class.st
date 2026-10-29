@@ -13,6 +13,12 @@ Class {
 }
 
 { #category : 'helpers' }
+CoachReviewTest >> analysisForTests [
+
+	^ analysis
+]
+
+{ #category : 'helpers' }
 CoachReviewTest >> answerFirstMoment: review [
 
 	review start: (review moments detect: [ :each | each ply = 7 ]).
@@ -34,23 +40,30 @@ CoachReviewTest >> line: aUCIMove whiteCentipawns: aNumber [
 ]
 
 { #category : 'helpers' }
+CoachReviewTest >> momentsForTests [
+	"Moments at ply 3 (only move found) and 7 (mistake)"
+
+	^ {
+		  (ChessMoment
+			   ply: 3
+			   color: #white
+			   kind: #onlyMoveFound
+			   source: #engine
+			   note: nil).
+		  (ChessMoment
+			   ply: 7
+			   color: #white
+			   kind: #mistake
+			   source: #engine
+			   note: nil) }
+]
+
+{ #category : 'helpers' }
 CoachReviewTest >> newReview [
 	"A review whose marking pass is done: moments at ply 3 (only move found) and 7 (mistake)"
 
 	^ self newReviewMarking
-		  finishMarkingWith: analysis moments: {
-				  (ChessMoment
-					   ply: 3
-					   color: #white
-					   kind: #onlyMoveFound
-					   source: #engine
-					   note: nil).
-				  (ChessMoment
-					   ply: 7
-					   color: #white
-					   kind: #mistake
-					   source: #engine
-					   note: nil) };
+		  finishMarkingWith: analysis moments: self momentsForTests;
 		  yourself
 ]
 

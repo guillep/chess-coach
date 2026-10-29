@@ -11,7 +11,8 @@ Class {
 		'detail',
 		'selectedTag',
 		'recordBlock',
-		'startBlock'
+		'startBlock',
+		'times'
 	],
 	#category : 'ChessCoach-UI-Coach',
 	#package : 'ChessCoach-UI',
@@ -76,10 +77,10 @@ MistakesDashboardElement >> buildEmptyState [
 				 beMultiLine;
 				 hMatchParent;
 				 text:
-					 'Select a game and press "Review with coach". The coach asks about the important moments of the game and keeps track of your mistakes here.';
+					 'Select a game and press "New analysis". You first mark the moves you want to talk about, then the coach asks about the important moments and keeps track of your mistakes here.';
 				 yourself);
 		addChild: (ToButton new
-				 labelText: 'Review my latest game';
+				 labelText: 'Open my latest game';
 				 clickAction: [ startBlock value ];
 				 yourself)
 ]
@@ -102,6 +103,29 @@ MistakesDashboardElement >> buildPhases [
 									  ((frequencies associations first: (frequencies size min: 3))
 										   collect: [ :each |
 										   each key , ' ×' , each value printString ]) ])) ]
+]
+
+{ #category : 'building' }
+MistakesDashboardElement >> buildTimes [
+
+	content addChild: (ToLabel text:
+			 'Per reviewed moment: ' , (self duration: times secondsPerMoment)
+			 , ' ('
+			 , (', ' join: (times secondsPerMomentKind associations asArray
+						   sort: [ :a :b | a key < b key ];
+						   collect: [ :each |
+							   each key , ' ' , (self duration: each value) ])) , ')').
+	content addChild: (ToLabel text: 'Per question: '
+			 , (', ' join: (times secondsPerQuestionKind associations asArray
+						   sort: [ :a :b | a key < b key ];
+						   collect: [ :each |
+							   each key , ' ' , (self duration: each value) ]))).
+	content addChild: (ToLabel text:
+			 'Marking pass: ' , (self duration: times markingSecondsPerGame)
+			 , ' per game, ' , (self duration: times markingSecondsPerPly)
+			 , ' per move').
+	content addChild: (ToLabel text: 'Time per moment (blocks of 10)  '
+			 , (self sparkline: (times secondsPerMomentInBlocksOf: 10)))
 ]
 
 { #category : 'building' }
@@ -144,9 +168,26 @@ MistakesDashboardElement >> database: aMistakeDatabase [
 ]
 
 { #category : 'accessing' }
+MistakesDashboardElement >> database: aMistakeDatabase times: aReviewTimes [
+
+	database := aMistakeDatabase.
+	times := aReviewTimes.
+	selectedTag := nil.
+	self rebuild
+]
+
+{ #category : 'accessing' }
 MistakesDashboardElement >> detail [
 
 	^ detail
+]
+
+{ #category : 'private' }
+MistakesDashboardElement >> duration: seconds [
+
+	seconds < 60 ifTrue: [ ^ seconds rounded printString , ' s' ].
+	^ (seconds // 60) printString , ' min '
+	  , (seconds \\ 60) rounded printString , ' s'
 ]
 
 { #category : 'initialization' }
@@ -189,6 +230,9 @@ MistakesDashboardElement >> rebuild [
 	content addChild:
 		(self title: 'Trend (blocks of 10 games, oldest first)').
 	self buildTrend.
+	(times notNil and: [ times reviewedMomentCount > 0 ]) ifTrue: [
+			content addChild: (self title: 'Time').
+			self buildTimes ].
 	selectedTag ifNotNil: [ self buildDetail ]
 ]
 

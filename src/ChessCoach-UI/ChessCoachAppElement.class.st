@@ -502,7 +502,9 @@ ChessCoachAppElement >> updateFromSession [
 				  session chessComUsername } reject: [ :each | each isNil ])).
 	session analysisQueue isRunning ifTrue: [
 		session analysisQueue enqueueUnanalysed ].
-	dashboard database: session mistakeDatabase.
+	dashboard
+		database: session mistakeDatabase
+		times: session reviewTimes.
 	gameList dataAccessor removeAll.
 	gameList dataAccessor addAll: (session gamesWithSpeed: speedFilter)
 ]

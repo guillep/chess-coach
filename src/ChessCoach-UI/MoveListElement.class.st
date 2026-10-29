@@ -46,6 +46,7 @@ MoveListElement >> applyLayout [
 
 { #category : 'initialization' }
 MoveListElement >> buildUI [
+	"Two layouts: rigid, a numbered grid (number, White's move, Black's move), and compact, a flow of moves"
 
 	| header |
 	self removeChildren.
@@ -54,7 +55,7 @@ MoveListElement >> buildUI [
 	header constraintsDo: [ :c |
 			c horizontal matchParent.
 			c vertical fitContent ].
-	toggleButton := BlTextElement new text: 'Rigid' asRopedText.
+	toggleButton := BlTextElement new text: 'Compact' asRopedText.
 	toggleButton constraintsDo: [ :c |
 			c horizontal fitContent.
 			c vertical fitContent ].
@@ -69,12 +70,12 @@ MoveListElement >> buildUI [
 	compactContainer layout: BlFlowLayout horizontal.
 	compactContainer constraintsDo: [ :c |
 			c horizontal matchParent.
-			c vertical matchParent ].
+			c vertical fitContent ].
 	rigidContainer := BlElement new.
-	rigidContainer layout: (BlGridLayout horizontal columnCount: 2).
+	rigidContainer layout: (BlGridLayout horizontal columnCount: 3).
 	rigidContainer constraintsDo: [ :c |
 			c horizontal matchParent.
-			c vertical matchParent ].
+			c vertical fitContent ].
 	self addChild: compactContainer.
 	self addChild: rigidContainer.
 	self applyLayout
@@ -110,7 +111,7 @@ MoveListElement >> initialize [
 	game := nil.
 	announcer := Announcer new.
 	selectedMoveIndex := 0.
-	layoutMode := #compact.
+	layoutMode := #rigid.
 	moveElements := Dictionary new.
 	rigidMoveElements := Dictionary new.
 	markedPlies := Set new.
@@ -164,8 +165,8 @@ MoveListElement >> markedPlies: someIntegers [
 MoveListElement >> moveTexts [
 	"The texts of the moves, in order (for tests)"
 
-	^ (1 to: moveElements size) collect: [ :each |
-		  (moveElements at: each) text asString ]
+	^ (1 to: rigidMoveElements size) collect: [ :each |
+		  (rigidMoveElements at: each) text asString ]
 ]
 
 { #category : 'building' }
@@ -197,6 +198,12 @@ MoveListElement >> rebuildMoves [
 					c vertical fitContent ].
 			compactContainer addChild: compact.
 			moveElements at: index put: compact.
+			index odd ifTrue: [
+					rigidContainer addChild: (BlTextElement new
+							 text: ((index + 1 // 2) printString , '.') asRopedText;
+							 margin: (BlInsets all: 4);
+							 padding: (BlInsets all: 2);
+							 yourself) ].
 			rigid := self newMoveElementFor: move at: index.
 			rigid constraintsDo: [ :c |
 					c horizontal matchParent.

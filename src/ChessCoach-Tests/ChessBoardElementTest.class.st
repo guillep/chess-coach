@@ -15,7 +15,7 @@ ChessBoardElementTest >> testMoveListTakesGameAndAnnounces [
 	list whenMoveSelectedDo: [ :ply | selectedPly := ply ].
 	list selectMoveAt: 1.
 	self assert: selectedPly equals: 1.
-	self assert: list layoutMode equals: #compact
+	self assert: list layoutMode equals: #rigid
 ]
 
 { #category : 'tests' }

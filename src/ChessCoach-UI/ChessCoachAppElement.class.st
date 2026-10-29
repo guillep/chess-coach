@@ -78,25 +78,10 @@ ChessCoachAppElement >> analysisLabel [
 	^ analysisLabel
 ]
 
-{ #category : 'private' }
-ChessCoachAppElement >> analysisMarkFor: aGameIndexEntry [
-	"The progress of the game being analysed, as a prefix"
-
-	| queue |
-	queue := session analysisQueue.
-	((queue stateOf: aGameIndexEntry) = #analysing and: [
-		 queue progress notNil ]) ifFalse: [ ^ '' ].
-	^ queue progress key printString , '/'
-	  , queue progress value printString , ' '
-]
-
 { #category : 'analysis queue' }
 ChessCoachAppElement >> analysisStateChangedOf: aGameIdOrNil [
-	"Redraw the row of the game whose analysis state changed (every row when nil) and the status line"
+	"The background analysis is shown in the status line only: rebuilding list rows on every change left stale selection skins (invisible text)"
 
-	gameList dataAccessor withIndexDo: [ :entry :index |
-			(aGameIdOrNil isNil or: [ entry gameId = aGameIdOrNil ]) ifTrue: [
-				gameList dataAccessor at: index put: entry ] ].
 	self updateAnalysisStatus
 ]
 
@@ -450,23 +435,15 @@ ChessCoachAppElement >> refreshButton [
 
 { #category : 'private' }
 ChessCoachAppElement >> rowElementFor: aGameIndexEntry [
-	"The analysis state icon, then the players, result and date"
+	"Players, result and date. A plain Bloc text: a Toplo label inside a list node kept the selected text colour after deselection, which made rows unreadable."
 
-	| row |
-	row := ToElement new
-		       layout: (BlLinearLayout horizontal cellSpacing: 6);
-		       hMatchParent;
-		       vFitContent;
-		       yourself.
-	(self analysisIconNameFor: aGameIndexEntry) ifNotNil: [ :name |
-			row addChild: ((ToMaterialDesignIconProvider iconNamed: name)
-					 extent: 16 @ 16;
-					 yourself) ].
-	row addChild: (ToLabel new
-			 text: (self rowTextFor: aGameIndexEntry);
-			 hMatchParent;
-			 yourself).
-	^ row
+	^ BlTextElement new
+		  text: (self rowTextFor: aGameIndexEntry) asRopedText;
+		  padding: (BlInsets top: 2 bottom: 2);
+		  constraintsDo: [ :c |
+				  c horizontal matchParent.
+				  c vertical fitContent ];
+		  yourself
 ]
 
 { #category : 'private' }
@@ -474,7 +451,6 @@ ChessCoachAppElement >> rowTextFor: aGameIndexEntry [
 
 	^ String streamContents: [ :stream |
 			  stream
-				  nextPutAll: (self analysisMarkFor: aGameIndexEntry);
 				  nextPutAll: (' – ' join: aGameIndexEntry players);
 				  nextPutAll: ', ';
 				  nextPutAll: aGameIndexEntry result;

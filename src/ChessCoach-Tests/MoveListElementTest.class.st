@@ -23,6 +23,7 @@ MoveListElementTest >> testArrowKeysNavigate [
 
 { #category : 'tests' }
 MoveListElementTest >> testClickingAMoveEnablesArrowKeys [
+	"The numbered grid shows the number first, then White's move"
 
 	| list scripter |
 	list := MoveListElement new.
@@ -30,7 +31,7 @@ MoveListElementTest >> testClickingAMoveEnablesArrowKeys [
 	scripter := BlDevScripter new.
 	scripter element: list.
 	scripter testClick onChildFromBlock: [ :element |
-		(element childAt: 2) childAt: 1 ].
+		(element childAt: 3) childAt: 2 ].
 	scripter keyClick: KeyboardKey right.
 	scripter syncPlay.
 	self assert: list selectedMoveIndex equals: 2

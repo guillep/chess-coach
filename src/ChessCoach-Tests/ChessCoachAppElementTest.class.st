@@ -195,14 +195,15 @@ ChessCoachAppElementTest >> testRowsShowTheAnalysisState [
 	self
 		assert: (app analysisIconNameFor: first)
 		equals: 'outlined_hourglassempty'.
+	self assert:
+		(app analysisLabel text asString includesSubstring: '20 games left').
 	queue runNext.
 	scripter pulse.
 	self
 		assert: (app analysisIconNameFor: first)
 		equals: 'outlined_checkcircle'.
-	self
-		assert: (app analysisIconNameFor: app gameList dataAccessor second)
-		equals: 'outlined_hourglassempty'.
+	self assert:
+		(app analysisLabel text asString includesSubstring: '19 games left').
 	self assert: ((app rowTextFor: first) beginsWith: 'alice')
 ]
 

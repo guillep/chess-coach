@@ -78,12 +78,13 @@ SettingsElement >> build [
 						  by: 10) });
 		addChild: (widgets
 				 section: 'Board'
-				 help: 'The look of the pieces on every board of the app.'
+				 help:
+				 'The pieces and the square colours of every board of the app.'
 				 rows: { self pieceSetRow });
 		addChild: (widgets
 				 section: 'Analysis (Stockfish)'
 				 help:
-				 'Stockfish analyses your games in the background to find mistakes and only moves. Depth is how far it looks (higher is slower and stronger); lines is how many alternatives it keeps per position (2 or more are needed to detect only moves).'
+				 'Stockfish analyses the games you review to find mistakes and only moves. Depth is how far it looks (higher is slower and stronger); lines is how many alternatives it keeps per position (2 or more are needed to detect only moves).'
 				 rows: {
 						 self stockfishRow.
 						 (self
@@ -112,9 +113,7 @@ SettingsElement >> build [
 							               beMultiLine;
 							               hMatchParent;
 							               yourself) }).
-	self addChild: (content asScrollableElement
-			 matchParent;
-			 yourself).
+	self addChild: (widgets scrollable: content).
 	self updateAccounts.
 	self updateNumbers.
 	self updatePieceSet.

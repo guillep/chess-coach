@@ -99,6 +99,29 @@ ChessCoachWidgets class >> paragraph: aString [
 ]
 
 { #category : 'building' }
+ChessCoachWidgets class >> scrollable: anElement [
+	"anElement in a vertically scrollable area filling its parent, with a scrollbar on the right"
+
+	| scrollable scrollbar |
+	scrollable := anElement asScrollableElement.
+	scrollable constraintsDo: [ :c |
+			c horizontal matchParent.
+			c vertical matchParent ].
+	scrollbar := ToScrollbarElement horizontal: false.
+	scrollbar constraintsDo: [ :c |
+			c ignoreByLayout.
+			c ignored horizontal alignRight.
+			c ignored vertical alignTop ].
+	scrollbar attachTo: scrollable.
+	^ ToElement new
+		  layout: BlFrameLayout new;
+		  matchParent;
+		  addChild: scrollable;
+		  addChild: scrollbar;
+		  yourself
+]
+
+{ #category : 'building' }
 ChessCoachWidgets class >> section: aTitle help: aHelpStringOrNil rows: someElements [
 	"A heading followed by a group of rows"
 

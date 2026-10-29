@@ -193,14 +193,14 @@ MistakesDashboardElement >> duration: seconds [
 { #category : 'initialization' }
 MistakesDashboardElement >> initialize [
 
+	| page |
 	super initialize.
 	taxonomy := MistakeTaxonomy default.
 	database := MistakeDatabase withRecords: #(  ).
 	recordBlock := [ :record |  ].
 	startBlock := [ ].
-	self layout: (BlLinearLayout vertical cellSpacing: 10).
+	self layout: BlFrameLayout new.
 	self matchParent.
-	self padding: (BlInsets all: 16).
 	content := ToElement new
 		           layout: (BlLinearLayout vertical cellSpacing: 6);
 		           hMatchParent;
@@ -211,9 +211,15 @@ MistakesDashboardElement >> initialize [
 		          hMatchParent;
 		          vFitContent;
 		          yourself.
-	self
-		addChild: content;
-		addChild: detail.
+	page := ToElement new
+		        layout: (BlLinearLayout vertical cellSpacing: 10);
+		        hMatchParent;
+		        vFitContent;
+		        padding: (BlInsets all: 16);
+		        addChild: content;
+		        addChild: detail;
+		        yourself.
+	self addChild: (ChessCoachWidgets scrollable: page).
 	self rebuild
 ]
 

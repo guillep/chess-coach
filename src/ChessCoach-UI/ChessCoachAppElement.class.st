@@ -280,10 +280,22 @@ ChessCoachAppElement >> newGamesPage [
 		              layout: BlLinearLayout vertical;
 		              hMatchParent;
 		              vFitContent;
+		              background: (Color fromHexString: '#e3e6ea');
 		              yourself.
-	gameList := rowsColumn asScrollableElement
+	gameList := ToElement new
+		            layout: BlFrameLayout new;
 		            width: 280;
 		            vMatchParent;
+		            margin: (BlInsets
+				             top: 0
+				             left: 8
+				             bottom: 8
+				             right: 0);
+		            border:
+			            (BlBorder
+				             paint: (Color fromHexString: '#c8ccd2')
+				             width: 1);
+		            addChild: (ChessCoachWidgets scrollable: rowsColumn);
 		            yourself.
 	analysisPane := ToElement new
 		                layout: BlFrameLayout new;
@@ -435,10 +447,19 @@ ChessCoachAppElement >> pageButton: aPageId [
 { #category : 'updating' }
 ChessCoachAppElement >> paintRowAt: anIndex [
 
+	self paintRowAt: anIndex hovered: false
+]
+
+{ #category : 'updating' }
+ChessCoachAppElement >> paintRowAt: anIndex hovered: aBoolean [
+
 	anIndex > rowsColumn childrenCount ifTrue: [ ^ self ].
 	(rowsColumn childAt: anIndex) background: (anIndex = selectedIndex
 			 ifTrue: [ Color fromHexString: '#cfe2ff' ]
-			 ifFalse: [ Color transparent ])
+			 ifFalse: [
+					 aBoolean
+						 ifTrue: [ Color fromHexString: '#f0f4fa' ]
+						 ifFalse: [ Color white ] ])
 ]
 
 { #category : 'updating' }
@@ -458,21 +479,31 @@ ChessCoachAppElement >> refreshButton [
 
 { #category : 'private' }
 ChessCoachAppElement >> rowElementFor: aGameIndexEntry at: anIndex [
-	"Players, result and date; a click selects the game"
+	"Players, result and date; a click selects the game. Rows are 1 px apart over the column's grey, which draws the separators."
 
-	^ BlTextElement new
-		  text: (self rowTextFor: aGameIndexEntry) asRopedText;
-		  padding: (BlInsets
-				   top: 4
-				   left: 6
-				   bottom: 4
-				   right: 6);
-		  constraintsDo: [ :c |
-				  c horizontal matchParent.
-				  c vertical fitContent ];
-		  addEventHandlerOn: BlClickEvent
-		  do: [ :event | self selectGameAt: anIndex ];
-		  yourself
+	| row |
+	row := BlTextElement new
+		       text: (self rowTextFor: aGameIndexEntry) asRopedText;
+		       padding: (BlInsets
+				        top: 8
+				        left: 10
+				        bottom: 8
+				        right: 10);
+		       margin: (BlInsets bottom: 1);
+		       constraintsDo: [ :c |
+				       c horizontal matchParent.
+				       c vertical fitContent ];
+		       yourself.
+	row
+		addEventHandlerOn: BlClickEvent
+		do: [ :event | self selectGameAt: anIndex ].
+	row
+		addEventHandlerOn: BlMouseEnterEvent
+		do: [ :event | self paintRowAt: anIndex hovered: true ].
+	row
+		addEventHandlerOn: BlMouseLeaveEvent
+		do: [ :event | self paintRowAt: anIndex hovered: false ].
+	^ row
 ]
 
 { #category : 'private' }

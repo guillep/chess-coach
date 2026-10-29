@@ -53,47 +53,6 @@ ChessCoachAppElementTest >> setUp [
 ]
 
 { #category : 'tests' }
-ChessCoachAppElementTest >> testCoachWaitsForTheAnalysisThenOpensAndExits [
-
-	| queue engine |
-	self click: app loginButton.
-	self click: app loadMoreButton.
-	engine := StockfishEngineStub new.
-	session analyser: (GameAnalyser engine: engine).
-	session explorer: LichessExplorerClientStub new.
-	session classifier: (AnswerClassifier
-			 client: (OllamaClientStub new replyContent: '{"tags":[]}')
-			 taxonomy: MistakeTaxonomy default).
-	queue := AnalysisQueue
-		         session: session
-		         analyser: (GameAnalyser engine: engine).
-	session analysisQueue: queue.
-	session mark: app gameList dataAccessor second ply: 1 note: nil.
-	scripter pulse.
-	app gameList selecter selectIndex: 2.
-	scripter pulse.
-	self click: app coachButton.
-	self assert: app coach isNil description: 'waits'.
-	self
-		assert: queue pendingGameIds first
-		equals: app gameList dataAccessor second gameId.
-	queue runNext.
-	scripter
-		pulse;
-		pulse.
-	self assert: app coach notNil description: 'opened'.
-	self assert: queue isPaused description: 'paused'.
-	self assert: app coach review currentMoment ply equals: 1.
-	self assert: app coach isAttachedToSceneGraph description: 'shown'.
-	self click: app coach exitButton.
-	self assert: app coach isNil description: 'exited'.
-	self deny: queue isPaused.
-	self
-		assert: app analysis isAttachedToSceneGraph
-		description: 'analysis back'
-]
-
-{ #category : 'tests' }
 ChessCoachAppElementTest >> testLichessErrorIsShownInline [
 
 	self click: app loginButton.
@@ -146,6 +105,53 @@ ChessCoachAppElementTest >> testLogoutKeepsGamesListed [
 ]
 
 { #category : 'tests' }
+ChessCoachAppElementTest >> testNewAnalysisMarksThenReviewsAndIsListed [
+
+	| engine queue coach review |
+	self click: app loginButton.
+	self click: app loadMoreButton.
+	engine := StockfishEngineStub new.
+	session analyser: (GameAnalyser engine: engine).
+	session explorer: LichessExplorerClientStub new.
+	session classifier: (AnswerClassifier
+			 client: (OllamaClientStub new replyContent: '{"tags":[]}')
+			 taxonomy: MistakeTaxonomy default).
+	queue := AnalysisQueue
+		         session: session
+		         analyser: (GameAnalyser engine: engine).
+	session analysisQueue: queue.
+	app gameList selecter selectIndex: 2.
+	scripter pulse.
+	app gameView newAnalysis.
+	scripter pulse.
+	coach := app coach.
+	self assert: coach mode equals: #marking.
+	self
+		assert: queue pendingGameIds first
+		equals: app gameList dataAccessor second gameId.
+	coach showPly: 1.
+	coach noteField text: 'felt wrong'.
+	coach markShown.
+	review := coach review.
+	self assert: (review isMarked: 1).
+	coach doneMarking.
+	scripter pulse.
+	self assert: coach mode equals: #moment.
+	self assert: coach shownMoment ply equals: 1.
+	self assert: coach shownMoment isMarked.
+	coach stop.
+	scripter pulse.
+	self assert: coach mode equals: #list.
+	app exitCoach.
+	scripter pulse.
+	self assert: app coach isNil.
+	self assert: app gameView isAttachedToSceneGraph.
+	self assert:
+		(app gameView reviewsZone children first labelText asString
+			 beginsWith: 'Analysis 1 · ')
+]
+
+{ #category : 'tests' }
 ChessCoachAppElementTest >> testRowsShowTheAnalysisState [
 
 	| queue first |
@@ -167,13 +173,16 @@ ChessCoachAppElementTest >> testRowsShowTheAnalysisState [
 ]
 
 { #category : 'tests' }
-ChessCoachAppElementTest >> testSelectingARowOpensItsAnalysis [
+ChessCoachAppElementTest >> testSelectingARowOpensTheGameView [
 
 	self click: app loginButton.
 	self click: app loadMoreButton.
 	app gameList selecter selectIndex: 1.
 	scripter pulse.
-	self assert: (app analysis game metadata at: 'White') equals: 'alice'
+	self assert: app gameView isAttachedToSceneGraph.
+	self
+		assert: app gameView reviewsZone children first text asString
+		equals: 'No analysis yet.'
 ]
 
 { #category : 'tests' }
@@ -233,5 +242,5 @@ ChessCoachAppElementTest >> testStartsLoggedOut [
 	self assert: app loginButton labelText asString equals: 'Login'.
 	self assert: app loadMoreButton isDisabled.
 	self assert: app gameList dataAccessor isEmpty.
-	self assert: app analysis isNil
+	self assert: app gameView isNil
 ]

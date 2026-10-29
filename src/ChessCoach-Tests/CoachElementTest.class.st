@@ -40,15 +40,16 @@ CoachElementTest >> clickOn: aSquare [
 { #category : 'running' }
 CoachElementTest >> setUp [
 
-	| fixture |
+	| fixture session |
 	super setUp.
 	fixture := CoachReviewTest new.
 	fixture setUp.
 	review := fixture newReview.
-	review reviewMore.
+	session := (LichessAPIClientStub withGames: 0) newSessionOn:
+		           FileSystem memory root.
 	coach := CoachElement new.
 	coach backgroundRunner: [ :work | work value ].
-	coach review: review.
+	coach session: session entry: nil review: review.
 	scripter := BlDevScripter new.
 	scripter element: coach.
 	scripter space extent: 1100 @ 700.
@@ -58,8 +59,19 @@ CoachElementTest >> setUp [
 { #category : 'tests' }
 CoachElementTest >> testAWholeMoment [
 
+	self assert: coach mode equals: #list.
+	self assert:
+		(self zoneTexts includes: '○ Move 2 (Nf3) · onlyMoveFound · −0%').
+	self assert:
+		(self zoneTexts includes: '○ Move 4 (Ng5) · mistake · −18%').
+	coach continueReview.
+	scripter pulse.
+	self assert: review currentQuestion kind equals: #whatDidYouSee.
+	self answer: 'The bishop'.
+	coach nextMoment.
+	scripter pulse.
 	self assert: (coach header text asString includesSubstring:
-			 'Moment 1 of 1 · move 4 (Ng5)').
+			 'Moment 2 of 2 · move 4 (Ng5)').
 	self assert: coach board orientation equals: #white.
 	self
 		assert: (self arrowsOfStyle: #played) asArray
@@ -101,22 +113,53 @@ CoachElementTest >> testAWholeMoment [
 	self assert: (self zoneTexts includes: '✓ missed-opponent-threat').
 	coach nextMoment.
 	scripter pulse.
-	self assert:
-		(coach header text asString includesSubstring: 'summary').
+	self assert: coach mode equals: #summary.
 	self assert:
 		(self zoneTexts anySatisfy: [ :each |
-			 each beginsWith: 'Move 4 (Ng5)' ]).
-	coach reviewMore.
-	self assert: review currentQuestion kind equals: #whatDidYouSee
+			 each beginsWith: 'Move 4 (Ng5)' ])
+]
+
+{ #category : 'tests' }
+CoachElementTest >> testListShowsPastMomentsAndReviewsOneMoment [
+
+	| moment |
+	moment := review moments last.
+	coach showMoment: moment.
+	scripter pulse.
+	self assert: (self zoneTexts includes: 'Not reviewed yet.').
+	coach reviewShown.
+	scripter pulse.
+	self assert: review currentMoment equals: moment.
+	coach submitMoves.
+	self answer: 'Attack'.
+	coach stop.
+	scripter pulse.
+	self assert: coach mode equals: #list.
+	self assert: review currentMoment isNil.
+	self assert:
+		(self zoneTexts includes: '… Move 4 (Ng5) · mistake · −18%').
+	coach filter: #blunders.
+	scripter pulse.
+	self assert:
+		(self zoneTexts includes: 'No moments with this filter.').
+	coach filter: #all.
+	coach showMoment: moment.
+	scripter pulse.
+	self assert: (self zoneTexts includes:
+			 'You started this moment but did not finish it.').
+	coach reviewShown.
+	self assert: review currentQuestion kind equals: #expectedReply
 ]
 
 { #category : 'helpers' }
 CoachElementTest >> zoneTexts [
-	"The texts of the labels in the current question zone"
+	"The texts of the labels and buttons in the current question zone"
 
 	| texts |
 	texts := OrderedCollection new.
 	coach currentZone allChildrenBreadthFirstDo: [ :each |
-		(each isKindOf: ToLabel) ifTrue: [ texts add: each text asString ] ].
+			(each isKindOf: ToLabel) ifTrue: [ texts add: each text asString ].
+			(each isKindOf: ToButton) ifTrue: [
+				texts add: each labelText asString ] ].
 	^ texts
 ]

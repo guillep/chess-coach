@@ -5,19 +5,25 @@ Class {
 	#name : 'CoachElement',
 	#superclass : 'ToElement',
 	#instVars : [
+		'session',
+		'entry',
 		'review',
 		'game',
 		'board',
 		'header',
 		'history',
 		'currentZone',
-		'exitButton',
 		'markedMoves',
 		'message',
 		'busy',
 		'backgroundRunner',
 		'exitBlock',
-		'answerField'
+		'answerField',
+		'mode',
+		'shownPly',
+		'shownMoment',
+		'walking',
+		'noteField'
 	],
 	#category : 'ChessCoach-UI-Coach',
 	#package : 'ChessCoach-UI',
@@ -25,9 +31,11 @@ Class {
 }
 
 { #category : 'instance creation' }
-CoachElement class >> review: aCoachReview [
+CoachElement class >> session: aChessCoachSession entry: aGameIndexEntry review: aCoachReview [
 
 	^ self new
+		  session: aChessCoachSession
+		  entry: aGameIndexEntry
 		  review: aCoachReview;
 		  yourself
 ]
@@ -37,6 +45,17 @@ CoachElement >> answerField [
 	"The text field of the current written question, or nil"
 
 	^ answerField
+]
+
+{ #category : 'actions' }
+CoachElement >> backToList [
+
+	review leaveMoment.
+	markedMoves := OrderedCollection new.
+	message := nil.
+	shownMoment := nil.
+	mode := #list.
+	self refresh
 ]
 
 { #category : 'accessing' }
@@ -60,20 +79,112 @@ CoachElement >> buildBoardAnswer [
 	review currentQuestion kind = #candidates ifTrue: [
 			currentZone addChild: (self paragraph:
 					 'Your move is already marked in blue. Mark a move again to remove it.') ].
-	currentZone addChild: (ToButton new
-			 labelText: 'Done';
-			 clickAction: [ self submitMoves ];
-			 yourself)
+	currentZone addChild: (self button: 'Done' do: [ self submitMoves ])
+]
+
+{ #category : 'building' }
+CoachElement >> buildList [
+
+	| moments |
+	currentZone addChild:
+		(self row: (#( #all #mistakes #blunders ) collect: [ :each |
+					  self
+						  button: (each = self filter
+								   ifTrue: [ '[' , (self filterLabel: each) , ']' ]
+								   ifFalse: [ self filterLabel: each ])
+						  do: [ self filter: each ] ])).
+	moments := review momentsPassing: self filter.
+	moments ifEmpty: [
+		currentZone addChild:
+			(self paragraph: 'No moments with this filter.') ].
+	moments do: [ :each |
+			currentZone addChild: (self
+					 button: (each isReviewed
+							  ifTrue: [ '✓ ' ]
+							  ifFalse: [
+									  each isStarted
+										  ifTrue: [ '… ' ]
+										  ifFalse: [ '○ ' ] ]) , (self describeMoment: each)
+					 do: [ self showMoment: each ]) ].
+	currentZone addChild:
+		(self paragraph: ('Marking {1} · moments {2}' format: {
+					  (self minutes: review markingSeconds).
+					  (self minutes: review reviewingSeconds) })).
+	currentZone addChild: (self row: {
+				 (self button: 'Continue review' do: [ self continueReview ]).
+				 (self button: 'Summary' do: [ self showSummary ]).
+				 (self button: 'Back' do: [ exitBlock value ]) })
+]
+
+{ #category : 'building' }
+CoachElement >> buildMarking [
+
+	| marked |
+	currentZone addChild: (self paragraph:
+			 'Go through the game and mark the moves you want to talk about. The engine''s view stays hidden.').
+	currentZone addChild: (self row: {
+				 (self button: '◀' do: [ self showPly: shownPly - 1 ]).
+				 (self button: '▶' do: [ self showPly: shownPly + 1 ]) }).
+	shownPly > 0 ifTrue: [
+			marked := review isMarked: shownPly.
+			currentZone addChild:
+				(self paragraph: ('Move {1}: {2}{3}' format: {
+							  (shownPly + 1 // 2).
+							  (game moves at: shownPly) san.
+							  (marked
+								   ifTrue: [ ' (marked)' ]
+								   ifFalse: [ '' ]) })).
+			marked
+				ifTrue: [
+					currentZone addChild:
+						(self button: 'Unmark' do: [ self unmarkShown ]) ]
+				ifFalse: [
+						noteField := ToTextField new
+							             hMatchParent;
+							             yourself.
+						currentZone
+							addChild: (self paragraph: 'Note (optional):');
+							addChild: noteField;
+							addChild: (self button: 'Mark' do: [ self markShown ]) ] ].
+	currentZone addChild: (self paragraph: 'Marked: '
+			 , (review marks ifEmpty: [ 'nothing yet' ] ifNotEmpty: [ :marks |
+						  ', ' join:
+							  (marks collect: [ :each |
+								   (game moves at: (each at: 'ply')) san ]) ])).
+	currentZone addChild: (self row: {
+				 (self button: 'Done marking' do: [ self doneMarking ]).
+				 (self button: 'Back' do: [ exitBlock value ]) })
+]
+
+{ #category : 'building' }
+CoachElement >> buildMoment [
+
+	| question |
+	(self isActive: shownMoment) ifFalse: [
+			shownMoment isReviewed ifTrue: [ ^ self buildReveal ].
+			currentZone addChild: (self paragraph: (shownMoment isStarted
+						  ifTrue: [ 'You started this moment but did not finish it.' ]
+						  ifFalse: [ 'Not reviewed yet.' ])).
+			^ currentZone addChild: (self row: {
+						   (self button: 'Review this moment' do: [ self reviewShown ]).
+						   (self button: 'Back to list' do: [ self backToList ]) }) ].
+	shownMoment isRevealed ifTrue: [ ^ self buildReveal ].
+	question := review currentQuestion.
+	currentZone addChild: (self paragraph: question text).
+	question expectsMoves
+		ifTrue: [ self buildBoardAnswer ]
+		ifFalse: [ self buildTextAnswer ].
+	message ifNotNil: [ currentZone addChild: (ToLabel text: message) ].
+	currentZone addChild: (self button: 'Stop' do: [ self stop ])
 ]
 
 { #category : 'building' }
 CoachElement >> buildReveal [
 
-	| moment reveal before after |
-	moment := review currentMoment.
-	reveal := review revealOf: moment.
-	before := self positionBefore: moment.
-	after := game positionAfterPly: moment ply.
+	| reveal before after |
+	reveal := review revealOf: shownMoment.
+	before := self positionBefore: shownMoment.
+	after := game positionAfterPly: shownMoment ply.
 	currentZone addChild:
 		(self paragraph: ('Win chance: {1}% → {2}%' format: {
 					  ((reveal at: 'winBefore') printShowingDecimalPlaces: 0).
@@ -94,24 +205,28 @@ CoachElement >> buildReveal [
 										   ', ' join:
 											   ((reveal at: 'expectedReply') collect: [ :each |
 												    after sanForUCI: each ]) ]) })) ].
-	self buildTagsOf: moment.
-	currentZone addChild: (ToButton new
-			 labelText: 'Next moment';
-			 clickAction: [ self nextMoment ];
-			 yourself)
+	currentZone addChild: (self paragraph:
+			 'Time on this moment: ' , (self minutes: shownMoment seconds)).
+	self buildTagsOf: shownMoment.
+	currentZone addChild:
+		(self row: ((walking and: [ self isActive: shownMoment ])
+				  ifTrue: [
+						  {
+							  (self button: 'Next moment' do: [ self nextMoment ]).
+							  (self button: 'Stop' do: [ self stop ]) } ]
+				  ifFalse: [
+				  { (self button: 'Back to list' do: [ self backToList ]) } ]))
 ]
 
 { #category : 'building' }
 CoachElement >> buildSummary [
 
 	| counts |
-	review mistakeRecords do: [ :record |
-			currentZone addChild:
-				(self paragraph: ('Move {1} ({2}): −{3}% · {4}' format: {
-							  (record ply + 1 // 2).
-							  (game moves at: record ply) san.
-							  (record winDrop printShowingDecimalPlaces: 0).
-							  (', ' join: record tagIds) })) ].
+	review reviewedMoments do: [ :moment |
+			currentZone addChild: (self
+					 button: (self describeMoment: moment) , ' · '
+						 , (', ' join: (moment labels collect: [ :each | each tagId ]))
+					 do: [ self showMoment: moment ]) ].
 	counts := Bag new.
 	review mistakeRecords do: [ :each | counts addAll: each tagIds ].
 	counts ifNotEmpty: [
@@ -119,15 +234,11 @@ CoachElement >> buildSummary [
 				(self paragraph: 'Most frequent here: ' , (', ' join:
 						  ((counts sortedCounts first: (counts asSet size min: 3))
 							   collect: [ :each | each value , ' ×' , each key printString ]))) ].
-	review hasMore ifTrue: [
-			currentZone addChild: (ToButton new
-					 labelText: 'Review more moments';
-					 clickAction: [ self reviewMore ];
-					 yourself) ].
-	currentZone addChild: (ToButton new
-			 labelText: 'Back to analysis';
-			 clickAction: [ exitBlock value ];
-			 yourself)
+	currentZone addChild:
+		(self paragraph: 'Time: ' , (self minutes: review totalSeconds)).
+	currentZone addChild: (self row: {
+				 (self button: 'Back to list' do: [ self backToList ]).
+				 (self button: 'Back to the game' do: [ exitBlock value ]) })
 ]
 
 { #category : 'building' }
@@ -184,18 +295,48 @@ CoachElement >> buildTextAnswer [
 				 yourself)
 ]
 
+{ #category : 'private' }
+CoachElement >> busy: aString while: aBlock then: aUIBlock [
+	"Show aString while aBlock runs in the background, then run aUIBlock and refresh"
+
+	busy := aString.
+	self refresh.
+	self runInBackground: aBlock then: [
+			busy := nil.
+			aUIBlock value.
+			self refresh ]
+]
+
+{ #category : 'private' }
+CoachElement >> button: aString do: aBlock [
+
+	^ ToButton new
+		  labelText: aString;
+		  clickAction: aBlock;
+		  yourself
+]
+
 { #category : 'actions' }
 CoachElement >> confirmTag: aTagId [
 
-	review confirmTag: aTagId of: review currentMoment.
+	review confirmTag: aTagId of: shownMoment.
 	self refresh
+]
+
+{ #category : 'actions' }
+CoachElement >> continueReview [
+	"Walk through the moments not reviewed yet, in move order"
+
+	walking := true.
+	self startNextAfter: 0
 ]
 
 { #category : 'private' }
 CoachElement >> currentQuestionOrNil [
 
-	(review isFinished or: [ review currentMoment isRevealed ]) ifTrue: [
-		^ nil ].
+	(mode = #moment and: [
+		 (self isActive: shownMoment) and: [ shownMoment isRevealed not ] ])
+		ifFalse: [ ^ nil ].
 	^ review currentQuestion
 ]
 
@@ -206,6 +347,17 @@ CoachElement >> currentZone [
 ]
 
 { #category : 'private' }
+CoachElement >> describeMoment: aMomentReview [
+	"'Move 14 (Ng5) · mistake · −18%'"
+
+	^ 'Move {1} ({2}) · {3} · −{4}%' format: {
+			  (aMomentReview ply + 1 // 2).
+			  (game moves at: aMomentReview ply) san.
+			  (', ' join: aMomentReview kinds).
+			  (aMomentReview winDrop printShowingDecimalPlaces: 0) }
+]
+
+{ #category : 'private' }
 CoachElement >> describeMoves: someUCIMoves in: aCoachQuestion [
 	"The moves in SAN, in the position the question was asked in"
 
@@ -213,23 +365,48 @@ CoachElement >> describeMoves: someUCIMoves in: aCoachQuestion [
 	someUCIMoves ifEmpty: [ ^ 'none' ].
 	position := game positionAfterPly:
 		            (aCoachQuestion kind = #expectedReply
-			             ifTrue: [ review currentMoment ply ]
-			             ifFalse: [ review currentMoment ply - 1 ]).
+			             ifTrue: [ shownMoment ply ]
+			             ifFalse: [ shownMoment ply - 1 ]).
 	^ ', ' join:
 		  (someUCIMoves collect: [ :each | position sanForUCI: each ])
 ]
 
 { #category : 'actions' }
+CoachElement >> doneMarking [
+	"Merge my marks with the heuristic moments (waits for the engine analysis if needed), then walk through the moments"
+
+	self
+		busy: 'Finding the important moments…'
+		while: [ session finishMarking: review of: entry ]
+		then: [ self continueReview ]
+]
+
+{ #category : 'actions' }
 CoachElement >> dropTag: aTagId [
 
-	review dropTag: aTagId of: review currentMoment.
+	review dropTag: aTagId of: shownMoment.
 	self refresh
 ]
 
-{ #category : 'accessing' }
-CoachElement >> exitButton [
+{ #category : 'private' }
+CoachElement >> filter [
 
-	^ exitButton
+	^ session settings momentFilter
+]
+
+{ #category : 'actions' }
+CoachElement >> filter: aFilter [
+
+	session settings at: 'momentFilter' put: aFilter asString.
+	self refresh
+]
+
+{ #category : 'private' }
+CoachElement >> filterLabel: aFilter [
+
+	aFilter = #all ifTrue: [ ^ 'All' ].
+	aFilter = #mistakes ifTrue: [ ^ 'Mistakes+' ].
+	^ 'Blunders only'
 ]
 
 { #category : 'accessing' }
@@ -247,10 +424,10 @@ CoachElement >> history [
 { #category : 'initialization' }
 CoachElement >> initialize [
 
-	| panel footer |
+	| panel |
 	super initialize.
 	markedMoves := OrderedCollection new.
-	busy := false.
+	walking := false.
 	exitBlock := [ ].
 	backgroundRunner := [ :aBlock |
 	                    aBlock forkAt: Processor userBackgroundPriority ].
@@ -274,30 +451,29 @@ CoachElement >> initialize [
 		               hMatchParent;
 		               vFitContent;
 		               yourself.
-	exitButton := ToButton new
-		              labelText: 'Exit';
-		              clickAction: [ exitBlock value ];
-		              yourself.
-	footer := ToElement new
-		          layout: BlLinearLayout horizontal;
-		          hMatchParent;
-		          vFitContent;
-		          addChild: exitButton;
-		          yourself.
 	panel := ToElement new
 		         layout: (BlLinearLayout vertical cellSpacing: 10);
-		         width: 360;
-		         vMatchParent;
+		         hMatchParent;
+		         vFitContent;
 		         padding: (BlInsets all: 10);
 		         yourself.
 	panel
 		addChild: header;
 		addChild: history;
-		addChild: currentZone;
-		addChild: footer.
+		addChild: currentZone.
 	self
 		addChild: board;
-		addChild: panel
+		addChild: (panel asScrollableElement
+				 width: 380;
+				 vMatchParent;
+				 yourself)
+]
+
+{ #category : 'private' }
+CoachElement >> isActive: aMomentReview [
+	"Whether the coach is asking about aMomentReview right now"
+
+	^ aMomentReview notNil and: [ review currentMoment == aMomentReview ]
 ]
 
 { #category : 'private' }
@@ -315,6 +491,13 @@ CoachElement >> lineInSAN: someUCIMoves from: aChessPosition [
 	^ ' ' join: sans
 ]
 
+{ #category : 'actions' }
+CoachElement >> markShown [
+
+	review mark: shownPly note: noteField text asString trimBoth.
+	self refresh
+]
+
 { #category : 'accessing' }
 CoachElement >> markedMoves [
 
@@ -328,13 +511,28 @@ CoachElement >> message [
 	^ message
 ]
 
+{ #category : 'private' }
+CoachElement >> minutes: seconds [
+
+	^ seconds < 60
+		  ifTrue: [ seconds rounded printString , ' s' ]
+		  ifFalse: [ (seconds / 60) rounded printString , ' min' ]
+]
+
+{ #category : 'accessing' }
+CoachElement >> mode [
+	"#marking, #list, #moment or #summary"
+
+	^ mode
+]
+
 { #category : 'actions' }
 CoachElement >> moveMarked: aUCIMove [
 	"Toggle aUCIMove in the answer being composed; my real move is always a candidate"
 
 	| question |
 	question := self currentQuestionOrNil.
-	(busy or: [ question isNil or: [ question expectsMoves not ] ])
+	(busy notNil or: [ question isNil or: [ question expectsMoves not ] ])
 		ifTrue: [ ^ self ].
 	(board chessPosition isLegalUCI: aUCIMove) ifFalse: [
 			message := 'Illegal move'.
@@ -348,11 +546,29 @@ CoachElement >> moveMarked: aUCIMove [
 	self refresh
 ]
 
+{ #category : 'private' }
+CoachElement >> myColor [
+
+	| colors |
+	colors := session myColorsIn: game.
+	^ colors size = 1
+		  ifTrue: [ colors first ]
+		  ifFalse: [ #white ]
+]
+
 { #category : 'actions' }
 CoachElement >> nextMoment [
 
-	review nextMoment.
-	self refresh
+	| ply |
+	ply := shownMoment ply.
+	review leaveMoment.
+	self startNextAfter: ply
+]
+
+{ #category : 'accessing' }
+CoachElement >> noteField [
+
+	^ noteField
 ]
 
 { #category : 'private' }
@@ -368,7 +584,7 @@ CoachElement >> paragraph: aString [
 { #category : 'private' }
 CoachElement >> playedMove [
 
-	^ game uciMoves at: review currentMoment ply
+	^ game uciMoves at: shownMoment ply
 ]
 
 { #category : 'private' }
@@ -399,19 +615,23 @@ CoachElement >> review [
 	^ review
 ]
 
-{ #category : 'accessing' }
-CoachElement >> review: aCoachReview [
+{ #category : 'actions' }
+CoachElement >> reviewShown [
+	"Ask about the shown moment only"
 
-	review := aCoachReview.
-	game := aCoachReview game.
+	review start: shownMoment.
 	self refresh
 ]
 
-{ #category : 'actions' }
-CoachElement >> reviewMore [
+{ #category : 'private' }
+CoachElement >> row: someElements [
 
-	review reviewMore.
-	self refresh
+	^ ToElement new
+		  layout: BlFlowLayout horizontal;
+		  hMatchParent;
+		  vFitContent;
+		  addChildren: someElements;
+		  yourself
 ]
 
 { #category : 'private' }
@@ -420,6 +640,91 @@ CoachElement >> runInBackground: aBlock then: aUIBlock [
 	backgroundRunner value: [
 			aBlock value.
 			self enqueueTask: (BlTaskAction new action: aUIBlock) ]
+]
+
+{ #category : 'accessing' }
+CoachElement >> session: aChessCoachSession entry: aGameIndexEntry review: aCoachReview [
+	"Open on the marking pass when it is not done, on the list of moments otherwise"
+
+	session := aChessCoachSession.
+	entry := aGameIndexEntry.
+	review := aCoachReview.
+	game := aCoachReview game.
+	shownPly := 0.
+	review isMarking
+		ifTrue: [
+				mode := #marking.
+				review showPly: 0 ]
+		ifFalse: [ mode := #list ].
+	self refresh
+]
+
+{ #category : 'actions' }
+CoachElement >> showMoment: aMomentReview [
+	"Look at one moment: its history and reveal when reviewed, a button to review it otherwise"
+
+	(self isActive: aMomentReview) ifFalse: [ review leaveMoment ].
+	markedMoves := OrderedCollection new.
+	message := nil.
+	walking := false.
+	shownMoment := aMomentReview.
+	mode := #moment.
+	self refresh
+]
+
+{ #category : 'actions' }
+CoachElement >> showMomentAtPly: aPly [
+	"Show the moment of the review at aPly (from the dashboard)"
+
+	review moments
+		detect: [ :each | each ply = aPly ]
+		ifFound: [ :moment | self showMoment: moment ]
+]
+
+{ #category : 'actions' }
+CoachElement >> showPly: aPly [
+	"Marking pass: show the position after aPly"
+
+	shownPly := (aPly max: 0) min: game moves size.
+	review showPly: shownPly.
+	self refresh
+]
+
+{ #category : 'actions' }
+CoachElement >> showSummary [
+
+	review leaveMoment.
+	shownMoment := nil.
+	mode := #summary.
+	self refresh
+]
+
+{ #category : 'accessing' }
+CoachElement >> shownMoment [
+
+	^ shownMoment
+]
+
+{ #category : 'private' }
+CoachElement >> startNextAfter: aPly [
+
+	(review nextMomentAfter: aPly passing: self filter)
+		ifNil: [
+				walking := false.
+				mode := #summary ]
+		ifNotNil: [ :moment |
+				review start: moment.
+				shownMoment := moment.
+				mode := #moment ].
+	self refresh
+]
+
+{ #category : 'actions' }
+CoachElement >> stop [
+	"Leave the Socratic stage; unreviewed moments stay in the list"
+
+	walking := false.
+	self backToList
 ]
 
 { #category : 'actions' }
@@ -433,11 +738,10 @@ CoachElement >> submitMoves [
 	review currentQuestion kind = #expectedReply ifFalse: [
 			review answerMoves: moves.
 			^ self refresh ].
-	busy := true.
-	self refresh.
-	self runInBackground: [ review answerMoves: moves ] then: [
-			busy := false.
-			self refresh ]
+	self
+		busy: 'Analysing your candidates…'
+		while: [ review answerMoves: moves ]
+		then: [ ]
 ]
 
 { #category : 'actions' }
@@ -453,27 +757,41 @@ CoachElement >> submitText [
 		then: [ self refresh ]
 ]
 
+{ #category : 'actions' }
+CoachElement >> unmarkShown [
+
+	review unmark: shownPly.
+	self refresh
+]
+
 { #category : 'updating' }
 CoachElement >> updateBoard [
 
-	| moment question arrows |
-	review isFinished ifTrue: [ ^ board arrows: #(  ) ].
-	moment := review currentMoment.
+	| question arrows |
+	mode = #marking ifTrue: [
+			board orientation: self myColor.
+			board chessPosition: (game positionAfterPly: shownPly).
+			^ board arrows: (shownPly = 0
+					   ifTrue: [ #(  ) ]
+					   ifFalse: [
+					   { (ChessArrow uci: (game uciMoves at: shownPly) style: #played) } ]) ].
+	mode = #moment ifFalse: [ ^ board arrows: #(  ) ].
 	question := self currentQuestionOrNil.
-	board orientation: moment color.
+	board orientation: shownMoment color.
 	(question notNil and: [ question kind = #expectedReply ]) ifTrue: [
-			board chessPosition: (game positionAfterPly: moment ply).
+			board chessPosition: (game positionAfterPly: shownMoment ply).
 			^ board arrows: (markedMoves collect: [ :each |
 					   ChessArrow uci: each style: #candidate ]) ].
-	board chessPosition: (self positionBefore: moment).
+	board chessPosition: (self positionBefore: shownMoment).
 	arrows := OrderedCollection new.
-	moment isRevealed
+	shownMoment isReviewed
 		ifTrue: [
-				moment candidateWinPercents keysDo: [ :each |
+				shownMoment candidateWinPercents keysDo: [ :each |
 						each = self playedMove ifFalse: [
 							arrows add: (ChessArrow uci: each style: #candidate) ] ].
 				arrows add: (ChessArrow
-						 uci: (review analysis atPly: moment ply - 1) bestLine firstMove
+						 uci:
+						 (review analysis atPly: shownMoment ply - 1) bestLine firstMove
 						 style: #engine) ]
 		ifFalse: [
 				markedMoves do: [ :each |
@@ -487,42 +805,52 @@ CoachElement >> updateBoard [
 { #category : 'updating' }
 CoachElement >> updateCurrentZone [
 
-	| question |
 	currentZone removeChildren.
 	answerField := nil.
-	review isFinished ifTrue: [ ^ self buildSummary ].
-	busy ifTrue: [
-		^ currentZone addChild: (ToLabel text: 'Analysing your candidates…') ].
-	review currentMoment isRevealed ifTrue: [ ^ self buildReveal ].
-	question := review currentQuestion.
-	currentZone addChild: (self paragraph: question text).
-	question expectsMoves
-		ifTrue: [ self buildBoardAnswer ]
-		ifFalse: [ self buildTextAnswer ].
-	message ifNotNil: [ currentZone addChild: (ToLabel text: message) ]
+	noteField := nil.
+	busy ifNotNil: [ ^ currentZone addChild: (ToLabel text: busy) ].
+	mode = #marking ifTrue: [ ^ self buildMarking ].
+	mode = #list ifTrue: [ ^ self buildList ].
+	mode = #summary ifTrue: [ ^ self buildSummary ].
+	self buildMoment
 ]
 
 { #category : 'updating' }
 CoachElement >> updateHeader [
 
-	| moment move |
-	review isFinished ifTrue: [ ^ header text: 'Review summary' ].
-	moment := review currentMoment.
-	move := game moves at: moment ply.
+	| move |
+	mode = #marking ifTrue: [
+			^ header text:
+				  ('Analysis {1} · mark the interesting moves · move {2} of {3}'
+					   format: {
+							   review number.
+							   (shownPly + 1 // 2).
+							   (game moves size + 1 // 2) }) ].
+	mode = #list ifTrue: [
+			^ header text:
+				  ('Analysis {1} · {2} · {3}/{4} moments reviewed · {5}' format:
+					   {
+						   review number.
+						   review date yyyymmdd.
+						   review reviewedMoments size.
+						   (review momentsPassing: self filter) size.
+						   (self minutes: review totalSeconds) }) ].
+	mode = #summary ifTrue: [ ^ header text: 'Review summary' ].
+	move := game moves at: shownMoment ply.
 	header text: ('Moment {1} of {2} · move {3} ({4}) · {5}' format: {
-				 (review reviews indexOf: moment).
-				 review reviews size.
-				 (moment ply + 1 // 2).
+				 ((review momentsPassing: self filter) indexOf: shownMoment).
+				 (review momentsPassing: self filter) size.
+				 (shownMoment ply + 1 // 2).
 				 move san.
-				 (', ' join: moment kinds) })
+				 (', ' join: shownMoment kinds) })
 ]
 
 { #category : 'updating' }
 CoachElement >> updateHistory [
 
 	history removeChildren.
-	review isFinished ifTrue: [ ^ self ].
-	review currentMoment answers do: [ :answer |
+	mode = #moment ifFalse: [ ^ self ].
+	shownMoment answers do: [ :answer |
 			history addChild: (ToLabel new
 					 beMultiLine;
 					 hMatchParent;

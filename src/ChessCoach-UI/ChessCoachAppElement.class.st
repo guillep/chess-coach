@@ -13,12 +13,9 @@ Class {
 		'statusLabel',
 		'gameList',
 		'analysisPane',
-		'analysis',
+		'gameView',
 		'backgroundRunner',
-		'coachButton',
 		'coach',
-		'waitingEntry',
-		'waitingLabel',
 		'dashboard',
 		'speedFilter',
 		'speedButtons',
@@ -62,13 +59,6 @@ ChessCoachAppElement class >> session: aChessCoachSession [
 		  yourself
 ]
 
-{ #category : 'accessing' }
-ChessCoachAppElement >> analysis [
-	"The analysis of the selected game, or nil before one is selected"
-
-	^ analysis
-]
-
 { #category : 'private' }
 ChessCoachAppElement >> analysisMarkFor: aGameIndexEntry [
 	"A prefix showing the background analysis state of the game"
@@ -87,22 +77,11 @@ ChessCoachAppElement >> analysisMarkFor: aGameIndexEntry [
 
 { #category : 'analysis queue' }
 ChessCoachAppElement >> analysisStateChangedOf: aGameIdOrNil [
-	"Redraw the row of the game whose analysis state changed (every row when nil); start the coach when the game it waits for is ready"
+	"Redraw the row of the game whose analysis state changed (every row when nil)"
 
-	| queue |
 	gameList dataAccessor withIndexDo: [ :entry :index |
 			(aGameIdOrNil isNil or: [ entry gameId = aGameIdOrNil ]) ifTrue: [
-				gameList dataAccessor at: index put: entry ] ].
-	waitingEntry ifNil: [ ^ self ].
-	queue := session analysisQueue.
-	(queue stateOf: waitingEntry) = #ready ifTrue: [
-		^ self startCoachOn: waitingEntry ].
-	((queue stateOf: waitingEntry) = #analysing and: [
-		 queue progress notNil ]) ifTrue: [
-			waitingLabel text:
-				('Analysing the game… move {1} of {2}' format: {
-						 queue progress key.
-						 queue progress value }) ]
+				gameList dataAccessor at: index put: entry ] ]
 ]
 
 { #category : 'settings' }
@@ -111,7 +90,7 @@ ChessCoachAppElement >> applyPieceSet [
 
 	| pieceSet |
 	pieceSet := ChessPieceSet named: session settings pieceSet.
-	analysis ifNotNil: [ analysis boardElement pieceSet: pieceSet ].
+	gameView ifNotNil: [ gameView board pieceSet: pieceSet ].
 	coach ifNotNil: [ coach board pieceSet: pieceSet ]
 ]
 
@@ -125,15 +104,9 @@ ChessCoachAppElement >> backgroundRunner: aBlock [
 
 { #category : 'accessing' }
 ChessCoachAppElement >> coach [
-	"The coach element while a review is open, or nil"
+	"The open coach review, or nil"
 
 	^ coach
-]
-
-{ #category : 'accessing' }
-ChessCoachAppElement >> coachButton [
-
-	^ coachButton
 ]
 
 { #category : 'accessing' }
@@ -144,11 +117,10 @@ ChessCoachAppElement >> dashboard [
 
 { #category : 'coach' }
 ChessCoachAppElement >> exitCoach [
-	"Back to the analysis of the selected game (or the dashboard); the background analysis resumes"
+	"Back to the view of the selected game"
 
-	waitingEntry := nil.
 	coach := nil.
-	session analysisQueue resume.
+	gameView ifNotNil: [ gameView updateReviews ].
 	self showDefaultPane
 ]
 
@@ -165,6 +137,13 @@ ChessCoachAppElement >> filterBySpeed: aSpeedOrNil [
 ChessCoachAppElement >> gameList [
 
 	^ gameList
+]
+
+{ #category : 'accessing' }
+ChessCoachAppElement >> gameView [
+	"The view of the selected game, or nil before one is selected"
+
+	^ gameView
 ]
 
 { #category : 'private' }
@@ -216,11 +195,10 @@ ChessCoachAppElement >> newAnalysisPane [
 	"The right pane starts on the mistakes dashboard (the landing)"
 
 	dashboard := MistakesDashboardElement new.
-	dashboard whenRecordSelectedDo: [ :record |
-		self openCoachOnGameId: record gameId ].
+	dashboard whenRecordSelectedDo: [ :record | self openMistake: record ].
 	dashboard whenStartRequestedDo: [
 			self games ifNotEmpty: [ :entries |
-				self openCoachOnGameId: entries first gameId ] ].
+				self selectGameId: entries first gameId ] ].
 	^ ToElement new
 		  layout: BlFrameLayout new;
 		  matchParent;
@@ -297,10 +275,6 @@ ChessCoachAppElement >> newTopBar [
 		                 clickAction: [
 			                 self runInBackground: [ session refresh ] ];
 		                 yourself.
-	coachButton := ToButton new
-		               labelText: 'Review with coach';
-		               clickAction: [ self openCoach ];
-		               yourself.
 	settingsButton := ToButton new
 		                  labelText: '⚙ Settings';
 		                  clickAction: [ self openSettings ];
@@ -309,7 +283,6 @@ ChessCoachAppElement >> newTopBar [
 	statusLabel := ToLabel text: ''.
 	bar
 		addChild: refreshButton;
-		addChild: coachButton;
 		addChild: settingsButton;
 		addChild: userLabel;
 		addChild: statusLabel.
@@ -317,47 +290,45 @@ ChessCoachAppElement >> newTopBar [
 ]
 
 { #category : 'coach' }
-ChessCoachAppElement >> openCoach [
-	"Review the selected game with the coach, once its analysis is ready"
+ChessCoachAppElement >> openMistake: aMistakeRecord [
+	"Select the game of a mistake and show its moment in the most recent review that has it"
 
-	| entry queue |
-	entry := self selectedEntry ifNil: [ ^ self ].
-	(session isAnalysed: entry) ifTrue: [ ^ self startCoachOn: entry ].
-	queue := session analysisQueue.
-	(queue stateOf: entry) = #unknown ifTrue: [ queue enqueueUnanalysed ].
-	queue prioritise: entry.
-	queue resume.
-	waitingEntry := entry.
-	waitingLabel := ToLabel text: 'Analysing the game…'.
-	self showInPane: (ToElement new
-			 layout: (BlLinearLayout vertical cellSpacing: 8);
-			 padding: (BlInsets all: 16);
-			 matchParent;
-			 addChild: waitingLabel;
-			 addChild: (ToButton new
-					  labelText: 'Cancel';
-					  clickAction: [ self exitCoach ];
-					  yourself);
-			 yourself)
+	| entry review |
+	(self selectGameId: aMistakeRecord gameId) ifFalse: [ ^ self ].
+	entry := self selectedEntry.
+	review := (session reviewsFor: entry) reversed
+		          detect: [ :each |
+				          each reviewedMoments anySatisfy: [ :moment |
+					          moment ply = aMistakeRecord ply ] ]
+		          ifNone: [ ^ self ].
+	(self openReview: review of: entry) showMomentAtPly:
+		aMistakeRecord ply
 ]
 
 { #category : 'coach' }
-ChessCoachAppElement >> openCoachOnGameId: aGameId [
-	"Select the game in the list and review it with the coach"
+ChessCoachAppElement >> openReview: aCoachReview of: aGameIndexEntry [
+	"Show a coach review. Its game goes to the front of the background analysis, which the end of the marking pass needs."
 
-	| index |
-	index := self games findFirst: [ :each | each gameId = aGameId ].
-	index = 0 ifTrue: [ ^ self ].
-	gameList selecter selectIndex: index.
-	self selectedGameChanged.
-	self openCoach
+	(session isAnalysed: aGameIndexEntry) ifFalse: [
+			| queue |
+			queue := session analysisQueue.
+			(queue stateOf: aGameIndexEntry) = #unknown ifTrue: [
+				queue enqueueUnanalysed ].
+			queue prioritise: aGameIndexEntry ].
+	coach := CoachElement new.
+	coach backgroundRunner: backgroundRunner.
+	coach board pieceSet:
+		(ChessPieceSet named: session settings pieceSet).
+	coach session: session entry: aGameIndexEntry review: aCoachReview.
+	coach whenExitDo: [ self exitCoach ].
+	self showInPane: coach.
+	^ coach
 ]
 
 { #category : 'settings' }
 ChessCoachAppElement >> openSettings [
 
 	coach := nil.
-	waitingEntry := nil.
 	self showInPane: settingsElement
 ]
 
@@ -394,6 +365,18 @@ ChessCoachAppElement >> runInBackground: aBlock [
 				self inUIDo: [ statusLabel text: error messageText ] ] ]
 ]
 
+{ #category : 'actions' }
+ChessCoachAppElement >> selectGameId: aGameId [
+	"Select the game in the list; answer whether it is listed"
+
+	| index |
+	index := self games findFirst: [ :each | each gameId = aGameId ].
+	index = 0 ifTrue: [ ^ false ].
+	gameList selecter selectIndex: index.
+	self selectedGameChanged.
+	^ true
+]
+
 { #category : 'private' }
 ChessCoachAppElement >> selectedEntry [
 	"The index entry of the selected game, or nil"
@@ -407,10 +390,15 @@ ChessCoachAppElement >> selectedEntry [
 { #category : 'updating' }
 ChessCoachAppElement >> selectedGameChanged [
 
-	| index |
-	index := gameList selectionModel firstIndex.
-	(index isNil or: [ index = 0 ]) ifTrue: [ ^ self ].
-	self showGame: (session gameFor: (gameList dataAccessor at: index))
+	| entry |
+	entry := self selectedEntry ifNil: [ ^ self ].
+	coach := nil.
+	gameView := GameReviewsElement new.
+	gameView board pieceSet:
+		(ChessPieceSet named: session settings pieceSet).
+	gameView session: session entry: entry.
+	gameView whenOpenDo: [ :review | self openReview: review of: entry ].
+	self showInPane: gameView
 ]
 
 { #category : 'accessing' }
@@ -457,22 +445,9 @@ ChessCoachAppElement >> settingsElement [
 
 { #category : 'settings' }
 ChessCoachAppElement >> showDefaultPane [
-	"The analysis of the selected game, or the mistakes dashboard"
+	"The view of the selected game, or the mistakes dashboard"
 
-	self showInPane: (analysis ifNil: [ dashboard ])
-]
-
-{ #category : 'updating' }
-ChessCoachAppElement >> showGame: aGame [
-
-	coach := nil.
-	waitingEntry := nil.
-	analysis ifNil: [
-			analysis := GameAnalysisElement new.
-			analysis boardElement pieceSet:
-				(ChessPieceSet named: session settings pieceSet) ].
-	self showInPane: analysis.
-	analysis game: aGame
+	self showInPane: (gameView ifNil: [ dashboard ])
 ]
 
 { #category : 'private' }
@@ -509,26 +484,6 @@ ChessCoachAppElement >> startBackgroundAnalysis [
 	session analysisQueue
 		enqueueUnanalysed;
 		start
-]
-
-{ #category : 'coach' }
-ChessCoachAppElement >> startCoachOn: aGameIndexEntry [
-	"Pause the background analysis and open the review (moments and explorer data are fetched off the UI thread)"
-
-	| review |
-	waitingEntry := nil.
-	session analysisQueue pause.
-	self showInPane: (ToLabel text: 'Preparing the review…').
-	backgroundRunner value: [
-			review := session reviewFor: aGameIndexEntry.
-			self inUIDo: [
-					coach := CoachElement new.
-					coach backgroundRunner: backgroundRunner.
-					coach board pieceSet:
-						(ChessPieceSet named: session settings pieceSet).
-					coach review: review.
-					coach whenExitDo: [ self exitCoach ].
-					self showInPane: coach ] ]
 ]
 
 { #category : 'accessing' }

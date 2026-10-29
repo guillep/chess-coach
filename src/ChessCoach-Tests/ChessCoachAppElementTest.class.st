@@ -326,3 +326,15 @@ ChessCoachAppElementTest >> testStartsLoggedOut [
 	self assert: app gameList dataAccessor isEmpty.
 	self assert: app gameView isNil
 ]
+
+{ #category : 'tests' }
+ChessCoachAppElementTest >> testUnexpectedErrorIsShownAndLogged [
+
+	self click: app loginButton.
+	api error: (ZeroDivide new messageText: 'boom').
+	self click: app loadMoreButton.
+	self assert: (app statusLabel text asString beginsWith:
+			 'Something went wrong: ZeroDivide: boom').
+	self assert:
+		(session errorLog contents includesSubstring: 'ZeroDivide: boom')
+]

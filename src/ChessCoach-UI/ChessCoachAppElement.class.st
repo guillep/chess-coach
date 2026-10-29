@@ -484,16 +484,25 @@ ChessCoachAppElement >> rowTextFor: aGameIndexEntry [
 
 { #category : 'private' }
 ChessCoachAppElement >> runInBackground: aBlock [
-	"Run network work off the UI thread; show progress and any Lichess or network error inline"
+	"Run network work off the UI thread and show its progress. Lichess and network errors are shown in the status line; any other error is shown too and appended to errors.log, instead of opening a debugger."
 
 	statusLabel text: 'Working…'.
 	backgroundRunner value: [
 			[
 				aBlock value.
 				self inUIDo: [ statusLabel text: '' ] ]
-				on: LichessError , NetworkError
+				on: Error
 				do: [ :error |
-				self inUIDo: [ statusLabel text: error messageText ] ] ]
+						((error isKindOf: LichessError) or: [
+							 error isKindOf: NetworkError ]) ifFalse: [
+							session logError: error ].
+						self inUIDo: [
+								statusLabel text: ((error isKindOf: LichessError)
+										 ifTrue: [ error messageText ]
+										 ifFalse: [
+												 'Something went wrong: ' , error class name , ': '
+												 , (error messageText ifNil: [ '' ]) asString
+												 , ' (details in errors.log)' ]) ] ] ]
 ]
 
 { #category : 'actions' }

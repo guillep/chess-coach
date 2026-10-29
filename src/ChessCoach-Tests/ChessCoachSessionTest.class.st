@@ -175,6 +175,18 @@ ChessCoachSessionTest >> testMyColorsComeFromMyUsername [
 ]
 
 { #category : 'tests' }
+ChessCoachSessionTest >> testNDJSONBytesAreDecoded [
+
+	| lines |
+	lines := LichessAPIClientBytesStub new getJSONLines:
+		         'https://lichess.org/api/games/user/x' asZnUrl.
+	self
+		assert: (lines collect: [ :each | each at: 'id' ]) asArray
+		equals: #( 'a1' 'a2' ).
+	self assert: (lines first at: 'name') equals: 'Gö'
+]
+
+{ #category : 'tests' }
 ChessCoachSessionTest >> testOldReviewAndMarksBecomeReviewOne [
 
 	| entry game engine games review |

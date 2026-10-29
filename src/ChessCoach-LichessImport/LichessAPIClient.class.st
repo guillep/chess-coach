@@ -66,10 +66,10 @@ LichessAPIClient >> get: aZnUrl accept: aMimeTypeString [
 
 { #category : 'private' }
 LichessAPIClient >> getJSONLines: aZnUrl [
-	"GET an NDJSON resource and answer one dictionary per line"
+	"GET an NDJSON resource and answer one dictionary per line. Zinc doesn't know application/x-ndjson is text and answers bytes, so they are decoded as UTF-8 here."
 
-	^ ((self get: aZnUrl accept: 'application/x-ndjson') lines reject: [
-		   :line | line trimBoth isEmpty ]) collect: [ :line |
+	^ ((self textFrom: (self get: aZnUrl accept: 'application/x-ndjson'))
+		   lines reject: [ :line | line trimBoth isEmpty ]) collect: [ :line |
 		  STONJSON fromString: line ]
 ]
 
@@ -77,6 +77,14 @@ LichessAPIClient >> getJSONLines: aZnUrl [
 LichessAPIClient >> initialize [
 
 	baseUrl := 'https://lichess.org/api'
+]
+
+{ #category : 'private' }
+LichessAPIClient >> textFrom: aStringOrByteArray [
+
+	^ aStringOrByteArray isString
+		  ifTrue: [ aStringOrByteArray ]
+		  ifFalse: [ aStringOrByteArray utf8Decoded ]
 ]
 
 { #category : 'private' }

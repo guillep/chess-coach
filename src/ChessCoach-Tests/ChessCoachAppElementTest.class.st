@@ -227,6 +227,7 @@ ChessCoachAppElementTest >> testRowsShowTheAnalysisState [
 { #category : 'tests' }
 ChessCoachAppElementTest >> testSelectingARowOpensTheGameView [
 
+	| info |
 	self click: app loginButton.
 	self click: app loadMoreButton.
 	app gameList selecter selectIndex: 1.
@@ -234,7 +235,11 @@ ChessCoachAppElementTest >> testSelectingARowOpensTheGameView [
 	self assert: app gameView isAttachedToSceneGraph.
 	self
 		assert: app gameView reviewsZone children first text asString
-		equals: 'No analysis yet.'
+		equals: 'No analysis yet.'.
+	info := app gameView infoLines.
+	self assert: (info first beginsWith: 'White: ').
+	self assert: (info second beginsWith: 'Black: ').
+	self assert: info last equals: 'Stockfish: not analysed yet'
 ]
 
 { #category : 'tests' }

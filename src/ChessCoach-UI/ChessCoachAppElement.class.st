@@ -81,9 +81,10 @@ ChessCoachAppElement >> analysisLabel [
 
 { #category : 'analysis queue' }
 ChessCoachAppElement >> analysisStateChangedOf: aGameIdOrNil [
-	"The background analysis is shown in the status line only: rebuilding list rows on every change left stale selection skins (invisible text)"
+	"The background analysis is shown in the status line and in the open game's info, not in the list: rebuilding list rows on every change left stale selection skins (invisible text)"
 
-	self updateAnalysisStatus
+	self updateAnalysisStatus.
+	gameView ifNotNil: [ gameView updateInfo ]
 ]
 
 { #category : 'settings' }

@@ -11,7 +11,10 @@ Class {
 		'pending',
 		'answers',
 		'candidateWinPercents',
-		'labels'
+		'labels',
+		'score',
+		'winDrop',
+		'seconds'
 	],
 	#category : 'ChessCoach-Coach',
 	#package : 'ChessCoach-Coach'
@@ -35,15 +38,18 @@ CoachMomentReview class >> fromDictionary: aDictionary [
 		review candidate: move winPercent: percent ].
 	review labels: ((aDictionary at: 'labels') collect: [ :each |
 			 MistakeLabel fromDictionary: each ]).
+	review
+		score: (aDictionary at: 'score' ifAbsent: [ 0 ]);
+		winDrop: (aDictionary at: 'winDrop' ifAbsent: [ 0 ]);
+		addSeconds: (aDictionary at: 'seconds' ifAbsent: [ 0 ]).
 	^ review
 ]
 
 { #category : 'instance creation' }
-CoachMomentReview class >> ply: aPly color: aColor kinds: someKinds questions: someQuestions [
+CoachMomentReview class >> ply: aPly color: aColor kinds: someKinds [
 
 	^ self new
 		  setPly: aPly color: aColor kinds: someKinds asArray;
-		  ask: someQuestions;
 		  yourself
 ]
 
@@ -52,6 +58,12 @@ CoachMomentReview >> addAnswer: aCoachAnswer [
 
 	answers add: aCoachAnswer.
 	self proposeLabels: aCoachAnswer labels
+]
+
+{ #category : 'accessing' }
+CoachMomentReview >> addSeconds: aNumber [
+
+	seconds := seconds + aNumber
 ]
 
 { #category : 'dialogue' }
@@ -89,6 +101,9 @@ CoachMomentReview >> asDictionary [
 		  at: 'candidates' put: candidateWinPercents copy;
 		  at: 'labels'
 		  put: (labels collect: [ :each | each asDictionary ]) asArray;
+		  at: 'score' put: score;
+		  at: 'winDrop' put: winDrop;
+		  at: 'seconds' put: seconds;
 		  yourself
 ]
 
@@ -147,16 +162,42 @@ CoachMomentReview >> isClassifying [
 ]
 
 { #category : 'testing' }
+CoachMomentReview >> isMarked [
+
+	^ kinds includes: #marked
+]
+
+{ #category : 'testing' }
 CoachMomentReview >> isRevealed [
 	"No question left: the engine's view and the proposed tags can be shown"
 
 	^ pending isEmpty
 ]
 
+{ #category : 'testing' }
+CoachMomentReview >> isReviewed [
+	"Every question about this moment has been answered"
+
+	^ self isStarted and: [ self isRevealed ]
+]
+
+{ #category : 'testing' }
+CoachMomentReview >> isStarted [
+	"Whether the coach has asked anything about this moment yet"
+
+	^ answers notEmpty or: [ pending notEmpty ]
+]
+
 { #category : 'accessing' }
 CoachMomentReview >> kinds [
 
 	^ kinds
+]
+
+{ #category : 'accessing' }
+CoachMomentReview >> kinds: someKinds [
+
+	kinds := someKinds asArray
 ]
 
 { #category : 'accessing' }
@@ -170,6 +211,20 @@ CoachMomentReview >> labels [
 CoachMomentReview >> labels: someMistakeLabels [
 
 	labels := someMistakeLabels asOrderedCollection
+]
+
+{ #category : 'testing' }
+CoachMomentReview >> passes: aFilter [
+	"aFilter is #all, #mistakes (mistakes, blunders, only moves) or #blunders. My marks always pass."
+
+	aFilter = #all ifTrue: [ ^ true ].
+	aFilter = #mistakes ifTrue: [
+			^ kinds includesAny:
+				  #( #mistake #blunder #onlyMoveMissed #onlyMoveFound
+				     #marked ) ].
+	aFilter = #blunders ifTrue: [
+		^ kinds includesAny: #( #blunder #marked ) ].
+	self error: 'Unknown moment filter: ' , aFilter printString
 ]
 
 { #category : 'accessing' }
@@ -200,6 +255,26 @@ CoachMomentReview >> proposeLabels: someMistakeLabels [
 							labels at: (labels indexOf: existing) put: label ] ] ]
 ]
 
+{ #category : 'accessing' }
+CoachMomentReview >> score [
+	"Importance from MomentPrioritizer"
+
+	^ score
+]
+
+{ #category : 'accessing' }
+CoachMomentReview >> score: aNumber [
+
+	score := aNumber
+]
+
+{ #category : 'accessing' }
+CoachMomentReview >> seconds [
+	"Time spent on this moment: its questions and its reveal"
+
+	^ seconds
+]
+
 { #category : 'initialization' }
 CoachMomentReview >> setPly: aPly color: aColor kinds: someKinds [
 
@@ -209,5 +284,21 @@ CoachMomentReview >> setPly: aPly color: aColor kinds: someKinds [
 	pending := OrderedCollection new.
 	answers := OrderedCollection new.
 	candidateWinPercents := Dictionary new.
-	labels := OrderedCollection new
+	labels := OrderedCollection new.
+	score := 0.
+	winDrop := 0.
+	seconds := 0
+]
+
+{ #category : 'accessing' }
+CoachMomentReview >> winDrop [
+	"How many win-% points my move lost against the best one"
+
+	^ winDrop
+]
+
+{ #category : 'accessing' }
+CoachMomentReview >> winDrop: aNumber [
+
+	winDrop := aNumber
 ]

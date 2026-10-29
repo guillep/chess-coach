@@ -81,20 +81,14 @@ SettingsElement >> build [
 				 by: 1);
 		addChild: (multiPVNote := ToLabel new);
 		addChild: (self note:
-				 'Changing the depth or the lines re-analyses your games in the background.');
+				 'Changes apply to games analysed from now on; stored analyses are kept.');
 		addChild: (self heading: 'Coach (local LLM)');
 		addChild: self ollamaRow;
 		addChild: (modelsZone := self row: #(  ));
 		addChild: (llmStatus := ToLabel new
 				              beMultiLine;
 				              hMatchParent;
-				              yourself);
-		addChild: (self
-				 numberRow: 'Moments per round'
-				 key: 'momentsPerRound'
-				 from: 1
-				 to: 10
-				 by: 1).
+				              yourself).
 	self addChild: (content asScrollableElement
 			 matchParent;
 			 yourself).

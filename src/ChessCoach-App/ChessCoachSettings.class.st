@@ -24,7 +24,7 @@ ChessCoachSettings class >> defaults [
 		  at: 'multiPV' put: 3;
 		  at: 'ollamaUrl' put: 'http://localhost:11434';
 		  at: 'ollamaModel' put: 'qwen2.5:7b-instruct';
-		  at: 'momentsPerRound' put: 5;
+		  at: 'momentFilter' put: 'mistakes';
 		  yourself
 ]
 
@@ -70,9 +70,10 @@ ChessCoachSettings >> gamesPerLoad [
 ]
 
 { #category : 'accessing' }
-ChessCoachSettings >> momentsPerRound [
+ChessCoachSettings >> momentFilter [
+	"Which moments a review lists and walks through: #all, #mistakes or #blunders"
 
-	^ self at: 'momentsPerRound'
+	^ (self at: 'momentFilter') asSymbol
 ]
 
 { #category : 'accessing' }

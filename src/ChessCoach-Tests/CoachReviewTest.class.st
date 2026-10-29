@@ -5,7 +5,8 @@ Class {
 		'game',
 		'analysis',
 		'engine',
-		'client'
+		'client',
+		'now'
 	],
 	#category : 'ChessCoach-Tests',
 	#package : 'ChessCoach-Tests'
@@ -14,6 +15,7 @@ Class {
 { #category : 'helpers' }
 CoachReviewTest >> answerFirstMoment: review [
 
+	review start: (review moments detect: [ :each | each ply = 7 ]).
 	review answerMoves: #( 'f3g5' 'd2d3' ).
 	review answerText: 'I wanted to attack f7'.
 	review answerMoves: #( 'h7h6' ).
@@ -33,30 +35,38 @@ CoachReviewTest >> line: aUCIMove whiteCentipawns: aNumber [
 
 { #category : 'helpers' }
 CoachReviewTest >> newReview [
+	"A review whose marking pass is done: moments at ply 3 (only move found) and 7 (mistake)"
 
+	^ self newReviewMarking
+		  finishMarkingWith: analysis moments: {
+				  (ChessMoment
+					   ply: 3
+					   color: #white
+					   kind: #onlyMoveFound
+					   source: #engine
+					   note: nil).
+				  (ChessMoment
+					   ply: 7
+					   color: #white
+					   kind: #mistake
+					   source: #engine
+					   note: nil) };
+		  yourself
+]
+
+{ #category : 'helpers' }
+CoachReviewTest >> newReviewMarking [
+
+	now := DateAndTime year: 2026 month: 10 day: 29.
 	^ (CoachReview
 		   gameId: 'g1'
 		   game: game
-		   analysis: analysis
-		   moments: {
-				   (ChessMoment
-					    ply: 3
-					    color: #white
-					    kind: #onlyMoveFound
-					    source: #engine
-					    note: nil).
-				   (ChessMoment
-					    ply: 7
-					    color: #white
-					    kind: #mistake
-					    source: #engine
-					    note: nil) }
 		   engine: engine
 		   classifier:
 			   (AnswerClassifier
 				    client: client
 				    taxonomy: MistakeTaxonomy default))
-		  batchSize: 1;
+		  clock: [ now ];
 		  yourself
 ]
 
@@ -103,9 +113,8 @@ CoachReviewTest >> testClassificationWaitsForOllamaAndSavesEveryChange [
 	review := self newReview.
 	saves := 0.
 	review whenChangedDo: [ saves := saves + 1 ].
-	review reviewMore.
 	self answerFirstMoment: review.
-	self assert: saves equals: 6.
+	self assert: saves equals: 7.
 	self assert: review currentMoment isClassifying.
 	self assert: review currentMoment labels isEmpty.
 	client replyContent:
@@ -117,7 +126,7 @@ CoachReviewTest >> testClassificationWaitsForOllamaAndSavesEveryChange [
 		(review currentMoment labels collect: [ :each | each tagId ])
 			asArray
 		equals: #( 'hope-chess' ).
-	self assert: saves equals: 6 + 4
+	self assert: saves equals: 7 + 4
 ]
 
 { #category : 'tests' }
@@ -125,11 +134,12 @@ CoachReviewTest >> testDialogue [
 
 	| review moment reveal |
 	review := self newReview.
-	review reviewMore.
 	self
-		assert: (review reviews collect: [ :each | each ply ]) asArray
-		equals: #( 7 ).
-	self assert: review hasMore.
+		assert: (review moments collect: [ :each | each ply ]) asArray
+		equals: #( 3 7 ).
+	self deny: (review moments anySatisfy: [ :each | each isStarted ]).
+	moment := review moments second.
+	review start: moment.
 	self assert: review currentQuestion kind equals: #candidates.
 	review answerMoves: #( 'f3g5' 'd2d3' ).
 	self
@@ -138,7 +148,6 @@ CoachReviewTest >> testDialogue [
 	review answerText: 'I wanted to attack f7'.
 	self assert: review currentQuestion kind equals: #expectedReply.
 	review answerMoves: #( 'h7h6' ).
-	moment := review currentMoment.
 	self
 		assert:
 		(moment pending collect: [ :each | each kind -> each move ]) asArray
@@ -154,9 +163,8 @@ CoachReviewTest >> testDialogue [
 		equals:
 		'You also considered d3, which was better. Why did you choose Ng5?'.
 	3 timesRepeat: [ review answerText: 'I did not see it' ].
-	self assert: moment isRevealed.
+	self assert: moment isReviewed.
 	self assert: moment isClassifying.
-	self assert: moment labels isEmpty.
 	review classifyPending.
 	self deny: moment isClassifying.
 	reveal := review revealOf: moment.
@@ -168,8 +176,25 @@ CoachReviewTest >> testDialogue [
 		assert: (moment labels collect: [ :each | each tagId ]) asArray
 		equals: #( 'missed-opponent-threat' ).
 	review confirmTag: 'hope-chess' of: moment.
-	review nextMoment.
-	self assert: review isFinished
+	review leaveMoment.
+	self assert: review currentMoment isNil.
+	self assert: (review nextMomentAfter: 7 passing: #all) isNil.
+	self assert: (review nextMomentAfter: 0 passing: #all) ply equals: 3
+]
+
+{ #category : 'tests' }
+CoachReviewTest >> testFoundOnlyMoveIsNotAMistake [
+
+	| review |
+	review := self newReview.
+	self answerFirstMoment: review.
+	review leaveMoment.
+	review start: (review nextMomentAfter: 0 passing: #all).
+	self assert: review currentMoment ply equals: 3.
+	self assert: review currentQuestion kind equals: #whatDidYouSee.
+	review answerText: 'The knight fork'.
+	self assert: review currentMoment isReviewed.
+	self assert: review mistakeRecords size equals: 1
 ]
 
 { #category : 'tests' }
@@ -177,7 +202,7 @@ CoachReviewTest >> testIllegalCandidate [
 
 	| review |
 	review := self newReview.
-	review reviewMore.
+	review start: review moments last.
 	self
 		should: [ review answerMoves: #( 'e1e3' ) ]
 		raise: CoachIllegalMove.
@@ -185,13 +210,76 @@ CoachReviewTest >> testIllegalCandidate [
 ]
 
 { #category : 'tests' }
+CoachReviewTest >> testMarkingPassAndFilters [
+
+	| review restored |
+	review := self newReviewMarking.
+	self assert: review isMarking.
+	review showPly: 1.
+	self wait: 4.
+	review showPly: 2.
+	self wait: 6.
+	review mark: 3 note: 'not sure'.
+	review mark: 5 note: ''.
+	review unmark: 5.
+	review showPly: 1.
+	self wait: 2.
+	self assert: (review isMarked: 3).
+	self deny: (review isMarked: 5).
+	review finishMarkingWith: analysis moments: {
+			(ChessMoment
+				 ply: 3
+				 color: #white
+				 kind: #marked
+				 source: #marks
+				 note: 'not sure').
+			(ChessMoment
+				 ply: 5
+				 color: #white
+				 kind: #inaccuracy
+				 source: #engine
+				 note: nil).
+			(ChessMoment
+				 ply: 7
+				 color: #white
+				 kind: #mistake
+				 source: #engine
+				 note: nil) }.
+	self deny: review isMarking.
+	self assert: (review plySeconds at: 1) equals: 6.
+	self assert: (review plySeconds at: 2) equals: 6.
+	self assert: review markingSeconds equals: 12.
+	self
+		assert:
+		((review momentsPassing: #all) collect: [ :each | each ply ])
+			asArray
+		equals: #( 3 5 7 ).
+	self
+		assert:
+			((review momentsPassing: #mistakes) collect: [ :each | each ply ])
+				asArray
+		equals: #( 3 7 ).
+	self
+		assert:
+			((review momentsPassing: #blunders) collect: [ :each | each ply ])
+				asArray
+		equals: #( 3 ).
+	self assert: (review moments last winDrop between: 17 and: 19).
+	restored := self newReviewMarking
+		            restoreFromJSON: review asJSON analysis: [ analysis ];
+		            yourself.
+	self assert: restored marks size equals: 1.
+	self assert: restored markingSeconds equals: 12
+]
+
+{ #category : 'tests' }
 CoachReviewTest >> testMistakeRecordsAndJSON [
 
 	| review record restored |
 	review := self newReview.
-	review reviewMore.
 	self answerFirstMoment: review.
 	review currentMoment confirmTag: 'missed-opponent-threat'.
+	review leaveMoment.
 	record := review mistakeRecords first.
 	self assert: review mistakeRecords size equals: 1.
 	self assert: record playedMove equals: 'f3g5'.
@@ -201,11 +289,13 @@ CoachReviewTest >> testMistakeRecordsAndJSON [
 	self assert: record explanation equals: 'I wanted to attack f7'.
 	self assert: (record winDrop between: 17 and: 19).
 	self assert: record labels first isConfirmed.
-	restored := self newReview
-		            restoreFromJSON: review asJSON;
+	restored := self newReviewMarking
+		            restoreFromJSON: review asJSON analysis: [ analysis ];
 		            yourself.
-	self assert: restored reviews size equals: 1.
-	self assert: restored hasMore.
+	self deny: restored isMarking.
+	self assert: restored moments size equals: 2.
+	self deny: restored moments first isStarted.
+	self assert: restored moments last isReviewed.
 	self
 		assert:
 		(restored mistakeRecords collect: [ :each | each asDictionary ])
@@ -214,19 +304,35 @@ CoachReviewTest >> testMistakeRecordsAndJSON [
 ]
 
 { #category : 'tests' }
-CoachReviewTest >> testReviewMoreAddsTheNextMoments [
+CoachReviewTest >> testTimings [
 
-	| review |
+	| review moment |
 	review := self newReview.
-	review reviewMore.
-	self answerFirstMoment: review.
-	review nextMoment.
-	review reviewMore.
-	self deny: review hasMore.
-	self deny: review isFinished.
-	self assert: review currentMoment ply equals: 3.
-	self assert: review currentQuestion kind equals: #whatDidYouSee.
-	review answerText: 'The knight fork'.
-	self assert: review currentMoment isRevealed.
-	self assert: review mistakeRecords size equals: 1
+	moment := review moments last.
+	review start: moment.
+	self wait: 30.
+	review answerMoves: #( 'f3g5' ).
+	self wait: 45.
+	review answerText: 'attack'.
+	self wait: 10.
+	review leaveMoment.
+	self
+		assert: (moment answers collect: [ :each | each seconds ]) asArray
+		equals: #( 30 45 ).
+	self assert: moment seconds equals: 85.
+	self assert: review reviewingSeconds equals: 85.
+	review start: moment.
+	self wait: 5.
+	review leaveMoment.
+	self assert: moment seconds equals: 90.
+	self
+		assert:
+		(CoachMomentReview fromDictionary: moment asDictionary) seconds
+		equals: 90
+]
+
+{ #category : 'helpers' }
+CoachReviewTest >> wait: seconds [
+
+	now := now + seconds seconds
 ]

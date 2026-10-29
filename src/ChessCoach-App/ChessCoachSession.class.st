@@ -210,6 +210,16 @@ ChessCoachSession >> explorer: aLichessExplorerClient [
 	explorer := aLichessExplorerClient
 ]
 
+{ #category : 'coach' }
+ChessCoachSession >> finishMarking: aCoachReview of: aGameIndexEntry [
+	"End the marking pass: merge my marks with the heuristic moments. Slow when the game is not analysed yet: call it off the UI thread."
+
+	aCoachReview
+		finishMarkingWith: (self analysisFor: aGameIndexEntry)
+		moments:
+		(self momentsFor: aGameIndexEntry marks: aCoachReview marks)
+]
+
 { #category : 'accessing' }
 ChessCoachSession >> gameFor: aGameIndexEntry [
 
@@ -250,14 +260,9 @@ ChessCoachSession >> initializeWithImporter: aLichessGameImporter [
 
 { #category : 'moments' }
 ChessCoachSession >> isAnalysed: aGameIndexEntry [
-	"Whether a stored analysis exists at the analyser's depth and MultiPV"
+	"Whether the game has its Stockfish analysis. It is kept even when the analysis settings change."
 
-	| file analysis |
-	file := self analysisFileFor: aGameIndexEntry.
-	file exists ifFalse: [ ^ false ].
-	analysis := GameAnalysis fromJSON: file contents.
-	^ analysis depth = self analyser depth and: [
-		  analysis multiPV = self analyser multiPV ]
+	^ (self analysisFileFor: aGameIndexEntry) exists
 ]
 
 { #category : 'testing' }
@@ -297,19 +302,6 @@ ChessCoachSession >> logout [
 ]
 
 { #category : 'marks' }
-ChessCoachSession >> mark: aGameIndexEntry ply: aPly note: aString [
-	"Mark the ply-th half-move as important, replacing any earlier mark on it"
-
-	self
-		saveMarks: ((self marksFor: aGameIndexEntry) reject: [ :each |
-				 (each at: 'ply') = aPly ]) , { (Dictionary new
-				 at: 'ply' put: aPly;
-				 at: 'note' put: aString;
-				 yourself) }
-		for: aGameIndexEntry
-]
-
-{ #category : 'marks' }
 ChessCoachSession >> marksFor: aGameIndexEntry [
 	"My marks on the game: dictionaries with 'ply' and 'note', sorted by ply"
 
@@ -319,6 +311,32 @@ ChessCoachSession >> marksFor: aGameIndexEntry [
 		        of: aGameIndexEntry gameId.
 	file exists ifFalse: [ ^ #(  ) ].
 	^ STONJSON fromString: file contents
+]
+
+{ #category : 'private' }
+ChessCoachSession >> migrateOldReviewOf: aGameIndexEntry [
+	"A review.json and marks.json saved before reviews had numbers become review-1.json, with every detected moment"
+
+	| old marks review |
+	old := importer fileStore
+		       file: 'review.json'
+		       of: aGameIndexEntry gameId.
+	marks := importer fileStore
+		         file: 'marks.json'
+		         of: aGameIndexEntry gameId.
+	(old exists or: [ marks exists ]) ifFalse: [ ^ self ].
+	review := self newCoachReviewFor: aGameIndexEntry.
+	old exists ifTrue: [
+			review
+				restoreFromJSON: old contents
+				analysis: [ self analysisFor: aGameIndexEntry ] ].
+	marks exists ifTrue: [
+			(STONJSON fromString: marks contents) do: [ :each |
+				review mark: (each at: 'ply') note: (each at: 'note') ] ].
+	old exists ifTrue: [ self finishMarking: review of: aGameIndexEntry ].
+	self saveReviewFile: review.
+	old ensureDelete.
+	marks ensureDelete
 ]
 
 { #category : 'coach' }
@@ -337,8 +355,8 @@ ChessCoachSession >> mistakesFile [
 ]
 
 { #category : 'moments' }
-ChessCoachSession >> momentsFor: aGameIndexEntry [
-	"The game's interesting moments, sorted by ply. Slow the first time (engine analysis): call it off the UI thread."
+ChessCoachSession >> momentsFor: aGameIndexEntry marks: someMarks [
+	"The game's interesting moments, merged with someMarks (dictionaries with 'ply' and 'note'), sorted by ply. Slow the first time (engine analysis): call it off the UI thread."
 
 	| game analysis colors |
 	game := self gameFor: aGameIndexEntry.
@@ -352,9 +370,7 @@ ChessCoachSession >> momentsFor: aGameIndexEntry [
 					    game: game
 					    explorer: self explorer
 					    colors: colors) }
-		   marksFinder: (MarkedMomentsFinder
-				    game: game
-				    marks: (self marksFor: aGameIndexEntry))
+		   marksFinder: (MarkedMomentsFinder game: game marks: someMarks)
 		   colors: colors) moments
 ]
 
@@ -377,14 +393,51 @@ ChessCoachSession >> myColorsIn: aGame [
 ]
 
 { #category : 'private' }
-ChessCoachSession >> rebuiltMistakeDatabase [
-	"The reviews are the source of truth: collect the mistakes saved in every games/<id>.review.json"
+ChessCoachSession >> newCoachReviewFor: aGameIndexEntry [
+	"A review that saves itself after every change and rebuilds the mistake database when a moment is left"
 
-	^ MistakeDatabase withRecords:
-		  ((importer fileStore baseDirectory / 'games' filesMatching:
-			    '*.review.json') flatCollect: [ :file |
-				   ((STONJSON fromString: file contents) at: 'mistakes') collect: [
-					   :each | MistakeRecord fromDictionary: each ] ])
+	| review |
+	review := CoachReview
+		          gameId: aGameIndexEntry gameId
+		          game: (self gameFor: aGameIndexEntry)
+		          engine: self analyser engine
+		          classifier: self classifier.
+	review depth: self settings depth.
+	review whenChangedDo: [ self saveReviewFile: review ].
+	review whenMomentClosedDo: [ self saveReview: review ].
+	^ review
+]
+
+{ #category : 'coach' }
+ChessCoachSession >> newReviewFor: aGameIndexEntry [
+	"Start the next review of the game, in its manual marking pass"
+
+	| review |
+	review := self newCoachReviewFor: aGameIndexEntry.
+	review number: ((self reviewsFor: aGameIndexEntry)
+			 inject: 0
+			 into: [ :max :each | max max: each number ]) + 1.
+	self saveReviewFile: review.
+	self announceChanged.
+	^ review
+]
+
+{ #category : 'private' }
+ChessCoachSession >> rebuiltMistakeDatabase [
+	"The reviews are the source of truth: collect the mistakes saved in every games/<id>.review-<n>.json. A moment reviewed in several reviews of a game counts once, from the most recent one."
+
+	| latest |
+	latest := Dictionary new.
+	((importer fileStore baseDirectory / 'games' filesMatching:
+			  '*.review-*.json') collect: [ :file |
+			 STONJSON fromString: file contents ]) asArray
+		sort: [ :a :b | (a at: 'number') < (b at: 'number') ];
+		do: [ :review |
+				(review at: 'mistakes') do: [ :each |
+							| record |
+							record := MistakeRecord fromDictionary: each.
+							latest at: record gameId -> record ply put: record ] ].
+	^ MistakeDatabase withRecords: latest values
 ]
 
 { #category : 'games' }
@@ -397,42 +450,30 @@ ChessCoachSession >> refresh [
 	self announceChanged
 ]
 
-{ #category : 'coach' }
-ChessCoachSession >> reviewFor: aGameIndexEntry [
-	"The coach review of the game, continuing the saved one if any. It saves itself after every change and rebuilds the mistake database when a moment is closed. Slow the first time (engine analysis): call it off the UI thread."
+{ #category : 'private' }
+ChessCoachSession >> review: aGameIndexEntry from: aJSONString [
 
-	| review file |
-	review := CoachReview
-		          gameId: aGameIndexEntry gameId
-		          game: (self gameFor: aGameIndexEntry)
-		          analysis: (self analysisFor: aGameIndexEntry)
-		          moments: (self momentsFor: aGameIndexEntry)
-		          engine: self analyser engine
-		          classifier: self classifier.
-	review
-		batchSize: self settings momentsPerRound;
-		depth: self settings depth.
-	file := importer fileStore
-		        file: 'review.json'
-		        of: aGameIndexEntry gameId.
-	file exists
-		ifTrue: [ review restoreFromJSON: file contents ]
-		ifFalse: [ review reviewMore ].
-	review whenChangedDo: [ self saveReviewFile: review ].
-	review whenMomentClosedDo: [ self saveReview: review ].
-	^ review
+	^ (self newCoachReviewFor: aGameIndexEntry)
+		  restoreFromJSON: aJSONString
+		  analysis: [ self analysisFor: aGameIndexEntry ];
+		  yourself
 ]
 
 { #category : 'private' }
-ChessCoachSession >> saveMarks: aCollection for: aGameIndexEntry [
+ChessCoachSession >> reviewFilesOf: aGameId [
 
-	(importer fileStore file: 'marks.json' of: aGameIndexEntry gameId)
-		ensureDelete;
-		writeStreamDo: [ :stream |
-				stream nextPutAll: (STONJSON toString:
-								 (aCollection asArray sort: [ :a :b |
-										  (a at: 'ply') < (b at: 'ply') ])) ].
-	self announceChanged
+	^ importer fileStore baseDirectory / 'games' filesMatching:
+		  aGameId , '.review-*.json'
+]
+
+{ #category : 'coach' }
+ChessCoachSession >> reviewsFor: aGameIndexEntry [
+	"The game's coach reviews (games/<id>.review-<n>.json), oldest first. A review.json and marks.json from before reviews had numbers become review 1."
+
+	self migrateOldReviewOf: aGameIndexEntry.
+	^ ((self reviewFilesOf: aGameIndexEntry gameId) collect: [ :file |
+		   self review: aGameIndexEntry from: file contents ]) asArray
+		  sort: [ :a :b | a number < b number ]
 ]
 
 { #category : 'coach' }
@@ -450,20 +491,21 @@ ChessCoachSession >> saveReview: aCoachReview [
 { #category : 'private' }
 ChessCoachSession >> saveReviewFile: aCoachReview [
 
-	(importer fileStore file: 'review.json' of: aCoachReview gameId)
+	(importer fileStore
+		 file: 'review-' , aCoachReview number printString , '.json'
+		 of: aCoachReview gameId)
 		ensureDelete;
 		writeStreamDo: [ :stream | stream nextPutAll: aCoachReview asJSON ]
 ]
 
 { #category : 'settings' }
 ChessCoachSession >> settingChanged: aKey [
-	"Apply a changed setting to the engines and the classifier already created, then announce it"
+	"Apply a changed setting to the engines and the classifier already created, then announce it. Stored analyses are kept."
 
 	(#( 'depth' 'multiPV' 'stockfishPath' ) includes: aKey) ifTrue: [
 			{
 				self analyser.
-				self analysisQueue analyser } do: [ :each | self configure: each ].
-			self analysisQueue invalidate ].
+				self analysisQueue analyser } do: [ :each | self configure: each ] ].
 	(#( 'ollamaUrl' 'ollamaModel' ) includes: aKey) ifTrue: [
 			self classifier client
 				baseUrl: self settings ollamaUrl;
@@ -482,15 +524,6 @@ ChessCoachSession >> settings [
 				              importer fileStore baseDirectory / 'settings.json'.
 			  settings whenChangedDo: [ :key | self settingChanged: key ].
 			  settings ]
-]
-
-{ #category : 'marks' }
-ChessCoachSession >> unmark: aGameIndexEntry ply: aPly [
-
-	self
-		saveMarks: ((self marksFor: aGameIndexEntry) reject: [ :each |
-				 (each at: 'ply') = aPly ])
-		for: aGameIndexEntry
 ]
 
 { #category : 'accessing' }

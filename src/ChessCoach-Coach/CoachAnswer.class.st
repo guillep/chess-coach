@@ -9,7 +9,8 @@ Class {
 		'moves',
 		'text',
 		'labels',
-		'classified'
+		'classified',
+		'seconds'
 	],
 	#category : 'ChessCoach-Coach',
 	#package : 'ChessCoach-Coach'
@@ -26,6 +27,7 @@ CoachAnswer class >> fromDictionary: aDictionary [
 		   labels: ((aDictionary at: 'labels') collect: [ :each |
 					    MistakeLabel fromDictionary: each ]) asArray)
 		  classified: (aDictionary at: 'classified' ifAbsent: [ true ]);
+		  seconds: (aDictionary at: 'seconds' ifAbsent: [ 0 ]);
 		  yourself
 ]
 
@@ -71,6 +73,7 @@ CoachAnswer >> asDictionary [
 		  at: 'text' put: text;
 		  at: 'labels' put: (labels collect: [ :each | each asDictionary ]);
 		  at: 'classified' put: classified;
+		  at: 'seconds' put: self seconds;
 		  yourself
 ]
 
@@ -110,6 +113,19 @@ CoachAnswer >> moves [
 CoachAnswer >> question [
 
 	^ question
+]
+
+{ #category : 'accessing' }
+CoachAnswer >> seconds [
+	"How long I took to answer, from the moment the question was shown"
+
+	^ seconds ifNil: [ 0 ]
+]
+
+{ #category : 'accessing' }
+CoachAnswer >> seconds: aNumber [
+
+	seconds := aNumber
 ]
 
 { #category : 'initialization' }

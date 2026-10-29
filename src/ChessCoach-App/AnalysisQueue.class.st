@@ -55,14 +55,6 @@ AnalysisQueue >> enqueueUnanalysed [
 	self announce: nil
 ]
 
-{ #category : 'queueing' }
-AnalysisQueue >> invalidate [
-	"The analysis settings changed: games analysed before are queued again (newest first)"
-
-	mutex critical: [ ready removeAll ].
-	self enqueueUnanalysed
-]
-
 { #category : 'testing' }
 AnalysisQueue >> isPaused [
 

@@ -18,7 +18,7 @@ ChessCoachSettingsTest >> setUp [
 ]
 
 { #category : 'tests' }
-ChessCoachSettingsTest >> testAnalysisSettingsReanalyseInTheBackground [
+ChessCoachSettingsTest >> testAnalysisSettingsKeepStoredAnalyses [
 
 	| engine queue entry |
 	session login.
@@ -36,8 +36,8 @@ ChessCoachSettingsTest >> testAnalysisSettingsReanalyseInTheBackground [
 	session settings at: 'depth' put: 12.
 	self assert: session analyser depth equals: 12.
 	self assert: queue analyser depth equals: 12.
-	self deny: (session isAnalysed: entry).
-	self assert: (queue stateOf: entry) equals: #queued.
+	self assert: (session isAnalysed: entry).
+	self assert: (queue stateOf: entry) equals: #ready.
 	session settings at: 'multiPV' put: 2.
 	self assert: queue analyser multiPV equals: 2.
 	session settings at: 'stockfishPath' put: '/usr/local/bin/stockfish'.

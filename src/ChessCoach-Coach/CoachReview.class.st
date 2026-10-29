@@ -1,5 +1,7 @@
 "
-Headless Socratic review of a game. Goes through my marked moments and the most important automatic ones (batchSize at a time, in game order), asks CoachQuestions, evaluates my candidates with the engine, classifies my text answers and reveals the truth at the end of each moment. Produces MistakeRecords and round-trips through JSON (games/<id>.review.json).
+One coach review of a game (games/<id>.review-<n>.json); a game can have several.
+
+First a manual marking pass (mark:note:, showPly: records the time on each ply), then finishMarkingWith:moments: merges my marks with the heuristic moments. Then the Socratic stage: start: a moment, answer its CoachQuestions (each answer records its time), see the reveal, leaveMoment. Unreviewed moments can be started at any time. Produces MistakeRecords and round-trips through JSON.
 "
 Class {
 	#name : 'CoachReview',
@@ -10,11 +12,18 @@ Class {
 		'analysis',
 		'engine',
 		'classifier',
-		'queue',
+		'number',
+		'date',
+		'marks',
+		'plySeconds',
+		'shownPly',
+		'shownAt',
 		'reviews',
 		'current',
-		'batchSize',
+		'momentStartedAt',
+		'questionShownAt',
 		'depth',
+		'clock',
 		'changedBlock',
 		'momentClosedBlock'
 	],
@@ -23,13 +32,12 @@ Class {
 }
 
 { #category : 'instance creation' }
-CoachReview class >> gameId: anId game: aGame analysis: aGameAnalysis moments: someMoments engine: aStockfishEngine classifier: anAnswerClassifier [
+CoachReview class >> gameId: anId game: aGame engine: aStockfishEngine classifier: anAnswerClassifier [
+	"A new review, starting with the manual marking pass"
 
 	^ self new
 		  setGameId: anId
 		  game: aGame
-		  analysis: aGameAnalysis
-		  moments: someMoments
 		  engine: aStockfishEngine
 		  classifier: anAnswerClassifier
 ]
@@ -38,6 +46,13 @@ CoachReview class >> gameId: anId game: aGame analysis: aGameAnalysis moments: s
 CoachReview >> analysis [
 
 	^ analysis
+]
+
+{ #category : 'accessing' }
+CoachReview >> analysis: aGameAnalysis [
+	"The Stockfish analysis, known once the marking pass is done"
+
+	analysis := aGameAnalysis
 ]
 
 { #category : 'answering' }
@@ -54,7 +69,9 @@ CoachReview >> answerMoves: someUCIMoves [
 		(position isLegalUCI: move) ifFalse: [
 			CoachIllegalMove signal: move ] ].
 	self currentMoment answer:
-		(CoachAnswer question: question moves: someUCIMoves).
+		((CoachAnswer question: question moves: someUCIMoves)
+			 seconds: self takeAnswerSeconds;
+			 yourself).
 	question kind = #expectedReply ifTrue: [ self askAboutCandidates ].
 	self changed
 ]
@@ -67,23 +84,32 @@ CoachReview >> answerText: aString [
 	question := self currentQuestion.
 	self assert: question expectsMoves not.
 	self currentMoment answer:
-		(CoachAnswer question: question text: aString).
+		((CoachAnswer question: question text: aString)
+			 seconds: self takeAnswerSeconds;
+			 yourself).
 	self changed
 ]
 
 { #category : 'converting' }
 CoachReview >> asJSON [
-	"The review file content: my answers per moment plus the mistake records derived from them"
+	"The review file content (games/<id>.review-<n>.json): marks, moments with my answers, timings and the mistake records derived from them"
 
 	^ STONJSON toString: (Dictionary new
 			   at: 'game' put: gameId;
-			   at: 'current' put: current;
+			   at: 'number' put: number;
+			   at: 'date' put: date yyyymmdd;
+			   at: 'marking' put: self isMarking;
+			   at: 'marks' put: self marks;
+			   at: 'plySeconds'
+			   put: (plySeconds associations asArray collect: [ :each |
+						    Array with: each key with: each value ]);
 			   at: 'moments'
 			   put: (reviews collect: [ :each | each asDictionary ]) asArray;
-			   at: 'mistakes'
-			   put:
-				   (self mistakeRecords collect: [ :each | each asDictionary ])
-					   asArray;
+			   at: 'mistakes' put: (self isMarking
+					    ifTrue: [ #(  ) ]
+					    ifFalse: [
+						    (self mistakeRecords collect: [ :each | each asDictionary ])
+							    asArray ]);
 			   yourself)
 ]
 
@@ -139,13 +165,6 @@ CoachReview >> askAboutCandidates [
 	moment ask: questions
 ]
 
-{ #category : 'accessing' }
-CoachReview >> batchSize: anInteger [
-	"How many automatic moments each round reviews (marked moments are always included)"
-
-	batchSize := anInteger
-]
-
 { #category : 'saving' }
 CoachReview >> changed [
 	"Every answer, tag change and move to the next moment is saved at once"
@@ -175,6 +194,13 @@ CoachReview >> classifyPending [
 						self changed ] ]
 ]
 
+{ #category : 'accessing' }
+CoachReview >> clock: aBlock [
+	"aBlock answers the current DateAndTime; tests replace it"
+
+	clock := aBlock
+]
+
 { #category : 'labels' }
 CoachReview >> confirmTag: aTagId of: aMomentReview [
 
@@ -198,14 +224,22 @@ CoachReview >> contextOf: aMomentReview [
 
 { #category : 'navigating' }
 CoachReview >> currentMoment [
+	"The moment being asked about, or nil"
 
-	^ reviews at: current
+	^ current
 ]
 
 { #category : 'navigating' }
 CoachReview >> currentQuestion [
 
 	^ self currentMoment currentQuestion
+]
+
+{ #category : 'accessing' }
+CoachReview >> date [
+	"The day the review started"
+
+	^ date
 ]
 
 { #category : 'accessing' }
@@ -219,6 +253,34 @@ CoachReview >> depth: anInteger [
 CoachReview >> dropTag: aTagId of: aMomentReview [
 
 	aMomentReview dropTag: aTagId.
+	self changed
+]
+
+{ #category : 'marking' }
+CoachReview >> finishMarkingWith: aGameAnalysis moments: someChessMoments [
+	"End the marking pass: someChessMoments are the heuristic moments merged with my marks. Moments already in the review keep their answers."
+
+	| prioritizer |
+	self recordShownPly.
+	analysis := aGameAnalysis.
+	prioritizer := MomentPrioritizer on: analysis.
+	someChessMoments do: [ :moment |
+			| review |
+			review := (reviews
+				           detect: [ :each | each ply = moment ply ]
+				           ifNone: [ nil ]) ifNil: [
+					          reviews add: (CoachMomentReview
+							           ply: moment ply
+							           color: moment color
+							           kinds: moment kinds) ].
+			review
+				kinds: (review kinds asSet
+						 addAll: moment kinds;
+						 yourself) asArray;
+				score: (prioritizer scoreOf: moment);
+				winDrop: (self winDropAt: moment ply for: moment color) ].
+	reviews := (reviews asArray sort: [ :a :b | a ply < b ply ])
+		           asOrderedCollection.
 	self changed
 ]
 
@@ -248,18 +310,53 @@ CoachReview >> gameId [
 	^ gameId
 ]
 
-{ #category : 'testing' }
-CoachReview >> hasMore [
-	"Whether reviewMore would select further moments"
+{ #category : 'marking' }
+CoachReview >> isMarked: aPly [
 
-	^ queue notEmpty
+	^ marks anySatisfy: [ :each | (each at: 'ply') = aPly ]
 ]
 
 { #category : 'testing' }
-CoachReview >> isFinished [
-	"Whether every selected moment has been reviewed and left"
+CoachReview >> isMarking [
+	"Whether the manual marking pass is not done yet"
 
-	^ current > reviews size
+	^ analysis isNil
+]
+
+{ #category : 'navigating' }
+CoachReview >> leaveMoment [
+	"Stop working on the current moment, answered or not. Its time is recorded."
+
+	current ifNil: [ ^ self ].
+	current addSeconds: (self secondsSince: momentStartedAt).
+	current := nil.
+	self changed.
+	momentClosedBlock value
+]
+
+{ #category : 'marking' }
+CoachReview >> mark: aPly note: aString [
+	"Mark the ply-th half-move as interesting, replacing any earlier mark on it"
+
+	self unmarkSilently: aPly.
+	marks add: (Dictionary new
+			 at: 'ply' put: aPly;
+			 at: 'note' put: aString;
+			 yourself).
+	self changed
+]
+
+{ #category : 'timing' }
+CoachReview >> markingSeconds [
+
+	^ plySeconds inject: 0 into: [ :sum :each | sum + each ]
+]
+
+{ #category : 'marking' }
+CoachReview >> marks [
+	"My marks from the manual pass: dictionaries with 'ply' and 'note', sorted by ply"
+
+	^ marks asArray sort: [ :a :b | (a at: 'ply') < (b at: 'ply') ]
 ]
 
 { #category : 'mistakes' }
@@ -295,19 +392,46 @@ CoachReview >> mistakeRecords [
 
 	^ reviews
 		  select: [ :each |
-				  each isRevealed and: [
+				  each isReviewed and: [
 					  (each kinds copyWithout: #onlyMoveFound) notEmpty ] ]
 		  thenCollect: [ :each | self mistakeRecordFor: each ]
 ]
 
-{ #category : 'navigating' }
-CoachReview >> nextMoment [
-	"Leave the current moment once its reveal has been seen"
+{ #category : 'accessing' }
+CoachReview >> moments [
+	"Every moment of the review, in move order"
 
-	self assert: self currentMoment isRevealed.
-	current := current + 1.
-	self changed.
-	momentClosedBlock value
+	^ reviews
+]
+
+{ #category : 'accessing' }
+CoachReview >> momentsPassing: aFilter [
+
+	^ reviews select: [ :each | each passes: aFilter ]
+]
+
+{ #category : 'navigating' }
+CoachReview >> nextMomentAfter: aPly passing: aFilter [
+	"The first moment after aPly not reviewed yet, or nil when none is left"
+
+	^ reviews
+		  detect: [ :each |
+				  each ply > aPly and: [
+					  each isReviewed not and: [ each passes: aFilter ] ] ]
+		  ifNone: [ nil ]
+]
+
+{ #category : 'accessing' }
+CoachReview >> number [
+	"Which review of the game this is: 1 for the first"
+
+	^ number
+]
+
+{ #category : 'accessing' }
+CoachReview >> number: anInteger [
+
+	number := anInteger
 ]
 
 { #category : 'private - questions' }
@@ -354,18 +478,46 @@ CoachReview >> phaseOf: aFEN ply: aPly [
 	^ 'middlegame'
 ]
 
+{ #category : 'timing' }
+CoachReview >> plySeconds [
+	"Seconds spent on each ply during the marking pass"
+
+	^ plySeconds
+]
+
+{ #category : 'private - timing' }
+CoachReview >> recordShownPly [
+
+	shownPly ifNil: [ ^ self ].
+	plySeconds
+		at: shownPly
+		put: (plySeconds at: shownPly ifAbsent: [ 0 ])
+			+ (self secondsSince: shownAt).
+	shownPly := nil
+]
+
 { #category : 'converting' }
-CoachReview >> restoreFromJSON: aString [
-	"Continue a saved review: restore the moments already selected and drop them from the queue"
+CoachReview >> restoreFromJSON: aString analysis: aBlock [
+	"Continue a saved review. A review saved before reviews had numbers (review.json) has no marks or timings.
+	aBlock answers the game's analysis; it is evaluated only when the marking pass was done."
 
 	| dictionary |
 	dictionary := STONJSON fromString: aString.
+	number := dictionary at: 'number' ifAbsent: [ 1 ].
+	date := (dictionary at: 'date' ifAbsent: [ nil ])
+		        ifNil: [ Date today ]
+		        ifNotNil: [ :string | string asDate ].
+	marks := (dictionary at: 'marks' ifAbsent: [ #(  ) ])
+		         asOrderedCollection.
+	plySeconds := Dictionary new.
+	(dictionary at: 'plySeconds' ifAbsent: [ #(  ) ]) do: [ :pair |
+		plySeconds at: pair first put: pair second ].
 	reviews := ((dictionary at: 'moments') collect: [ :each |
 		            CoachMomentReview fromDictionary: each ])
 		           asOrderedCollection.
-	current := dictionary at: 'current'.
-	queue removeAllSuchThat: [ :moment |
-		reviews anySatisfy: [ :each | each ply = moment ply ] ]
+	current := nil.
+	(dictionary at: 'marking' ifAbsent: [ false ]) ifFalse: [
+		analysis := aBlock value ]
 ]
 
 { #category : 'revealing' }
@@ -395,25 +547,17 @@ CoachReview >> revealOf: aMomentReview [
 		  yourself
 ]
 
-{ #category : 'navigating' }
-CoachReview >> reviewMore [
-	"Select the next round: all remaining marked moments plus the batchSize most important others"
+{ #category : 'accessing' }
+CoachReview >> reviewedMoments [
 
-	| marked others |
-	marked := queue select: [ :each | each isMarked ].
-	others := (queue reject: [ :each | each isMarked ]) first:
-		          (batchSize min:
-			           (queue count: [ :each | each isMarked not ])).
-	queue
-		removeAll: marked;
-		removeAll: others.
-	((marked , others) asArray sort: [ :a :b | a ply < b ply ]) do: [
-			:moment |
-			reviews add: (CoachMomentReview
-					 ply: moment ply
-					 color: moment color
-					 kinds: moment kinds
-					 questions: (self openingQuestionsFor: moment)) ]
+	^ reviews select: [ :each | each isReviewed ]
+]
+
+{ #category : 'timing' }
+CoachReview >> reviewingSeconds [
+	"Time spent on the moments (questions and reveals)"
+
+	^ reviews inject: 0 into: [ :sum :each | sum + each seconds ]
 ]
 
 { #category : 'accessing' }
@@ -423,22 +567,78 @@ CoachReview >> reviews [
 	^ reviews
 ]
 
+{ #category : 'private - timing' }
+CoachReview >> secondsSince: aDateAndTime [
+
+	^ (clock value - aDateAndTime) asMilliSeconds / 1000 roundTo: 0.1
+]
+
 { #category : 'initialization' }
-CoachReview >> setGameId: anId game: aGame analysis: aGameAnalysis moments: someMoments engine: aStockfishEngine classifier: anAnswerClassifier [
+CoachReview >> setGameId: anId game: aGame engine: aStockfishEngine classifier: anAnswerClassifier [
 
 	gameId := anId.
 	game := aGame.
-	analysis := aGameAnalysis.
-	queue := ((MomentPrioritizer on: aGameAnalysis) byImportance:
-		          someMoments) asOrderedCollection.
 	engine := aStockfishEngine.
 	classifier := anAnswerClassifier.
+	number := 1.
+	date := Date today.
+	marks := OrderedCollection new.
+	plySeconds := Dictionary new.
 	reviews := OrderedCollection new.
-	current := 1.
-	batchSize := 5.
 	depth := 18.
+	clock := [ DateAndTime now ].
 	changedBlock := [ ].
 	momentClosedBlock := [ ]
+]
+
+{ #category : 'marking' }
+CoachReview >> showPly: aPly [
+	"The marking pass now shows the position after aPly; the time on the previous one is recorded"
+
+	self recordShownPly.
+	shownPly := aPly.
+	shownAt := clock value
+]
+
+{ #category : 'navigating' }
+CoachReview >> start: aMomentReview [
+	"Ask about aMomentReview (or continue it)"
+
+	self assert: self isMarking not.
+	current := aMomentReview.
+	aMomentReview isStarted ifFalse: [
+		aMomentReview ask: (self openingQuestionsFor: aMomentReview) ].
+	momentStartedAt := questionShownAt := clock value.
+	self changed
+]
+
+{ #category : 'private - timing' }
+CoachReview >> takeAnswerSeconds [
+	"Seconds since the current question was shown; the next question is shown now"
+
+	| seconds |
+	seconds := self secondsSince: questionShownAt.
+	questionShownAt := clock value.
+	^ seconds
+]
+
+{ #category : 'timing' }
+CoachReview >> totalSeconds [
+
+	^ self markingSeconds + self reviewingSeconds
+]
+
+{ #category : 'marking' }
+CoachReview >> unmark: aPly [
+
+	self unmarkSilently: aPly.
+	self changed
+]
+
+{ #category : 'private' }
+CoachReview >> unmarkSilently: aPly [
+
+	marks removeAllSuchThat: [ :each | (each at: 'ply') = aPly ]
 ]
 
 { #category : 'saving' }
@@ -451,4 +651,15 @@ CoachReview >> whenChangedDo: aBlock [
 CoachReview >> whenMomentClosedDo: aBlock [
 
 	momentClosedBlock := aBlock
+]
+
+{ #category : 'private' }
+CoachReview >> winDropAt: aPly for: aColor [
+
+	| before after |
+	before := analysis atPly: aPly - 1.
+	after := analysis atPly: aPly.
+	(before lines isEmpty or: [ after lines isEmpty ]) ifTrue: [ ^ 0 ].
+	^ (before winPercentFor: aColor) - (after winPercentFor: aColor)
+		  max: 0
 ]

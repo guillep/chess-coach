@@ -124,7 +124,7 @@ ChessCoachSessionTest >> testLogoutDeletesTokenAndKeepsGames [
 { #category : 'tests' }
 ChessCoachSessionTest >> testMomentsCombineEngineFindingsAndMarks [
 
-	| entry game engine moments |
+	| entry game engine marks moments |
 	session login.
 	session loadMoreGames.
 	entry := session games first.
@@ -135,9 +135,16 @@ ChessCoachSessionTest >> testMomentsCombineEngineFindingsAndMarks [
 	engine at: (game positionAfterPly: 2) fen whiteCentipawns: #( -400 ).
 	session analyser: (GameAnalyser engine: engine).
 	session explorer: LichessExplorerClientStub new.
-	session mark: entry ply: 2 note: 'my idea'.
-	session mark: entry ply: 1 note: 'felt wrong'.
-	moments := session momentsFor: entry.
+	marks := {
+		         (Dictionary new
+			          at: 'ply' put: 1;
+			          at: 'note' put: 'felt wrong';
+			          yourself).
+		         (Dictionary new
+			          at: 'ply' put: 2;
+			          at: 'note' put: 'my idea';
+			          yourself) }.
+	moments := session momentsFor: entry marks: marks.
 	self
 		assert: (moments collect: [ :each | each ply ]) asArray
 		equals: #( 1 2 ).
@@ -145,7 +152,7 @@ ChessCoachSessionTest >> testMomentsCombineEngineFindingsAndMarks [
 	self assert: (moments first notes includes: 'felt wrong').
 	self assert: moments second isMarked.
 	self assert: engine analysedCount equals: 3.
-	session momentsFor: entry.
+	session momentsFor: entry marks: marks.
 	self assert: engine analysedCount equals: 3
 ]
 
@@ -165,6 +172,40 @@ ChessCoachSessionTest >> testMyColorsComeFromMyUsername [
 
 1. e4'))
 		equals: #( #white #black )
+]
+
+{ #category : 'tests' }
+ChessCoachSessionTest >> testOldReviewAndMarksBecomeReviewOne [
+
+	| entry game engine games review |
+	session login.
+	session loadMoreGames.
+	entry := session games first.
+	game := session gameFor: entry.
+	engine := StockfishEngineStub new.
+	engine at: (game positionAfterPly: 0) fen whiteCentipawns: #( 50 ).
+	engine at: (game positionAfterPly: 1) fen whiteCentipawns: #( -400 ).
+	session analyser: (GameAnalyser engine: engine).
+	session explorer: LichessExplorerClientStub new.
+	games := root / 'games'.
+	games / (entry gameId , '.marks.json') writeStreamDo: [ :stream |
+		stream nextPutAll: '[{"ply":2,"note":"hmm"}]' ].
+	games / (entry gameId , '.review.json') writeStreamDo: [ :stream |
+			stream nextPutAll: '{"game":"' , entry gameId
+				,
+				'","current":1,"moments":[{"ply":1,"color":"white","kinds":["blunder"],"pending":[],"answers":[{"question":{"kind":"why","text":"Why?","move":null},"moves":[],"text":"fast","labels":[],"classified":true}],"candidates":{},"labels":[]}],"mistakes":[]}' ].
+	review := (session reviewsFor: entry) first.
+	self assert: (session reviewsFor: entry) size equals: 1.
+	self assert: review number equals: 1.
+	self deny: review isMarking.
+	self
+		assert: (review moments collect: [ :each | each ply ]) asArray
+		equals: #( 1 2 ).
+	self assert: review moments first isReviewed.
+	self assert: review moments second isMarked.
+	self deny: (games / (entry gameId , '.review.json')) exists.
+	self deny: (games / (entry gameId , '.marks.json')) exists.
+	self assert: (games / (entry gameId , '.review-1.json')) exists
 ]
 
 { #category : 'tests' }
@@ -196,7 +237,7 @@ ChessCoachSessionTest >> testRefreshFetchesNewerGames [
 { #category : 'tests' }
 ChessCoachSessionTest >> testReviewIsSavedAndFeedsTheMistakeDatabase [
 
-	| entry game engine review database restored |
+	| entry game engine review database restored second |
 	session login.
 	session loadMoreGames.
 	entry := session games first.
@@ -210,26 +251,51 @@ ChessCoachSessionTest >> testReviewIsSavedAndFeedsTheMistakeDatabase [
 			 client: (OllamaClientStub new replyContent:
 					  '{"tags":[{"tag":"no-blunder-check","confidence":0.8}]}')
 			 taxonomy: MistakeTaxonomy default).
-	session mark: entry ply: 1 note: 'felt wrong'.
-	review := session reviewFor: entry.
+	review := session newReviewFor: entry.
+	self assert: review number equals: 1.
+	review mark: 1 note: 'felt wrong'.
+	self assert: (session reviewsFor: entry) first isMarking.
+	session finishMarking: review of: entry.
+	review start: review moments first.
 	self assert: review currentMoment ply equals: 1.
 	review answerMoves: #(  ).
 	review answerText: 'It looked natural'.
 	review answerMoves: { game uciMoves second }.
 	[ review currentMoment isRevealed ] whileFalse: [
 		review answerText: 'I moved too fast' ].
-	self assert: (session reviewFor: entry) currentMoment isRevealed.
 	review classifyPending.
 	review confirmTag: 'no-blunder-check' of: review currentMoment.
-	review nextMoment.
+	review leaveMoment.
 	database := session mistakeDatabase.
 	self assert: database records size equals: 1.
 	self
 		assert: (database tagFrequencies at: 'no-blunder-check')
 		equals: 1.
-	restored := session reviewFor: entry.
-	self assert: restored reviews first labels first isConfirmed.
-	self deny: restored currentMoment ply = 1
+	restored := (session reviewsFor: entry) first.
+	self deny: restored isMarking.
+	self assert: restored moments first isReviewed.
+	self assert: restored moments first labels first isConfirmed.
+	self assert: restored marks size equals: 1.
+	"A second review of the same moment replaces the first one in the database"
+	second := session newReviewFor: entry.
+	self assert: second number equals: 2.
+	session finishMarking: second of: entry.
+	second start: second moments first.
+	second answerMoves: #(  ).
+	second answerText: 'Again'.
+	second answerMoves: { game uciMoves second }.
+	[ second currentMoment isRevealed ] whileFalse: [
+		second answerText: 'Same' ].
+	second classifyPending.
+	second leaveMoment.
+	database := session mistakeDatabase.
+	self assert: database records size equals: 1.
+	self assert: database records first explanation equals: 'Again'.
+	self
+		assert:
+		((session reviewsFor: entry) collect: [ :each | each number ])
+			asArray
+		equals: #( 1 2 )
 ]
 
 { #category : 'tests' }
@@ -237,21 +303,4 @@ ChessCoachSessionTest >> testStartsLoggedOutWithNoGames [
 
 	self deny: session isLoggedIn.
 	self assert: session games isEmpty
-]
-
-{ #category : 'tests' }
-ChessCoachSessionTest >> testUnmarkRemovesAMark [
-
-	| entry |
-	session login.
-	session loadMoreGames.
-	entry := session games first.
-	session mark: entry ply: 2 note: ''.
-	session mark: entry ply: 1 note: 'x'.
-	session unmark: entry ply: 2.
-	self
-		assert:
-			((session marksFor: entry) collect: [ :each | each at: 'ply' ])
-				asArray
-		equals: #( 1 )
 ]

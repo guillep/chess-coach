@@ -225,6 +225,90 @@ CoachElement >> buildReplay [
 ]
 
 { #category : 'building' }
+CoachElement >> buildReportComparison [
+
+	| tags |
+	tags := review tagsMoreThanUsualComparedTo: session mistakeDatabase.
+	tags ifNil: [
+			^ currentZone addChild:
+				  (self paragraph:
+					   'Not enough earlier reviews to compare with yet.') ].
+	currentZone addChild: (self paragraph:
+			 (tags ifEmpty: [ 'Nothing more than usual.' ] ifNotEmpty: [
+					  'More than usual: ' , (', ' join:
+						   (tags collect: [ :each |
+							    (MistakeTaxonomy default tagAt: each) name ])) ]))
+]
+
+{ #category : 'building' }
+CoachElement >> buildReportMistakes [
+	"Counted tags grouped by category"
+
+	| taxonomy counts |
+	taxonomy := MistakeTaxonomy default.
+	counts := review tagCounts.
+	counts ifEmpty: [
+		^ currentZone addChild: (self paragraph: 'No tagged mistakes.') ].
+	taxonomy categories do: [ :category |
+			| tags |
+			tags := (taxonomy tagsInCategory: category) select: [ :tag |
+				        (counts occurrencesOf: tag id) > 0 ].
+			tags ifNotEmpty: [
+					currentZone addChild: (self paragraph:
+							 category capitalized , ': '
+							 , (', ' join: (tags collect: [ :tag |
+										   tag name , ' ×'
+										   , (counts occurrencesOf: tag id) printString ]))) ] ]
+]
+
+{ #category : 'building' }
+CoachElement >> buildReportNumbers [
+
+	| kinds |
+	kinds := review kindCounts.
+	currentZone addChild:
+		(self paragraph: ('Reviewed {1} of {2} moments' format: {
+					  review reviewedMoments size.
+					  (review momentsPassing: self filter) size })).
+	currentZone addChild: (self paragraph: (' · ' join: ({
+					   ('Blunders' -> #blunder).
+					   ('Mistakes' -> #mistake).
+					   ('Inaccuracies' -> #inaccuracy).
+					   ('Only moves found' -> #onlyMoveFound).
+					   ('Only moves missed' -> #onlyMoveMissed).
+					   ('Long thinks' -> #longThink).
+					   ('Opening choices' -> #openingChoice).
+					   ('Your marks' -> #marked) }
+					   select: [ :each | (kinds occurrencesOf: each value) > 0 ]
+					   thenCollect: [ :each |
+						   each key , ' '
+						   , (kinds occurrencesOf: each value) printString ])))
+]
+
+{ #category : 'building' }
+CoachElement >> buildReportTime [
+
+	| times reviewed |
+	times := session reviewTimes.
+	reviewed := review reviewedMoments size.
+	currentZone addChild:
+		(self paragraph: ('Total {1} · marking {2}' format: {
+					  (self minutes: review totalSeconds).
+					  (self minutes: review markingSeconds) })).
+	reviewed > 0 ifTrue: [
+			currentZone addChild:
+				(self paragraph:
+					 ('Per moment: {1} here, {2} on average' format: {
+							  (self minutes: review reviewingSeconds / reviewed).
+							  (self minutes: times secondsPerMoment) })) ].
+	review timeBox ifNotNil: [ :minutes |
+			currentZone addChild:
+				(self paragraph: ('Time box: {1} min planned, {2} used' format: {
+							  minutes.
+							  (self minutes: review totalSeconds) })) ]
+]
+
+{ #category : 'building' }
 CoachElement >> buildReveal [
 
 	| reveal before after line |
@@ -276,22 +360,25 @@ CoachElement >> buildReveal [
 
 { #category : 'building' }
 CoachElement >> buildSummary [
+	"The review report: numbers, mistakes by category, tags more frequent than usual, time and the reviewed moments"
 
-	| counts |
+	currentZone addChild: (self heading: 'Numbers').
+	self buildReportNumbers.
+	currentZone addChild: (self heading: 'Mistakes').
+	self buildReportMistakes.
+	currentZone addChild:
+		(self heading: 'Compared with your other games').
+	self buildReportComparison.
+	currentZone addChild: (self heading: 'Time').
+	self buildReportTime.
+	currentZone addChild: (self heading: 'Moments').
 	review reviewedMoments do: [ :moment |
 			currentZone addChild: (self
 					 button: (self describeMoment: moment) , ' · '
-						 , (', ' join: (moment labels collect: [ :each | each tagId ]))
+						 , (', ' join: (moment countedLabels collect: [ :each |
+									   (MistakeTaxonomy default tagAt: each tagId) name ]))
+					 icon: (self stateIconNameOf: moment)
 					 do: [ self showMoment: moment ]) ].
-	counts := Bag new.
-	review mistakeRecords do: [ :each | counts addAll: each tagIds ].
-	counts ifNotEmpty: [
-			currentZone addChild:
-				(self paragraph: 'Most frequent here: ' , (', ' join:
-						  ((counts sortedCounts first: (counts asSet size min: 3))
-							   collect: [ :each | each value , ' ×' , each key printString ]))) ].
-	currentZone addChild:
-		(self paragraph: 'Time: ' , (self minutes: review totalSeconds)).
 	currentZone addChild: (self row: {
 				 (self button: 'Back to list' do: [ self backToList ]).
 				 (self button: 'Back to the game' do: [ exitBlock value ]) })
@@ -547,6 +634,16 @@ CoachElement >> filterLabel: aFilter [
 CoachElement >> header [
 
 	^ header
+]
+
+{ #category : 'private' }
+CoachElement >> heading: aString [
+
+	^ ToLabel new
+		  text: (aString asRopedText
+				   bold;
+				   yourself);
+		  yourself
 ]
 
 { #category : 'accessing' }

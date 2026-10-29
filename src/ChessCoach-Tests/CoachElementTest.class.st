@@ -206,6 +206,32 @@ CoachElementTest >> testMarkingWithTheKeyboard [
 ]
 
 { #category : 'tests' }
+CoachElementTest >> testReport [
+
+	coach continueReview.
+	self answer: 'The bishop'.
+	coach nextMoment.
+	coach submitMoves.
+	self answer: 'Attack'.
+	coach submitMoves.
+	scripter pulse.
+	[ review currentMoment isRevealed ] whileFalse: [ self answer: 'No' ].
+	review classifyPending.
+	coach nextMoment.
+	scripter pulse.
+	self assert: coach mode equals: #summary.
+	self assert: (self zoneTexts includes: 'Reviewed 2 of 2 moments').
+	self assert:
+		(self zoneTexts includes: 'Mistakes 1 · Only moves found 1').
+	self assert:
+		(self zoneTexts includes: 'Perception: Missed opponent threat ×1').
+	self assert: (self zoneTexts includes:
+			 'Not enough earlier reviews to compare with yet.').
+	self assert:
+		(self zoneTexts anySatisfy: [ :each | each beginsWith: 'Total ' ])
+]
+
+{ #category : 'tests' }
 CoachElementTest >> testReportAProblem [
 
 	| session entry marking reportedCoach |

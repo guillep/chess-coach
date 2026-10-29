@@ -345,6 +345,16 @@ CoachReview >> isPlanned: aMomentReview [
 	^ planned isNil or: [ planned includes: aMomentReview ply ]
 ]
 
+{ #category : 'report' }
+CoachReview >> kindCounts [
+	"How many reviewed moments of each kind"
+
+	| counts |
+	counts := Bag new.
+	self reviewedMoments do: [ :each | counts addAll: each kinds ].
+	^ counts
+]
+
 { #category : 'navigating' }
 CoachReview >> leaveMoment [
 	"Stop working on the current moment, answered or not. Its time is recorded."
@@ -671,6 +681,34 @@ CoachReview >> start: aMomentReview [
 		aMomentReview ask: (self openingQuestionsFor: aMomentReview) ].
 	momentStartedAt := questionShownAt := clock value.
 	self changed
+]
+
+{ #category : 'report' }
+CoachReview >> tagCounts [
+	"How many times each counted tag appears in this review's mistakes"
+
+	| counts |
+	counts := Bag new.
+	self mistakeRecords do: [ :each | counts addAll: each tagIds ].
+	^ counts
+]
+
+{ #category : 'report' }
+CoachReview >> tagsMoreThanUsualComparedTo: aMistakeDatabase [
+	"Tags whose share of this review's mistakes is at least 1.5 times their share in my other games. Answer nil when there are fewer than 5 mistakes from other games to compare with."
+
+	| mine others otherCounts |
+	mine := self mistakeRecords.
+	others := aMistakeDatabase records reject: [ :each |
+		          each gameId = gameId ].
+	others size < 5 ifTrue: [ ^ nil ].
+	mine ifEmpty: [ ^ #(  ) ].
+	otherCounts := Bag new.
+	others do: [ :each | otherCounts addAll: each tagIds ].
+	^ (self tagCounts asSet select: [ :tag |
+			   (self tagCounts occurrencesOf: tag) / mine size
+			   >= ((otherCounts occurrencesOf: tag) / others size * 1.5) ])
+		  asArray sort
 ]
 
 { #category : 'private - timing' }

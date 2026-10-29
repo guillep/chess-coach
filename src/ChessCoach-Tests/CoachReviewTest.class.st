@@ -317,6 +317,36 @@ CoachReviewTest >> testMistakeRecordsAndJSON [
 ]
 
 { #category : 'tests' }
+CoachReviewTest >> testTagsMoreThanUsual [
+
+	| review others database |
+	review := self newReview.
+	self answerFirstMoment: review.
+	review leaveMoment.
+	others := (1 to: 6) collect: [ :each |
+			          MistakeRecord new
+				          gameId: 'other' , each printString;
+				          ply: 3;
+				          date: Date today;
+				          labels: { (MistakeLabel
+						           tagId: (each = 1
+								            ifTrue: [ 'missed-opponent-threat' ]
+								            ifFalse: [ 'hope-chess' ])
+						           confidence: 1) };
+				          yourself ].
+	database := MistakeDatabase withRecords: others.
+	self
+		assert: (review tagsMoreThanUsualComparedTo: database)
+		equals: #( 'missed-opponent-threat' ).
+	self assert: (review tagsMoreThanUsualComparedTo:
+			 (MistakeDatabase withRecords: (others first: 2))) isNil.
+	self
+		assert: (review tagCounts occurrencesOf: 'missed-opponent-threat')
+		equals: 1.
+	self assert: (review kindCounts occurrencesOf: #mistake) equals: 1
+]
+
+{ #category : 'tests' }
 CoachReviewTest >> testTimeBoxPlansMarksThenTheMostImportantMoments [
 
 	| review times restored |

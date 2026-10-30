@@ -72,7 +72,7 @@ OpeningTreeElement >> buildDatabase [
 	node topDatabaseMoves do: [ :each |
 			panel addChild: (ToLabel text: ('{1} · {2} games · {3}' format: {
 							  (each at: 'san').
-							  (node gamesOfDatabaseMove: each).
+							  (self thousands: (node gamesOfDatabaseMove: each)).
 							  (self percent:
 								   (node databaseScoreOf: (each at: 'uci') for: tree color)) })) ]
 ]
@@ -180,16 +180,17 @@ OpeningTreeElement >> buildPath [
 
 { #category : 'building' }
 OpeningTreeElement >> buildSpots: someSpots title: aTitle help: aHelpString [
+	"The ten worst, each with where it happens"
 
 	treePanel addChild: (ChessCoachWidgets
 			 section: aTitle
 			 help: aHelpString
 			 rows:
 				 (someSpots ifEmpty: [ { (ToLabel text: 'None') } ] ifNotEmpty: [
-						  someSpots collect: [ :each |
+						  (someSpots first: (someSpots size min: 10)) collect: [ :each |
 								  ToButton new
 									  labelText: ('{1} · {2} games · {3}' format: {
-													   each san.
+													   (each positionLabelFrom: (tree nodeAt: each key)).
 													   each games.
 													   (self percent: each score) });
 									  clickAction: [ self jumpTo: each ];
@@ -472,6 +473,19 @@ OpeningTreeElement >> start [
 
 	tree builtOn ifNil: [ ^ self rebuild ].
 	self showRoot
+]
+
+{ #category : 'building' }
+OpeningTreeElement >> thousands: anInteger [
+	"164086610 as 164,086,610"
+
+	| digits |
+	digits := anInteger printString.
+	^ String streamContents: [ :stream |
+			  digits withIndexDo: [ :digit :index |
+					  stream nextPut: digit.
+					  (index < digits size and: [ digits size - index \\ 3 = 0 ])
+						  ifTrue: [ stream nextPut: $, ] ] ]
 ]
 
 { #category : 'accessing' }

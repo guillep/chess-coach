@@ -125,10 +125,10 @@ SetupWizardElement >> navigationRow [
 				   labelText: 'Skip';
 				   clickAction: [ self next ];
 				   yourself);
-		  addChild: (ToButton new
-				   labelText: 'Next';
-				   clickAction: [ self next ];
-				   yourself);
+		  addChild: (ChessCoachWidgets
+				   primaryButton: 'Next'
+				   icon: 'filled_arrowforward'
+				   do: [ self next ]);
 		  yourself
 ]
 
@@ -141,20 +141,8 @@ SetupWizardElement >> next [
 
 { #category : 'building' }
 SetupWizardElement >> paragraph: aString [
-	"A label for short texts. Longer ones are read-only text fields, which wrap at word boundaries (Toplo labels don't wrap)."
 
-	aString size <= 45 ifTrue: [
-			^ ToLabel new
-				  hMatchParent;
-				  text: aString;
-				  yourself ].
-	^ ToTextField new
-		  wrappingMode: true;
-		  hMatchParent;
-		  vFitContent;
-		  text: aString;
-		  beReadonlyWithoutSelection;
-		  yourself
+	^ ChessCoachWidgets paragraph: aString
 ]
 
 { #category : 'accessing' }

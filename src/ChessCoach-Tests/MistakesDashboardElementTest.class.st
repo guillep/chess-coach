@@ -54,12 +54,12 @@ MistakesDashboardElementTest >> testShowsFrequenciesPhasesTrendAndDetail [
 	dashboard := MistakesDashboardElement new.
 	dashboard database: self database.
 	dashboard whenRecordSelectedDo: [ :record | selected := record ].
-	self assert: (dashboard texts includes: 'no-blunder-check').
+	self assert: (dashboard texts includes: 'No blunder check').
 	self assert: (dashboard texts includes:
-			 'Opening: no-blunder-check ×1, hope-chess ×1').
+			 'Opening: No blunder check ×1, Hope chess ×1').
 	self assert:
-		(dashboard texts includes: 'Endgame: no-blunder-check ×1').
-	self assert: (dashboard texts includes: 'no-blunder-check  9').
+		(dashboard texts includes: 'Endgame: No blunder check ×1').
+	self assert: (dashboard texts includes: 'No blunder check  9').
 	dashboard selectTag: 'hope-chess'.
 	self assert:
 		(dashboard texts includes: '2026-10-01 · game g1, move 11: too fast').

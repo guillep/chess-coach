@@ -59,6 +59,18 @@ OpeningWeakSpot >> pointsLost [
 	^ games * gap
 ]
 
+{ #category : 'printing' }
+OpeningWeakSpot >> positionLabelFrom: aNode [
+	"'Move 7: Bd3', with dots for Black's moves"
+
+	^ 'Move {1}{2} {3}' format: {
+			  aNode fen substrings last.
+			  (aNode turn = #white
+				   ifTrue: [ '.' ]
+				   ifFalse: [ '...' ]).
+			  san }
+]
+
 { #category : 'accessing' }
 OpeningWeakSpot >> san [
 

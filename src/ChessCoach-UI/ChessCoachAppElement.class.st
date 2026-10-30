@@ -998,7 +998,7 @@ ChessCoachAppElement >> showTab: aTabButton [
 
 { #category : 'navigation' }
 ChessCoachAppElement >> showWizard [
-	"The first-run setup replaces the pages until it is finished"
+	"The first-run setup replaces the pages until it is finished, below the top bar"
 
 	| wizard |
 	wizard := SetupWizardElement new.
@@ -1006,11 +1006,11 @@ ChessCoachAppElement >> showWizard [
 	wizard session: session.
 	wizard whenFinishedDo: [
 			wizard removeFromParent.
-			self addChildFirst: navigation.
+			self addChild: navigation at: 2.
 			self updateFromSession.
 			self showPage: #Games ].
 	navigation removeFromParent.
-	self addChildFirst: wizard.
+	self addChild: wizard at: 2.
 	^ wizard
 ]
 

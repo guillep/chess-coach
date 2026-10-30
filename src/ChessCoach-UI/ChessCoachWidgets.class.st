@@ -121,13 +121,25 @@ ChessCoachWidgets class >> pageTitle: aTitle subtitle: aSubtitle [
 
 { #category : 'building' }
 ChessCoachWidgets class >> paragraph: aString [
-	"A label that wraps at word boundaries"
+	"A text that wraps at word boundaries: short ones are a label, longer ones one label per word in a flow layout, since multi-line Toplo labels fit their content and don't wrap (logged as an upstream candidate)"
 
-	^ ToLabel new
-		  beMultiLine;
-		  hMatchParent;
-		  text: aString;
-		  yourself
+	| flow |
+	aString size <= 45 ifTrue: [
+			^ ToLabel new
+				  hMatchParent;
+				  text: aString;
+				  yourself ].
+	flow := ToElement new
+		        layout: BlFlowLayout horizontal;
+		        hMatchParent;
+		        vFitContent;
+		        yourself.
+	aString substrings do: [ :word |
+			flow addChild: (ToLabel new
+					 text: word;
+					 margin: (BlInsets right: 4);
+					 yourself) ].
+	^ flow
 ]
 
 { #category : 'building' }

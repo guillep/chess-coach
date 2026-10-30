@@ -40,11 +40,11 @@ MistakesDashboardElement >> buildBars [
 				       yourself.
 			row
 				addChild: (ToLabel new
-						 text: each key;
+						 text: (self nameOf: each key);
 						 width: 200;
 						 yourself);
 				addChild: (BlElement new
-						 extent: (each value / max * 240) rounded @ 14;
+						 extent: (each value / max * 600) rounded @ 14;
 						 background: (self colorOfTag: each key);
 						 yourself);
 				addChild: (ToLabel text: each value printString).
@@ -104,7 +104,7 @@ MistakesDashboardElement >> buildPhases [
 								  ', ' join:
 									  ((frequencies associations first: (frequencies size min: 3))
 										   collect: [ :each |
-										   each key , ' ×' , each value printString ]) ])) ]
+										   (self nameOf: each key) , ' ×' , each value printString ]) ])) ]
 ]
 
 { #category : 'building' }
@@ -139,7 +139,8 @@ MistakesDashboardElement >> buildTrend [
 	top := database tagFrequencies keys first:
 		       (database tagFrequencies size min: 3).
 	top do: [ :tag |
-			content addChild: (ToLabel text: tag , '  ' , (self sparkline:
+			content addChild:
+				(ToLabel text: (self nameOf: tag) , '  ' , (self sparkline:
 						  (blocks collect: [ :each | each at: tag ifAbsent: [ 0 ] ]))) ]
 ]
 
@@ -237,6 +238,12 @@ MistakesDashboardElement >> initialize [
 			 'Your typical mistakes and how long your reviews take, from every review with the coach.'
 			 body: (ChessCoachWidgets scrollable: page)).
 	self rebuild
+]
+
+{ #category : 'private' }
+MistakesDashboardElement >> nameOf: aTagId [
+
+	^ (taxonomy tagAt: aTagId) name
 ]
 
 { #category : 'building' }

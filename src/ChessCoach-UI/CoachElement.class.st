@@ -398,24 +398,28 @@ CoachElement >> buildReveal [
 
 { #category : 'building' }
 CoachElement >> buildSummary [
-	"The review report: numbers, mistakes by category, tags more frequent than usual, time and the reviewed moments"
+	"The review report: numbers, mistakes by category, tags more frequent than usual, time and the reviewed moments. Without reviewed moments there is nothing to report."
 
-	self section: 'Numbers' build: [ self buildReportNumbers ].
-	self section: 'Mistakes' build: [ self buildReportMistakes ].
-	self
-		section: 'Compared with your other games'
-		build: [ self buildReportComparison ].
-	self section: 'Time' build: [ self buildReportTime ].
-	self section: 'Moments' build: [
-			review reviewedMoments do: [ :moment |
-					currentZone addChild: (self
-							 button: (self describeMoment: moment)
-							 icon: (self stateIconNameOf: moment)
-							 do: [ self showMoment: moment ]).
-					moment countedLabels ifNotEmpty: [ :labels |
-							currentZone addChild:
-								(self paragraph: (', ' join: (labels collect: [ :each |
-											   (MistakeTaxonomy default tagAt: each tagId) name ]))) ] ] ].
+	review reviewedMoments
+		ifEmpty: [
+		currentZone addChild: (self paragraph: 'No moments reviewed yet.') ]
+		ifNotEmpty: [
+				self section: 'Numbers' build: [ self buildReportNumbers ].
+				self section: 'Mistakes' build: [ self buildReportMistakes ].
+				self
+					section: 'Compared with your other games'
+					build: [ self buildReportComparison ].
+				self section: 'Time' build: [ self buildReportTime ].
+				self section: 'Moments' build: [
+						review reviewedMoments do: [ :moment |
+								currentZone addChild: (self
+										 button: (self describeMoment: moment)
+										 icon: (self stateIconNameOf: moment)
+										 do: [ self showMoment: moment ]).
+								moment countedLabels ifNotEmpty: [ :labels |
+										currentZone addChild:
+											(self paragraph: (', ' join: (labels collect: [ :each |
+														   (MistakeTaxonomy default tagAt: each tagId) name ]))) ] ] ] ].
 	currentZone addChild: (self row: {
 				 (self button: 'Back to list' do: [ self backToList ]).
 				 (self button: 'Back to the game' do: [ exitBlock value ]) })

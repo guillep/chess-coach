@@ -306,7 +306,7 @@ CoachElementTest >> testTheListShowsTheFinalPosition [
 
 { #category : 'helpers' }
 CoachElementTest >> zoneTexts [
-	"The texts of the labels, paragraphs and buttons in the current question zone"
+	"The texts of the labels, paragraphs and buttons in the current question zone. A long paragraph is a flow of labels, one per word."
 
 	| texts |
 	texts := OrderedCollection new.
@@ -315,6 +315,13 @@ CoachElementTest >> zoneTexts [
 			(each isKindOf: ToTextField) ifTrue: [
 				texts add: each text asString ].
 			(each isKindOf: ToButton) ifTrue: [
-				texts add: each labelText asString ] ].
+				texts add: each labelText asString ].
+			((each layout isKindOf: BlFlowLayout) and: [
+					 each children notEmpty and: [
+						 each children allSatisfy: [ :child | child isKindOf: ToLabel ] ] ])
+				ifTrue: [
+						texts add: (' ' join:
+								 (each children asArray collect: [ :child |
+									  child text asString ])) ] ].
 	^ texts
 ]

@@ -379,15 +379,8 @@ SettingsElement >> loginOrLogout [
 
 { #category : 'building' }
 SettingsElement >> note: aString [
-	"A read-only text that wraps at word boundaries (Toplo labels don't wrap)"
 
-	^ ToTextField new
-		  wrappingMode: true;
-		  hMatchParent;
-		  vFitContent;
-		  text: aString;
-		  beReadonlyWithoutSelection;
-		  yourself
+	^ ChessCoachWidgets paragraph: aString
 ]
 
 { #category : 'building' }
@@ -658,7 +651,7 @@ SettingsElement >> updateAppTheme [
 
 { #category : 'updating' }
 SettingsElement >> updateModels: someModelNames [
-	"One button per installed model; the chosen one is shown in brackets"
+	"One button per installed model; the chosen one has a check mark"
 
 	| chosen |
 	chosen := session settings ollamaModel.
@@ -666,9 +659,7 @@ SettingsElement >> updateModels: someModelNames [
 	modelsZone addChild: (ToLabel text: 'Model:').
 	someModelNames do: [ :name |
 			modelsZone addChild: (ToButton new
-					 labelText: (name = chosen
-							  ifTrue: [ '[' , name , ']' ]
-							  ifFalse: [ name ]);
+					 labelText: (self chosen: name is: chosen);
 					 clickAction: [
 							 session settings at: 'ollamaModel' put: name.
 							 self updateModels: someModelNames ];

@@ -110,18 +110,19 @@ MistakesDashboardElement >> buildPhases [
 { #category : 'building' }
 MistakesDashboardElement >> buildTimes [
 
-	content addChild: (ToLabel text:
+	| kinds |
+	kinds := [ :associations |
+		         ', ' join: (associations asArray
+				          sort: [ :a :b | a key < b key ];
+				          collect: [ :each |
+						          (ChessCoachWidgets humanize: each key) , ' '
+						          , (self duration: each value) ]) ].
+	content addChild: (ChessCoachWidgets paragraph:
 			 'Per reviewed moment: ' , (self duration: times secondsPerMoment)
-			 , ' ('
-			 , (', ' join: (times secondsPerMomentKind associations asArray
-						   sort: [ :a :b | a key < b key ];
-						   collect: [ :each |
-							   each key , ' ' , (self duration: each value) ])) , ')').
-	content addChild: (ToLabel text: 'Per question: '
-			 , (', ' join: (times secondsPerQuestionKind associations asArray
-						   sort: [ :a :b | a key < b key ];
-						   collect: [ :each |
-							   each key , ' ' , (self duration: each value) ]))).
+			 , ' (' , (kinds value: times secondsPerMomentKind associations)
+			 , ')').
+	content addChild: (ChessCoachWidgets paragraph: 'Per question: '
+			 , (kinds value: times secondsPerQuestionKind associations)).
 	content addChild: (ToLabel text:
 			 'Marking pass: ' , (self duration: times markingSecondsPerGame)
 			 , ' per game, ' , (self duration: times markingSecondsPerPly)
@@ -132,10 +133,13 @@ MistakesDashboardElement >> buildTimes [
 
 { #category : 'building' }
 MistakesDashboardElement >> buildTrend [
-	"Small bars per top tag: one bar per block of 10 games, taller when the tag was more frequent"
+	"Small bars per top tag: one bar per block of 10 games, taller when the tag was more frequent. One block shows no trend yet."
 
 	| blocks top |
 	blocks := database tagFrequenciesByGames: 10.
+	blocks size < 2 ifTrue: [
+			^ content addChild:
+				  (ToLabel text: 'A trend needs more than 10 reviewed games.') ].
 	top := database tagFrequencies keys first:
 		       (database tagFrequencies size min: 3).
 	top do: [ :tag |
@@ -341,12 +345,14 @@ MistakesDashboardElement >> speed [
 
 { #category : 'accessing' }
 MistakesDashboardElement >> texts [
-	"Every label and button text shown, in order (for tests)"
+	"Every label and paragraph text shown, in order (for tests)"
 
 	| texts |
 	texts := OrderedCollection new.
 	self allChildrenBreadthFirstDo: [ :each |
-		(each isKindOf: ToLabel) ifTrue: [ texts add: each text asString ] ].
+			(each isKindOf: ToLabel) ifTrue: [ texts add: each text asString ].
+			(ChessCoachWidgets paragraphTextOf: each) ifNotNil: [ :text |
+				texts add: text ] ].
 	^ texts
 ]
 

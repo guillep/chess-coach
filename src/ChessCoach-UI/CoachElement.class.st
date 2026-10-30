@@ -636,12 +636,17 @@ CoachElement >> currentZone [
 
 { #category : 'private' }
 CoachElement >> describeMoment: aMomentReview [
-	"'Move 14 (Ng5) · mistake · −18%'"
+	"'Move 14 (Ng5) · mistake · −18%'. Only the first kind is named, so that the line fits"
 
-	^ 'Move {1} ({2}) · {3} · −{4}%' format: {
+	| kinds |
+	kinds := aMomentReview kinds asArray.
+	^ 'Move {1} ({2}) · {3}{4} · −{5}%' format: {
 			  (aMomentReview ply + 1 // 2).
 			  (game moves at: aMomentReview ply) san.
-			  (', ' join: aMomentReview kinds).
+			  (ChessCoachWidgets humanize: kinds first).
+			  (kinds size > 1
+				   ifTrue: [ ' +' , (kinds size - 1) printString ]
+				   ifFalse: [ '' ]).
 			  (aMomentReview winDrop printShowingDecimalPlaces: 0) }
 ]
 
@@ -974,7 +979,7 @@ CoachElement >> positionBefore: aMomentReview [
 
 { #category : 'building' }
 CoachElement >> questionTitle: aCoachQuestion [
-	"The current question, set apart with an icon and in bold, so that a new question is noticed"
+	"The current question, set apart with an icon and a background, so that a new question is noticed"
 
 	^ ToElement new
 		  layout: (BlLinearLayout horizontal cellSpacing: 8);
@@ -987,16 +992,7 @@ CoachElement >> questionTitle: aCoachQuestion [
 			  ((ToMaterialDesignIconProvider iconNamed: 'filled_livehelp')
 				   extent: 22 @ 22;
 				   yourself);
-		  addChild: (ToTextField new
-				   wrappingMode: true;
-				   hMatchParent;
-				   vFitContent;
-				   text: (aCoachQuestion text asRopedText
-						    bold;
-						    yourself);
-				   beReadonlyWithSelection;
-				   background: Color transparent;
-				   yourself);
+		  addChild: (ChessCoachWidgets paragraph: aCoachQuestion text);
 		  yourself
 ]
 
@@ -1379,17 +1375,16 @@ CoachElement >> updateHeader [
 
 { #category : 'updating' }
 CoachElement >> updateHistory [
-	"My earlier answers on this moment, under a title, as text I can select and copy"
+	"My earlier answers on this moment, under a title"
 
 	history removeChildren.
 	mode = #moment ifFalse: [ ^ self ].
 	shownMoment answers ifEmpty: [ ^ self ].
 	history addChild: (self heading: 'Your answers').
 	shownMoment answers do: [ :answer |
+			history addChild: (self paragraph: answer question text).
 			history addChild:
-				(ChessCoachWidgets selectableParagraph: answer question text).
-			history addChild: (ChessCoachWidgets selectableParagraph:
-					 '→ ' , (answer question expectsMoves
+				(self paragraph: '→ ' , (answer question expectsMoves
 						  ifTrue: [
 						  self describeMoves: answer moves in: answer question ]
 						  ifFalse: [ answer text ])) ].

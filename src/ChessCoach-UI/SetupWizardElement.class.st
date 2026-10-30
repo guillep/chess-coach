@@ -203,7 +203,9 @@ SetupWizardElement >> texts [
 			(each isKindOf: ToTextField) ifTrue: [
 				texts add: each text asString ].
 			(each isKindOf: ToButton) ifTrue: [
-				texts add: each labelText asString ] ].
+				texts add: each labelText asString ].
+			(ChessCoachWidgets paragraphTextOf: each) ifNotNil: [ :text |
+				texts add: text ] ].
 	^ texts
 ]
 

@@ -75,6 +75,16 @@ ChessCoachWidgets class >> help: aString [
 	^ icon
 ]
 
+{ #category : 'accessing' }
+ChessCoachWidgets class >> humanize: aKind [
+	"A kind as people read it: 'longThink' as 'long think'"
+
+	^ String streamContents: [ :stream |
+			  aKind do: [ :each |
+					  each isUppercase ifTrue: [ stream space ].
+					  stream nextPut: each asLowercase ] ]
+]
+
 { #category : 'building' }
 ChessCoachWidgets class >> page: someElements [
 	"A page's top-level column, with the same margins on every page"
@@ -142,6 +152,18 @@ ChessCoachWidgets class >> paragraph: aString [
 					 margin: (BlInsets right: 4);
 					 yourself) ].
 	^ flow
+]
+
+{ #category : 'accessing' }
+ChessCoachWidgets class >> paragraphTextOf: anElement [
+	"The whole text of a long paragraph (a flow of word labels), or nil for any other element"
+
+	((anElement layout isKindOf: BlFlowLayout) and: [
+			 anElement children notEmpty and: [
+				 anElement children allSatisfy: [ :each | each isKindOf: ToLabel ] ] ])
+		ifFalse: [ ^ nil ].
+	^ ' ' join:
+		  (anElement children asArray collect: [ :each | each text asString ])
 ]
 
 { #category : 'building' }

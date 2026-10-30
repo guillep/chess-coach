@@ -606,7 +606,7 @@ ChessCoachAppElement >> newNotificationsPanel [
 
 { #category : 'initialization' }
 ChessCoachAppElement >> newPageButton: aString icon: anIconName page: anElement [
-	"A square tab: a large Material Design icon above a small label"
+	"A square tab of a fixed width, so that a long name doesn't move the pages: a large Material Design icon above a small label"
 
 	^ ToTabButton new
 		  id: aString asSymbol;
@@ -615,6 +615,7 @@ ChessCoachAppElement >> newPageButton: aString icon: anIconName page: anElement 
 				   extent: 32 @ 32;
 				   yourself);
 		  beVertical;
+		  width: 96;
 		  removable: false;
 		  paneBuilder: [ :pane :button :holder | pane addChild: anElement ];
 		  yourself
@@ -750,18 +751,13 @@ ChessCoachAppElement >> openReview: aCoachReview of: aGameIndexEntry [
 
 { #category : 'navigation' }
 ChessCoachAppElement >> openTab: aString icon: anIconName page: anElement [
-	"Add a closable page after the fixed ones and show it, with the margins every page has"
+	"Add a closable page after the fixed ones and show it. Its name is cut to fit the tab."
 
 	| button |
 	button := (self
-		           newPageButton: aString
+		           newPageButton: (aString truncateTo: 11)
 		           icon: anIconName
-		           page: (ToElement new
-				            layout: BlFrameLayout new;
-				            matchParent;
-				            padding: (BlInsets all: 16);
-				            addChild: anElement;
-				            yourself))
+		           page: anElement)
 		          removable: true;
 		          yourself.
 	navigation addItem: button.

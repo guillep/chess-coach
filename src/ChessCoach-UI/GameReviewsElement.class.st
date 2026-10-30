@@ -168,15 +168,15 @@ GameReviewsElement >> newAnalysis [
 
 { #category : 'building' }
 GameReviewsElement >> newTimeBoxChoice [
-	"Toggle buttons for the time box of a new analysis: none, or a number of minutes. A Toplo checkable group keeps exactly one checked."
+	"Toggle buttons for the time box of a new analysis, wrapping when narrow: none, or a number of minutes. A Toplo checkable group keeps exactly one checked."
 
 	| row group |
 	row := ToElement new
-		       layout: (BlLinearLayout horizontal cellSpacing: 4);
+		       layout: BlFlowLayout horizontal;
 		       hMatchParent;
 		       vFitContent;
 		       addChild: ((ToLabel text: 'Time box:')
-				        margin: (BlInsets right: 4);
+				        margin: (BlInsets right: 8);
 				        yourself);
 		       yourself.
 	group := ToCheckableGroup new.
@@ -231,9 +231,11 @@ GameReviewsElement >> updateInfo [
 
 { #category : 'updating' }
 GameReviewsElement >> updateReviews [
+	"The right padding keeps the scrollbar off the delete buttons"
 
 	| reviews |
 	reviewsZone removeChildren.
+	reviewsZone padding: (BlInsets right: 16).
 	reviews := session reviewsFor: entry.
 	reviews ifEmpty: [
 		^ reviewsZone addChild: (ToLabel text: 'No analysis yet.') ].

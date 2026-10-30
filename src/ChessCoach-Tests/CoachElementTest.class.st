@@ -70,7 +70,7 @@ CoachElementTest >> testAWholeMoment [
 
 	self assert: coach mode equals: #list.
 	self assert:
-		(self zoneTexts includes: 'Move 2 (Nf3) · onlyMoveFound · −0%').
+		(self zoneTexts includes: 'Move 2 (Nf3) · only move found · −0%').
 	self assert:
 		(self zoneTexts includes: 'Move 4 (Ng5) · mistake · −18%').
 	self
@@ -115,7 +115,9 @@ CoachElementTest >> testAWholeMoment [
 		assert: coach answerField text asString
 		equals: 'It looked natural. Intuition. '.
 	self answer: 'I wanted to attack f7'.
-	self assert: (self historyTexts includes: '→ I wanted to attack f7').
+	self assert: (coach history children anySatisfy: [ :each |
+				 (each isKindOf: ToLabel) and: [
+					 each text asString = '→ I wanted to attack f7' ] ]).
 	self assert: (coach board chessPosition pieceAt: 'g5') equals: 'N'.
 	self clickOn: 'h7'.
 	self clickOn: 'h6'.
@@ -291,7 +293,7 @@ CoachElementTest >> testShiftReturnAnswers [
 	scripter syncContinue.
 	scripter pulse.
 	self assert: (coach history children anySatisfy: [ :each |
-				 (each isKindOf: ToTextField) and: [
+				 (each isKindOf: ToLabel) and: [
 					 each text asString includesSubstring: 'The bishop' ] ])
 ]
 

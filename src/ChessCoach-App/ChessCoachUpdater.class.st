@@ -70,7 +70,7 @@ ChessCoachUpdater >> loadBaseline [
 		baseline: 'ChessCoach';
 		repository: 'tonel://' , (self repository location / 'src') fullName;
 		onConflictUseIncoming;
-		onUpgradeUseIncoming;
+		onUpgrade: [ :upgrade | upgrade useIncoming ];
 		load
 ]
 

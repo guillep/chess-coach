@@ -145,11 +145,11 @@ GameReviewsElement >> initialize [
 
 { #category : 'building' }
 GameReviewsElement >> linkTo: aUrl [
-	"A blue text element rather than a label: the label skin replaces the text colour. Blue reads on light and dark themes."
+	"A coloured text element rather than a label: the label skin replaces the text colour. This mate brown reads on light and dark themes."
 
 	^ BlTextElement new
 		  text: (('Site: ' , aUrl) asRopedText
-				   foreground: (Color fromHexString: '#3b82f6');
+				   foreground: (Color fromHexString: '#c9783c');
 				   yourself);
 		  mouseCursor: Cursor webLink;
 		  addEventHandlerOn: BlClickEvent

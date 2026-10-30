@@ -986,12 +986,10 @@ CoachElement >> questionTitle: aCoachQuestion [
 		  hMatchParent;
 		  vFitContent;
 		  padding: (BlInsets all: 8);
-		  background: (Color blue alpha: 0.12);
+		  background: ((Color fromHexString: '#4f9a6a') alpha: 0.2);
 		  geometry: (BlRoundedRectangleGeometry cornerRadius: 6);
 		  addChild:
-			  ((ToMaterialDesignIconProvider iconNamed: 'filled_livehelp')
-				   extent: 22 @ 22;
-				   yourself);
+			  (ChessCoachWidgets icon: 'filled_livehelp' extent: 22 @ 22);
 		  addChild: (ChessCoachWidgets paragraph: aCoachQuestion text);
 		  yourself
 ]

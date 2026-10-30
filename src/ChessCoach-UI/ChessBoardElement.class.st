@@ -29,6 +29,7 @@ ChessBoardElement class >> themes [
 	"Board colour themes by name: the light and the dark square colours, as hex strings"
 
 	^ OrderedDictionary new
+		  at: 'Chessmate' put: #( '#f6ead2' '#2f6b45' );
 		  at: 'Brown' put: #( '#f0d9b5' '#b58863' );
 		  at: 'Green' put: #( '#eeeed2' '#769656' );
 		  at: 'Blue' put: #( '#dee3e6' '#8ca2ad' );

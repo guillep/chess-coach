@@ -112,7 +112,7 @@ ChessCoachAppElement >> analysisStateChangedOf: aGameIdOrNil [
 
 { #category : 'settings' }
 ChessCoachAppElement >> applyAppTheme [
-	"The Chessmate light or dark theme for the whole window, with a matching page background and icon tint, for the icons shown and those built later.
+	"The Chessmate light or dark theme for the whole window, with a matching page background and icon tint, for the icons shown, those of hidden pages and those built later.
 	The theme goes on the space: under an element's local theme, Toplo installs no skin on a list's scrollbar (logged as an upstream candidate)."
 
 	| dark tint |
@@ -128,11 +128,17 @@ ChessCoachAppElement >> applyAppTheme [
 			         ifTrue: [ '#f6ead2' ]
 			         ifFalse: [ '#12281b' ]).
 	ChessCoachWidgets iconColor: tint.
-	self allChildrenBreadthFirstDo: [ :each |
-			((each isKindOf: ToImage) and: [
-					 (each anyInParentsSatisfy: [ :parent |
-						  parent isKindOf: ToButton ]) not ]) ifTrue: [
-				each innerImageColor: tint ] ]
+	{
+		self.
+		dashboard.
+		gamesPage.
+		settingsElement.
+		openings } do: [ :root |
+			root allChildrenBreadthFirstDo: [ :each |
+					((each isKindOf: ToImage) and: [
+							 (each anyInParentsSatisfy: [ :parent |
+								  parent isKindOf: ToButton ]) not ]) ifTrue: [
+						each innerImageColor: tint ] ] ]
 ]
 
 { #category : 'settings' }
@@ -626,7 +632,7 @@ ChessCoachAppElement >> newNotificationsPanel [
 	visible := session notifications visible.
 	visible ifEmpty: [
 			^ panel
-				  addChild: (ToLabel text: 'No notifications');
+				  addChild: (ToLabel text: 'All quiet. Time for another mate.');
 				  yourself ].
 	visible
 		do: [ :each |
@@ -1012,7 +1018,7 @@ ChessCoachAppElement >> showDefaultPane [
 					 layout: (BlLinearLayout vertical alignCenter cellSpacing: 12);
 					 matchParent;
 					 addChild: (ChessCoachWidgets logo: 128);
-					 addChild: (ToLabel text: 'Select a game');
+					 addChild: (ToLabel text: 'Pick a game. The mate is ready.');
 					 yourself ])
 ]
 

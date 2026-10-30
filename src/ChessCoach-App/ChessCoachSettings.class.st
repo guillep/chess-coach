@@ -20,7 +20,7 @@ ChessCoachSettings class >> defaults [
 		  at: 'formatVersion' put: 1;
 		  at: 'appTheme' put: 'Light';
 		  at: 'pieceSet' put: 'Meridian';
-		  at: 'boardTheme' put: 'Brown';
+		  at: 'boardTheme' put: 'Chessmate';
 		  at: 'gamesPerLoad' put: 20;
 		  at: 'gamesCheckMinutes' put: 30;
 		  at: 'stockfishPath' put: '/opt/homebrew/bin/stockfish';

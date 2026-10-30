@@ -75,13 +75,9 @@ MistakesDashboardElement >> buildEmptyState [
 
 	content
 		addChild: (ChessCoachWidgets logo: 128);
-		addChild: (self title: 'No reviewed mistakes yet');
-		addChild: (ToLabel new
-				 beMultiLine;
-				 hMatchParent;
-				 text:
-					 'Select a game and press "New analysis". You first mark the moves you want to talk about, then the coach asks about the important moments and keeps track of your mistakes here.';
-				 yourself);
+		addChild: (self title: 'Nothing to talk about yet');
+		addChild: (ChessCoachWidgets paragraph:
+					 'Pour a mate and pick a game. Press "New analysis", mark the moves you want to discuss, and I''ll ask about the moments that mattered. Your typical mistakes will show up here.');
 		addChild: (ToButton new
 				 labelText: 'Open my latest game';
 				 clickAction: [ startBlock value ];
@@ -177,14 +173,15 @@ MistakesDashboardElement >> chooseSpeed: aSpeedOrNil [
 
 { #category : 'private' }
 MistakesDashboardElement >> colorOfTag: aTagId [
+	"The category colours, from the icon's palette, readable on both themes"
 
 	| category |
 	category := (taxonomy tagAt: aTagId) category.
-	category = 'perception' ifTrue: [ ^ Color fromHexString: '#4e79a7' ].
-	category = 'calculation' ifTrue: [ ^ Color fromHexString: '#f28e2b' ].
-	category = 'evaluation' ifTrue: [ ^ Color fromHexString: '#59a14f' ].
-	category = 'decision' ifTrue: [ ^ Color fromHexString: '#e15759' ].
-	^ Color fromHexString: '#9c755f'
+	category = 'perception' ifTrue: [ ^ Color fromHexString: '#4f9a6a' ].
+	category = 'calculation' ifTrue: [ ^ Color fromHexString: '#e0a458' ].
+	category = 'evaluation' ifTrue: [ ^ Color fromHexString: '#a3b85c' ].
+	category = 'decision' ifTrue: [ ^ Color fromHexString: '#b5652b' ].
+	^ Color fromHexString: '#a08a6c'
 ]
 
 { #category : 'accessing' }
@@ -282,7 +279,7 @@ MistakesDashboardElement >> rebuild [
 	self
 		section: 'Your most frequent mistakes'
 		help:
-		'The mistake types you confirmed (or didn''t reject) most often. Click a bar to see those mistakes. The colours are the categories. Perception (blue): you didn''t see something. Calculation (orange): you saw it but calculated badly. Evaluation (green): you judged the position wrongly. Decision (red): your process failed, such as no blunder check, impulse, the clock or nerves. Knowledge (brown): you didn''t know the opening, endgame or pattern.'
+		'The mistake types you confirmed (or didn''t reject) most often. Click a bar to see those mistakes. The colours are the categories. Perception (green): you didn''t see something. Calculation (gold): you saw it but calculated badly. Evaluation (yerba green): you judged the position wrongly. Decision (mate brown): your process failed, such as no blunder check, impulse, the clock or nerves. Knowledge (taupe): you didn''t know the opening, endgame or pattern.'
 		build: [ self buildBars ].
 	self
 		section: 'By phase'

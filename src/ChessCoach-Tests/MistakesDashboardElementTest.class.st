@@ -42,7 +42,7 @@ MistakesDashboardElementTest >> testEmptyState [
 	dashboard := MistakesDashboardElement new.
 	started := false.
 	dashboard whenStartRequestedDo: [ started := true ].
-	self assert: (dashboard texts includes: 'No reviewed mistakes yet').
+	self assert: (dashboard texts includes: 'Nothing to talk about yet').
 	BlSpace simulateClickOn: dashboard content children last.
 	self assert: started
 ]

@@ -317,7 +317,8 @@ OpeningsElement >> updateTrees [
 
 	treesZone removeChildren.
 	session openingTrees ifEmpty: [
-		^ treesZone addChild: (ToLabel text: 'No trees yet.') ].
+			^ treesZone addChild: (ToLabel text:
+					   'No trees yet. Build one and we''ll look for your weak spots.') ].
 	session openingTrees do: [ :each |
 		treesZone addChild: (self newRowOf: each) ]
 ]

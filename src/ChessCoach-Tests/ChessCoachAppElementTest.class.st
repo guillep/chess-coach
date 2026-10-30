@@ -725,3 +725,18 @@ ChessCoachAppElementTest >> testUnexpectedErrorIsShownAndLogged [
 	self assert:
 		(session errorLog contents includesSubstring: 'ZeroDivide: boom')
 ]
+
+{ #category : 'tests' }
+ChessCoachAppElementTest >> testUpdateButtonAppearsWhenANewerVersionExists [
+
+	self assert: app updateButton visibility equals: BlVisibility gone.
+	session updater: (ChessCoachUpdaterStub new
+			 current: 'v1.1.1' tags: #( 'v1.2.0' ) failure: nil;
+			 yourself).
+	session checkForUpdate.
+	scripter pulse.
+	self assert: app updateButton visibility equals: BlVisibility visible.
+	self
+		assert: app updateButton labelText asString
+		equals: 'Update to v1.2.0'
+]

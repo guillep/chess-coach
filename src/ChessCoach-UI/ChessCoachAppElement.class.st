@@ -35,7 +35,8 @@ Class {
 		'gameTable',
 		'shownGameId',
 		'openings',
-		'openingTreeTab'
+		'openingTreeTab',
+		'updateButton'
 	],
 	#category : 'ChessCoach-UI-App',
 	#package : 'ChessCoach-UI',
@@ -915,8 +916,15 @@ ChessCoachAppElement >> session: aChessCoachSession [
 	The app theme is applied again when I am added to a space."
 
 	session := aChessCoachSession.
-	(self childWithId: #topBar) addChildFirst:
-		(ChessCoachWidgets help: 'Chess Coach ' , session appVersion).
+	updateButton := ChessCoachWidgets
+		                primaryButton: 'Update'
+		                icon: 'filled_arrowforward'
+		                do: [ self updateApp ].
+	(self childWithId: #topBar)
+		addChildFirst: updateButton;
+		addChild:
+			(ChessCoachWidgets help: 'Chess Coach ' , session appVersion)
+		at: 2.
 	session announcer
 		when: ChessCoachSessionChanged
 		do: [ :announcement |
@@ -1138,13 +1146,48 @@ ChessCoachAppElement >> updateAnalysisStatus [
 							  ifFalse: [ 's' ]) , ' left. You can keep working.' ])
 ]
 
+{ #category : 'actions' }
+ChessCoachAppElement >> updateApp [
+	"Close the window, install the update at a priority above Bloc's loop (a safe point), and open a new window, also when it failed. A running review is already saved."
+
+	| aSession tag space |
+	aSession := session.
+	tag := session availableUpdate.
+	space := self space.
+	space close.
+	[
+		aSession updater updateTo: tag thenDo: [ :error |
+				error ifNotNil: [
+						aSession logError: error.
+						aSession notifications post: (ChessCoachNotification
+								 key: 'error-Update'
+								 kind: #error
+								 title: 'Update failed'
+								 text:
+								 (error messageText ifNil: [ error class name ]) asString) ].
+				self class openOn: aSession ] ] forkAt:
+		Processor userInterruptPriority
+]
+
 { #category : 'notifications' }
 ChessCoachAppElement >> updateBell [
-	"Show the red dot while there are unread notifications"
+	"Show the red dot while there are unread notifications, and the Update button while a newer version exists"
 
 	bellBadge visibility: (session notifications unreadCount > 0
 			 ifTrue: [ BlVisibility visible ]
-			 ifFalse: [ BlVisibility hidden ])
+			 ifFalse: [ BlVisibility hidden ]).
+	session availableUpdate
+		ifNil: [ updateButton visibility: BlVisibility gone ]
+		ifNotNil: [ :tag |
+				updateButton
+					labelText: 'Update to ' , tag;
+					visibility: BlVisibility visible ]
+]
+
+{ #category : 'notifications' }
+ChessCoachAppElement >> updateButton [
+
+	^ updateButton
 ]
 
 { #category : 'updating' }

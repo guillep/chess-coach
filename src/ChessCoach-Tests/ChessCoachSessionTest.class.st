@@ -64,6 +64,17 @@ ChessCoachSessionTest >> testChangesAreAnnounced [
 ]
 
 { #category : 'tests' }
+ChessCoachSessionTest >> testCheckForUpdateNotifies [
+
+	session updater: (ChessCoachUpdaterStub new
+			 current: 'v1.1.1' tags: #( 'v1.2.0' ) failure: nil;
+			 yourself).
+	session checkForUpdate.
+	self assert: session availableUpdate equals: 'v1.2.0'.
+	self assert: session notifications visible first isUpdate
+]
+
+{ #category : 'tests' }
 ChessCoachSessionTest >> testCheckingForNewGamesNotifiesThem [
 
 	session login.
@@ -479,13 +490,13 @@ ChessCoachSessionTest >> testTheGamesCheckIntervalIsASetting [
 
 	session settings at: 'gamesCheckMinutes' put: 10.
 	session startScheduledChecks.
-	self
-		assert: session scheduler intervals asArray
-		equals: { 10 minutes }.
+	self assert: session scheduler intervals asArray equals: {
+			10 minutes.
+			6 hours }.
 	session settings at: 'gamesCheckMinutes' put: 45.
-	self
-		assert: session scheduler intervals asArray
-		equals: { 45 minutes }.
+	self assert: session scheduler intervals asArray equals: {
+			45 minutes.
+			6 hours }.
 	self assert: session scheduler isRunning.
 	session shutDown
 ]

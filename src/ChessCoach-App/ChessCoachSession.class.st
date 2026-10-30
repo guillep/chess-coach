@@ -14,7 +14,9 @@ Class {
 		'chessComImporter',
 		'settings',
 		'notifications',
-		'scheduler'
+		'scheduler',
+		'updater',
+		'availableUpdate'
 	],
 	#category : 'ChessCoach-App',
 	#package : 'ChessCoach-App'
@@ -149,6 +151,13 @@ ChessCoachSession >> appVersion [
 	^ head shortId
 ]
 
+{ #category : 'updates' }
+ChessCoachSession >> availableUpdate [
+	"The release tag to update to, or nil"
+
+	^ availableUpdate
+]
+
 { #category : 'opening trees' }
 ChessCoachSession >> buildOpeningTree: anOpeningTree [
 	"Count the matching games and save the tree, keeping the database data already fetched. Slow: call it off the UI thread."
@@ -214,6 +223,19 @@ ChessCoachSession >> checkForNewGames [
 					  ifFalse: [ entries size printString , ' new games' ])
 			 text: 'Downloaded from your accounts').
 	self announceChanged
+]
+
+{ #category : 'updates' }
+ChessCoachSession >> checkForUpdate [
+	"Look for a newer release and notify it; the notification also tells the window to show its Update button"
+
+	availableUpdate := self updater availableUpdate.
+	availableUpdate ifNil: [ ^ self ].
+	self notifications post: (ChessCoachNotification
+			 key: 'update-' , availableUpdate
+			 kind: #update
+			 title: 'Update available'
+			 text: availableUpdate , ' can be installed')
 ]
 
 { #category : 'chess.com' }
@@ -1004,7 +1026,7 @@ ChessCoachSession >> shutDown [
 
 { #category : 'running' }
 ChessCoachSession >> startScheduledChecks [
-	"Check for new games now and every so many minutes (a setting), until shutDown. Unexpected errors go to errors.log"
+	"Check for new games now and every so many minutes (a setting), and for updates now and every 6 hours, until shutDown. Unexpected errors go to errors.log"
 
 	scheduler ifNotNil: [ scheduler stop ].
 	scheduler := ChessCoachScheduler new.
@@ -1012,7 +1034,20 @@ ChessCoachSession >> startScheduledChecks [
 	scheduler
 		every: self settings gamesCheckMinutes minutes
 		do: [ self checkForNewGames ].
+	scheduler every: 6 hours do: [ self checkForUpdate ].
 	scheduler start
+]
+
+{ #category : 'updates' }
+ChessCoachSession >> updater [
+
+	^ updater ifNil: [ updater := ChessCoachUpdater new ]
+]
+
+{ #category : 'updates' }
+ChessCoachSession >> updater: aChessCoachUpdater [
+
+	updater := aChessCoachUpdater
 ]
 
 { #category : 'accessing' }

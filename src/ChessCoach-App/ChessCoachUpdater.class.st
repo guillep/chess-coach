@@ -25,12 +25,13 @@ ChessCoachUpdater >> availableUpdate [
 ]
 
 { #category : 'private - io' }
-ChessCoachUpdater >> checkOut: aTagName [
-	"Load the tagged code. Uncommitted changes in the image would be lost, so they stop the update."
+ChessCoachUpdater >> checkOut: aRevision [
+	"Load a tag, branch or commit hash. Uncommitted changes in the image would be lost, so they stop the update."
 
 	self repository isModified ifTrue: [
 		self error: 'The image has uncommitted changes' ].
-	(self repository tagNamed: aTagName) checkout
+	self repository fetch.
+	(self repository commitishNamed: aRevision) checkout
 ]
 
 { #category : 'private - io' }

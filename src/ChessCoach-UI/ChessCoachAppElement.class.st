@@ -76,6 +76,14 @@ ChessCoachAppElement class >> session: aChessCoachSession [
 		  yourself
 ]
 
+{ #category : 'updating' }
+ChessCoachAppElement class >> updateOpenAppTo: aRevision [
+	"For testing updates, from a Playground: ChessCoachAppElement updateOpenAppTo: 'abc1234'. aRevision is a tag, branch or commit hash."
+
+	(self allInstances detect: [ :each | each isAttachedToSceneGraph ])
+		updateAppTo: aRevision
+]
+
 { #category : 'private' }
 ChessCoachAppElement >> analysisIconNameFor: aGameIndexEntry [
 	"The Material Design icon showing the background analysis state of the game, or nil"
@@ -1148,15 +1156,20 @@ ChessCoachAppElement >> updateAnalysisStatus [
 
 { #category : 'actions' }
 ChessCoachAppElement >> updateApp [
-	"Close the window, install the update at a priority above Bloc's loop (a safe point), and open a new window, also when it failed. A running review is already saved."
 
-	| aSession tag space |
+	self updateAppTo: session availableUpdate
+]
+
+{ #category : 'actions' }
+ChessCoachAppElement >> updateAppTo: aRevision [
+	"Close the window, install aRevision (a tag, branch or commit hash) at a priority above Bloc's loop (a safe point), and open a new window, also when it failed. A running review is already saved."
+
+	| aSession space |
 	aSession := session.
-	tag := session availableUpdate.
 	space := self space.
 	space close.
 	[
-		aSession updater updateTo: tag thenDo: [ :error |
+		aSession updater updateTo: aRevision thenDo: [ :error |
 				error ifNotNil: [
 						aSession logError: error.
 						aSession notifications post: (ChessCoachNotification

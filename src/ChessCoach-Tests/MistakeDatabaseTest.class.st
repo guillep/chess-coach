@@ -23,6 +23,15 @@ MistakeDatabaseTest >> record: aGameId date: aDate phase: aPhase tags: someTagId
 ]
 
 { #category : 'tests' }
+MistakeDatabaseTest >> testAFileFromBeforeFormatVersionsStillLoads [
+
+	self assert: (MistakeDatabase fromJSON: '[]') records isEmpty.
+	self assert:
+		(MistakeDatabase fromJSON:
+			 (MistakeDatabase withRecords: #(  )) asJSON) records isEmpty
+]
+
+{ #category : 'tests' }
 MistakeDatabaseTest >> testQueries [
 
 	| database |

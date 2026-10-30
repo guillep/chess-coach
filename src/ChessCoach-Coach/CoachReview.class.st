@@ -37,6 +37,13 @@ Class {
 	#package : 'ChessCoach-Coach'
 }
 
+{ #category : 'constants' }
+CoachReview class >> formatVersion [
+	"The version of the review file format. A file without one is version 0."
+
+	^ 1
+]
+
 { #category : 'instance creation' }
 CoachReview class >> gameId: anId game: aGame engine: aStockfishEngine classifier: anAnswerClassifier [
 	"A new review, starting with the manual marking pass"
@@ -104,6 +111,7 @@ CoachReview >> asJSON [
 	"The review file content (games/<id>.review-<n>.json): marks, moments with my answers, timings, the time box and the mistake records derived from them"
 
 	^ STONJSON toString: (Dictionary new
+			   at: 'formatVersion' put: self class formatVersion;
 			   at: 'game' put: gameId;
 			   at: 'number' put: number;
 			   at: 'date' put: date yyyymmdd;
@@ -508,44 +516,16 @@ CoachReview >> number: anInteger [
 
 { #category : 'private - questions' }
 CoachReview >> openingQuestionsFor: aMoment [
-	"Candidates are the moves I considered before calculating; the bad ones I discarded were discarded rightly. So only a bad move asks for them, to find a better move I discarded wrongly. A good move I thought long about, or marked, only asks why and what I expected"
+	"A long think first asks what took so long, whatever else the moment is"
 
-	| played |
-	played := (game moves at: aMoment ply) san.
-	(aMoment kinds includesAny:
-		 #( #inaccuracy #mistake #blunder #onlyMoveMissed )) ifTrue: [
-			^ {
-				  (CoachQuestion
-					   kind: #candidates
-					   text:
-					   'Your move was bad. Which other candidate moves did you evaluate and discard here? Mark them on the board.').
-				  (CoachQuestion
-					   kind: #why
-					   text: 'Why did you play ' , played , '?').
-				  (CoachQuestion
-					   kind: #expectedReply
-					   text:
-					   'After ' , played
-					   , ', what did you expect your opponent to play?') } ].
-	(aMoment kinds includesAny: #( #longThink #marked )) ifTrue: [
-			^ {
-				  (CoachQuestion
-					   kind: #why
-					   text: 'Why did you play ' , played , '?').
-				  (CoachQuestion
-					   kind: #expectedReply
-					   text:
-					   'After ' , played
-					   , ', what did you expect your opponent to play?') } ].
-	(aMoment kinds includes: #onlyMoveFound) ifTrue: [
-			^ { (CoachQuestion
-				   kind: #whatDidYouSee
-				   text:
-					   'Only one move kept the balance and you found it: ' , played
-					   , '. What did you see?') } ].
+	| questions |
+	questions := self questionsAboutMoveOf: aMoment.
+	(aMoment kinds includes: #longThink) ifFalse: [ ^ questions ].
 	^ { (CoachQuestion
-		   kind: #why
-		   text: 'Why did you play ' , played , '?') }
+		   kind: #whyLongThink
+		   text:
+		   'You thought for a long time here. Why did it take so long?') }
+	  , questions
 ]
 
 { #category : 'timing' }
@@ -601,6 +581,48 @@ CoachReview >> plySeconds [
 	"Seconds spent on each ply during the marking pass"
 
 	^ plySeconds
+]
+
+{ #category : 'private - questions' }
+CoachReview >> questionsAboutMoveOf: aMoment [
+	"Candidates are the moves I considered before calculating; the bad ones I discarded were discarded rightly. So only a bad move asks for them, to find a better move I discarded wrongly. A good move I thought long about, or marked, only asks why and what I expected"
+
+	| played |
+	played := (game moves at: aMoment ply) san.
+	(aMoment kinds includesAny:
+		 #( #inaccuracy #mistake #blunder #onlyMoveMissed )) ifTrue: [
+			^ {
+				  (CoachQuestion
+					   kind: #candidates
+					   text:
+					   'Your move was bad. Which other candidate moves did you evaluate and discard here? Mark them on the board.').
+				  (CoachQuestion
+					   kind: #why
+					   text: 'Why did you play ' , played , '?').
+				  (CoachQuestion
+					   kind: #expectedReply
+					   text:
+					   'After ' , played
+					   , ', what did you expect your opponent to play?') } ].
+	(aMoment kinds includesAny: #( #longThink #marked )) ifTrue: [
+			^ {
+				  (CoachQuestion
+					   kind: #why
+					   text: 'Why did you play ' , played , '?').
+				  (CoachQuestion
+					   kind: #expectedReply
+					   text:
+					   'After ' , played
+					   , ', what did you expect your opponent to play?') } ].
+	(aMoment kinds includes: #onlyMoveFound) ifTrue: [
+			^ { (CoachQuestion
+				   kind: #whatDidYouSee
+				   text:
+					   'Only one move kept the balance and you found it: ' , played
+					   , '. What did you see?') } ].
+	^ { (CoachQuestion
+		   kind: #why
+		   text: 'Why did you play ' , played , '?') }
 ]
 
 { #category : 'private - timing' }

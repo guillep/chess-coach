@@ -502,7 +502,7 @@ CoachElement >> buildTagsOf: aMomentReview [
 
 { #category : 'building' }
 CoachElement >> buildTextAnswer [
-	"Quick answers that fit the question; clicking one adds it to the field. The field starts with the draft of this question, if any. Shift+Enter answers, as the Answer button does."
+	"Quick answers that fit the question; clicking one adds it to the field. The field starts with the draft of this question, if any. Shift+Enter answers, as the Answer button does; the shortcut goes on the editor, which has the keyboard focus."
 
 	| chips |
 	chips := ToElement new
@@ -523,7 +523,7 @@ CoachElement >> buildTextAnswer [
 		               height: 100;
 		               text: draft;
 		               yourself.
-	answerField addShortcut: (BlShortcutWithAction new
+	answerField addEditorShortcut: (BlShortcutWithAction new
 			 combination: BlKeyCombination shiftReturn;
 			 action: [ self submitText ]).
 	currentZone
@@ -998,10 +998,14 @@ CoachElement >> questionTitle: aCoachQuestion [
 
 { #category : 'private' }
 CoachElement >> quickAnswersFor: aCoachQuestion [
-	"Answers that fit the question: why I played a move, why I missed or discarded another, or what I saw"
+	"Answers that fit the question: why I played a move, why I missed or discarded another, why I thought so long, or what I saw"
 
 	| kind |
 	kind := aCoachQuestion kind.
+	kind = #whyLongThink ifTrue: [
+			^ #( 'The position was complicated' 'I was calculating a long line'
+			     'I couldn''t decide between two moves'
+			     'I was unsure of my plan' 'I lost concentration' ) ].
 	kind = #whyNotConsidered ifTrue: [
 			^ #( 'I didn''t see it' 'I saw it but thought it was worse'
 			     'I saw it but miscalculated it'

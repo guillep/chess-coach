@@ -41,6 +41,13 @@ ChessCoachSessionTest >> testAFailingCheckIsNotifiedOncePerSite [
 ]
 
 { #category : 'tests' }
+ChessCoachSessionTest >> testAppVersionComesFromTheRepository [
+
+	self deny: session appVersion equals: 'Repository version not found'.
+	self assert: session appVersion notEmpty
+]
+
+{ #category : 'tests' }
 ChessCoachSessionTest >> testChangesAreAnnounced [
 
 	| count |

@@ -104,6 +104,20 @@ ChessCoachAppElementTest >> testArrowKeysMoveTheGameSelection [
 ]
 
 { #category : 'tests' }
+ChessCoachAppElementTest >> testClosingTheShownGamePageGoesBackToGames [
+
+	self click: app loginButton.
+	self click: app loadMoreButton.
+	app selectGameAt: 1.
+	scripter pulse.
+	app playThrough: app selectedEntry.
+	scripter pulse.
+	app closeTab: app playThroughTab.
+	scripter pulse.
+	self assert: app gameView isAttachedToSceneGraph
+]
+
+{ #category : 'tests' }
 ChessCoachAppElementTest >> testCoachAndPlayThroughOpenInClosableTabs [
 
 	| coach coachTab |
@@ -330,8 +344,14 @@ ChessCoachAppElementTest >> testNewAnalysisMarksThenReviewsAndIsListed [
 	self assert: app coach isNil.
 	self assert: app gameView isAttachedToSceneGraph.
 	self assert:
-		(app gameView reviewsZone children first labelText asString
-			 beginsWith: 'Analysis 1 · ')
+		(app gameView reviewsZone children first children first labelText
+			 asString beginsWith: 'Analysis 1 · ').
+	session deleteReview: review.
+	app gameView updateReviews.
+	self assert: (session reviewsFor: app selectedEntry) isEmpty.
+	self
+		assert: app gameView reviewsZone children first text asString
+		equals: 'No analysis yet.'
 ]
 
 { #category : 'tests' }
@@ -446,7 +466,7 @@ ChessCoachAppElementTest >> testSettingsPage [
 					  '{"tags":[{"tag":"missed-opponent-threat","confidence":0.9}]}')
 			 taxonomy: MistakeTaxonomy default).
 	"The whole page fits without scrolling"
-	scripter space extent: 1200 @ 1400.
+	scripter space extent: 1200 @ 1800.
 	app showPage: #Settings.
 	scripter pulse.
 	settings := app settingsElement.
@@ -479,7 +499,9 @@ ChessCoachAppElementTest >> testSettingsPage [
 	self click: (settings buttonLabeled: 'llama3.1:8b').
 	self assert: session settings ollamaModel equals: 'llama3.1:8b'.
 	self assert:
-		(settings texts includes: 'Validated only with qwen2.5:7b-instruct')
+		(settings texts includes: 'Validated only with qwen2.5:7b-instruct').
+	self click: (settings buttonLabeled: 'Long thinks').
+	self deny: (session settings at: 'findLongThinks')
 ]
 
 { #category : 'tests' }

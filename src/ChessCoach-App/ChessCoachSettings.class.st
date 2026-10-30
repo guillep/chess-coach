@@ -17,6 +17,7 @@ Class {
 ChessCoachSettings class >> defaults [
 
 	^ Dictionary new
+		  at: 'formatVersion' put: 1;
 		  at: 'appTheme' put: 'Light';
 		  at: 'pieceSet' put: 'Meridian';
 		  at: 'boardTheme' put: 'Brown';
@@ -28,6 +29,10 @@ ChessCoachSettings class >> defaults [
 		  at: 'ollamaUrl' put: 'http://localhost:11434';
 		  at: 'ollamaModel' put: 'qwen2.5:7b-instruct';
 		  at: 'momentFilter' put: 'mistakes';
+		  at: 'findEvaluationJumps' put: true;
+		  at: 'findOnlyMoves' put: true;
+		  at: 'findLongThinks' put: true;
+		  at: 'findOpeningChoices' put: true;
 		  at: 'setupDone' put: false;
 		  yourself
 ]

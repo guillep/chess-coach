@@ -20,6 +20,13 @@ GameAnalysis class >> depth: aNumber plies: aCollection [
 	^ self new setDepth: aNumber plies: aCollection
 ]
 
+{ #category : 'constants' }
+GameAnalysis class >> formatVersion [
+	"The version of the analysis file format. A file without one is version 0."
+
+	^ 1
+]
+
 { #category : 'instance creation' }
 GameAnalysis class >> fromJSON: aString [
 
@@ -48,6 +55,7 @@ GameAnalysis class >> withoutEngineFor: aGame [
 GameAnalysis >> asJSON [
 
 	^ STONJSON toString: (Dictionary new
+			   at: 'formatVersion' put: self class formatVersion;
 			   at: 'depth' put: depth;
 			   at: 'multiPV' put: self multiPV;
 			   at: 'plies' put: (plies collect: [ :each | each asDictionary ]);

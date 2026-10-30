@@ -129,6 +129,26 @@ ChessCoachSession >> announcer [
 	^ announcer
 ]
 
+{ #category : 'accessing' }
+ChessCoachSession >> appVersion [
+	"The version of the chess-coach repository in the style of git describe: nearest tag, commits since it and the commit. Without a tag, only the commit."
+
+	| repository head distance |
+	repository := IceRepository registry
+		              detect: [ :each | each name = 'chess-coach' ]
+		              ifNone: [ ^ 'Repository version not found' ].
+	head := repository head commit.
+	distance := 0.
+	head commitsDo: [ :commit |
+			commit tags ifNotEmpty: [ :tags |
+					^ '{1}-{2}-g{3}' format: {
+							  tags first name.
+							  distance.
+							  head shortId } ].
+			distance := distance + 1 ].
+	^ head shortId
+]
+
 { #category : 'games' }
 ChessCoachSession >> canImport [
 	"Whether some site is set up to download games from: a Lichess or Chess.com username"
@@ -252,6 +272,20 @@ ChessCoachSession >> degradedModeNotes [
 			notes add:
 				'Ollama or its model not available: choose the tags yourself.' ].
 	^ notes
+]
+
+{ #category : 'coach' }
+ChessCoachSession >> deleteReview: aCoachReview [
+	"Delete the review's file and rebuild the mistake database without it"
+
+	(importer fileStore
+		 file: 'review-' , aCoachReview number printString , '.json'
+		 of: aCoachReview gameId) ensureDelete.
+	self mistakesFile
+		ensureDelete;
+		writeStreamDo: [ :stream |
+			stream nextPutAll: self rebuiltMistakeDatabase asJSON ].
+	self announceChanged
 ]
 
 { #category : 'errors' }
@@ -549,7 +583,7 @@ ChessCoachSession >> momentsFor: aGameIndexEntry marks: someMarks [
 
 { #category : 'moments' }
 ChessCoachSession >> momentsFor: aGameIndexEntry marks: someMarks problems: aCollection [
-	"The game's interesting moments, merged with someMarks (dictionaries with 'ply' and 'note'), sorted by ply. Heuristics that could not run add a sentence to aCollection. Slow the first time (engine analysis): call it off the UI thread."
+	"The game's interesting moments, merged with someMarks (dictionaries with 'ply' and 'note'), sorted by ply. Only the heuristics turned on in the settings run; those that could not run add a sentence to aCollection. Slow the first time (engine analysis): call it off the UI thread."
 
 	| game analysis colors finders opening |
 	game := self gameFor: aGameIndexEntry.
@@ -558,22 +592,25 @@ ChessCoachSession >> momentsFor: aGameIndexEntry marks: someMarks problems: aCol
 	finders := OrderedCollection new.
 	analysis hasEngineLines
 		ifTrue: [
-				finders
-					add: (EvaluationJumpFinder on: analysis);
-					add: (OnlyMoveFinder on: analysis) ]
+				(self settings at: 'findEvaluationJumps') ifTrue: [
+					finders add: (EvaluationJumpFinder on: analysis) ].
+				(self settings at: 'findOnlyMoves') ifTrue: [
+					finders add: (OnlyMoveFinder on: analysis) ] ]
 		ifFalse: [
 				aCollection add:
 					'Stockfish not found: moments come only from your marks and long thinks.' ].
-	finders add: (LongThinkFinder on: game).
-	(explorer notNil or: [ self isLoggedIn ])
-		ifTrue: [
-				finders add: (opening := OpeningWinRateFinder
-						            game: game
-						            explorer: self explorer
-						            colors: colors) ]
-		ifFalse: [
-				aCollection add:
-					'Log in to Lichess to compare your opening moves with its database.' ].
+	(self settings at: 'findLongThinks') ifTrue: [
+		finders add: (LongThinkFinder on: game) ].
+	(self settings at: 'findOpeningChoices') ifTrue: [
+			(explorer notNil or: [ self isLoggedIn ])
+				ifTrue: [
+						finders add: (opening := OpeningWinRateFinder
+								            game: game
+								            explorer: self explorer
+								            colors: colors) ]
+				ifFalse: [
+						aCollection add:
+							'Log in to Lichess to compare your opening moves with its database.' ] ].
 	^ (MomentDetector
 		   finders: finders
 		   marksFinder: (MarkedMomentsFinder game: game marks: someMarks)

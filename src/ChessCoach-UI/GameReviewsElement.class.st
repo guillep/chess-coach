@@ -50,7 +50,7 @@ GameReviewsElement >> describe: aCoachReview [
 
 { #category : 'private' }
 GameReviewsElement >> infoLines [
-	"One line per known PGN header, then the Stockfish analysis state"
+	"One line per known PGN header, then the number of moves and the Stockfish analysis state"
 
 	| headers lines player opening |
 	headers := game metadata.
@@ -80,6 +80,7 @@ GameReviewsElement >> infoLines [
 		 at: 'Link'
 		 ifAbsent: [ headers at: 'Site' ifAbsent: [ nil ] ]) ifNotNil: [
 		:site | lines add: 'Site: ' , site ].
+	lines add: 'Moves: ' , (game moves size + 1 // 2) printString.
 	lines add: 'Stockfish: ' , self analysisStateText.
 	^ lines
 ]
@@ -239,9 +240,24 @@ GameReviewsElement >> updateReviews [
 	reviews ifEmpty: [
 		^ reviewsZone addChild: (ToLabel text: 'No analysis yet.') ].
 	reviews do: [ :review |
-			reviewsZone addChild: (ToButton new
-					 labelText: (self describe: review);
-					 clickAction: [ openBlock value: review ];
+			reviewsZone addChild: (ToElement new
+					 layout: (BlLinearLayout horizontal cellSpacing: 8);
+					 hMatchParent;
+					 vFitContent;
+					 addChild: (ToButton new
+							  labelText: (self describe: review);
+							  clickAction: [ openBlock value: review ];
+							  yourself);
+					 addChild: (ToButton new
+							  icon:
+								  ((ToMaterialDesignIconProvider iconNamed: 'outlined_delete')
+									   extent: 16 @ 16;
+									   yourself);
+							  tooltipText: 'Delete this analysis';
+							  clickAction: [
+									  session deleteReview: review.
+									  self updateReviews ];
+							  yourself);
 					 yourself) ]
 ]
 

@@ -254,7 +254,7 @@ MistakesDashboardElement >> rebuild [
 	self
 		section: 'Your most frequent mistakes'
 		help:
-		'The mistake types you confirmed (or didn''t reject) most often. Click a bar to see those mistakes.'
+		'The mistake types you confirmed (or didn''t reject) most often. Click a bar to see those mistakes. The colours are the categories. Perception (blue): you didn''t see something. Calculation (orange): you saw it but calculated badly. Evaluation (green): you judged the position wrongly. Decision (red): your process failed, such as no blunder check, impulse, the clock or nerves. Knowledge (brown): you didn''t know the opening, endgame or pattern.'
 		build: [ self buildBars ].
 	self
 		section: 'By phase'

@@ -270,7 +270,9 @@ ChessCoachAppElement >> initialize [
 	navigation := self newNavigation.
 	self
 		addChild: (ToElement new
-				 layout: BlLinearLayout horizontal alignCenterRight;
+				 id: #topBar;
+				 layout:
+					 (BlLinearLayout horizontal alignCenterRight cellSpacing: 8);
 				 hMatchParent;
 				 vFitContent;
 				 padding: (BlInsets
@@ -519,7 +521,8 @@ ChessCoachAppElement >> newNavigation [
 			 page: settingsElement).
 	pane
 		addEventHandlerOn: ToItemRemovedFromListEvent
-		do: [ :event | self tabClosed: event item ].
+		do: [ :event |
+		self tabClosed: event item wasSelected: event wasSelected ].
 	^ pane
 ]
 
@@ -750,6 +753,12 @@ ChessCoachAppElement >> playThrough: aGameIndexEntry [
 ]
 
 { #category : 'accessing' }
+ChessCoachAppElement >> playThroughTab [
+
+	^ playThroughTab
+]
+
+{ #category : 'accessing' }
 ChessCoachAppElement >> refreshButton [
 
 	^ refreshButton
@@ -843,6 +852,8 @@ ChessCoachAppElement >> session: aChessCoachSession [
 	The app theme is applied again when I am added to a space."
 
 	session := aChessCoachSession.
+	(self childWithId: #topBar) addChildFirst:
+		(ChessCoachWidgets help: 'Chess Coach ' , session appVersion).
 	session announcer
 		when: ChessCoachSessionChanged
 		do: [ :announcement |
@@ -1013,17 +1024,25 @@ ChessCoachAppElement >> statusLabel [
 ]
 
 { #category : 'navigation' }
-ChessCoachAppElement >> tabClosed: aTabButton [
-	"A closable page was closed, from its tab or from its own close button"
+ChessCoachAppElement >> tabClosed: aTabButton wasSelected: aBoolean [
+	"A closable page was closed, from its tab or from its own close button. If it was showing, go back to Games rather than to the neighbouring tab, unless a new page of the same kind replaced it. Toplo checks the neighbour in a postponed action queued after this event, so Games is shown one postponed action later."
 
 	aTabButton == coachTab ifTrue: [
 			coach review leaveMoment.
 			coach := nil.
 			coachTab := nil.
-			gameView ifNotNil: [ gameView updateReviews ] ].
+			gameView ifNotNil: [ gameView updateReviews ].
+			aBoolean ifTrue: [
+					navigation itemList postponeAction: [
+							navigation itemList postponeAction: [
+								coachTab ifNil: [ self showPage: #Games ] ] ] ] ].
 	aTabButton == playThroughTab ifTrue: [
 			playThrough := nil.
-			playThroughTab := nil ]
+			playThroughTab := nil.
+			aBoolean ifTrue: [
+					navigation itemList postponeAction: [
+							navigation itemList postponeAction: [
+								playThroughTab ifNil: [ self showPage: #Games ] ] ] ] ]
 ]
 
 { #category : 'notifications' }

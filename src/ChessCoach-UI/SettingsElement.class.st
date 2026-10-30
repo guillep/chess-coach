@@ -124,6 +124,17 @@ SettingsElement >> build [
 						 (self note:
 							  'Changes apply to games analysed from now on; stored analyses are kept.') });
 		addChild: (widgets
+				 section: 'Moments'
+				 help:
+				 'How the coach finds the moments to review. Evaluation drops are moves that lost ground according to Stockfish; only moves are positions where a single move kept the balance; long thinks are moves that took at least 10 s and 3 times your average; opening choices compare your moves with the Lichess database. The moves you mark are always included. Changes apply to new analyses.'
+				 rows: {
+						 (self
+							  heuristicRow: 'Evaluation drops'
+							  key: 'findEvaluationJumps').
+						 (self heuristicRow: 'Only moves' key: 'findOnlyMoves').
+						 (self heuristicRow: 'Long thinks' key: 'findLongThinks').
+						 (self heuristicRow: 'Opening choices' key: 'findOpeningChoices') });
+		addChild: (widgets
 				 section: 'Coach (local LLM)'
 				 help:
 				 'A local model, run by Ollama on this computer, sorts your written answers into mistake types. Load models lists the installed ones; Test classifies a sample answer and shows how long it took.'
@@ -217,6 +228,20 @@ SettingsElement >> heading: aString [
 				   bold;
 				   yourself);
 		  yourself
+]
+
+{ #category : 'building' }
+SettingsElement >> heuristicRow: aLabel key: aKey [
+	"A toggle that turns one way of finding moments on or off, saved at once"
+
+	| toggle |
+	toggle := ToToggleButton new
+		          labelText: aLabel;
+		          yourself.
+	(session settings at: aKey) ifTrue: [ toggle check ].
+	toggle newCheckAction: [
+		session settings at: aKey put: toggle isChecked ].
+	^ toggle
 ]
 
 { #category : 'private' }

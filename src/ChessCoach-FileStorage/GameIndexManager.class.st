@@ -12,6 +12,13 @@ Class {
 	#package : 'ChessCoach-FileStorage'
 }
 
+{ #category : 'constants' }
+GameIndexManager class >> formatVersion [
+	"The version of the index file format. A file without one is version 0."
+
+	^ 1
+]
+
 { #category : 'adding' }
 GameIndexManager >> addGameEntry: entryDict [
 	"Add a new game entry to the index and save to disk"
@@ -77,6 +84,7 @@ GameIndexManager >> saveIndexToDisk [
 
 	| indexData |
 	indexData := Dictionary new.
+	indexData at: 'formatVersion' put: self class formatVersion.
 	indexData at: 'games' put: (index entries collect: [ :entry |
 				 Dictionary new
 					 at: 'gameId' put: entry gameId;

@@ -12,12 +12,24 @@ Class {
 	#tag : 'Mistakes'
 }
 
+{ #category : 'constants' }
+MistakeDatabase class >> formatVersion [
+	"The version of the mistakes file format. Version 0 was a bare list of records."
+
+	^ 1
+]
+
 { #category : 'instance creation' }
 MistakeDatabase class >> fromJSON: aString [
+	"Version 0 of the file is a bare list of records"
 
+	| contents records |
+	contents := STONJSON fromString: aString.
+	records := contents isDictionary
+		           ifTrue: [ contents at: 'records' ]
+		           ifFalse: [ contents ].
 	^ self withRecords:
-		  ((STONJSON fromString: aString) collect: [ :each |
-			   MistakeRecord fromDictionary: each ])
+		  (records collect: [ :each | MistakeRecord fromDictionary: each ])
 ]
 
 { #category : 'instance creation' }
@@ -29,7 +41,11 @@ MistakeDatabase class >> withRecords: someMistakeRecords [
 { #category : 'converting' }
 MistakeDatabase >> asJSON [
 
-	^ STONJSON toString: (records collect: [ :each | each asDictionary ])
+	^ STONJSON toString: (Dictionary new
+			   at: 'formatVersion' put: self class formatVersion;
+			   at: 'records'
+			   put: (records collect: [ :each | each asDictionary ]);
+			   yourself)
 ]
 
 { #category : 'accessing' }

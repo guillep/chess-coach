@@ -14,6 +14,13 @@ Class {
 	#package : 'ChessCoach-App'
 }
 
+{ #category : 'constants' }
+ChessCoachNotifications class >> formatVersion [
+	"The version of the notifications file format. Version 0 was a bare list of notifications."
+
+	^ 1
+]
+
 { #category : 'instance creation' }
 ChessCoachNotifications class >> onFile: aFileReference [
 
@@ -58,21 +65,28 @@ ChessCoachNotifications >> saveAndReport [
 	file
 		ensureDelete;
 		writeStreamDo: [ :stream |
-				stream nextPutAll: (STONJSON toStringPretty:
-								 (items collect: [ :each | each asDictionary ])) ].
+				stream nextPutAll: (STONJSON toStringPretty: (Dictionary new
+									  at: 'formatVersion' put: self class formatVersion;
+									  at: 'items'
+									  put: (items collect: [ :each | each asDictionary ]);
+									  yourself)) ].
 	changedBlock value
 ]
 
 { #category : 'initialization' }
 ChessCoachNotifications >> setFile: aFileReference [
+	"Version 0 of the file is a bare list of notifications"
 
+	| contents |
 	file := aFileReference.
 	changedBlock := [ ].
-	items := file exists
-		         ifTrue: [
-				         ((STONJSON fromString: file contents) collect: [ :each |
-					          ChessCoachNotification fromDictionary: each ]) asArray ]
-		         ifFalse: [ #(  ) ]
+	file exists ifFalse: [
+			items := #(  ).
+			^ self ].
+	contents := STONJSON fromString: file contents.
+	contents isDictionary ifTrue: [ contents := contents at: 'items' ].
+	items := (contents collect: [ :each |
+		          ChessCoachNotification fromDictionary: each ]) asArray
 ]
 
 { #category : 'accessing' }

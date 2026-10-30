@@ -58,11 +58,14 @@ SetupWizardElement >> buildSection: aSection title: aTitle text: aString [
 SetupWizardElement >> buildWelcome [
 
 	content
-		addChild: (self paragraph: 'Welcome to Chess Coach');
-		addChild: (self paragraph:
-					 'It downloads your games, finds the moments that mattered, asks you how you thought about them, and keeps track of your typical mistakes.');
-		addChild: (self paragraph:
-					 'Everything runs on this computer: Stockfish analyses the games and a local model (Ollama) classifies your answers.');
+		addChild: (ChessCoachWidgets
+				 section: 'Welcome to Chess Coach'
+				 help: nil
+				 rows: {
+						 (self paragraph:
+								  'It downloads your games, finds the moments that mattered, asks you how you thought about them, and keeps track of your typical mistakes.').
+						 (self paragraph:
+								  'Everything runs on this computer: Stockfish analyses the games and a local model (Ollama) classifies your answers.') });
 		addChild: self navigationRow
 ]
 

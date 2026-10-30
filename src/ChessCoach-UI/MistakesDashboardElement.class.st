@@ -291,7 +291,7 @@ MistakesDashboardElement >> rebuild [
 	self
 		section: 'Trend'
 		help:
-		'One digit per block of 10 games, oldest first: 0 is the least frequent, 9 the most, for each of your top mistake types.'
+		'One bar per block of 10 games, oldest first: the taller the bar, the more often the mistake appeared, for each of your top mistake types.'
 		build: [ self buildTrend ].
 	(times notNil and: [ times reviewedMomentCount > 0 ]) ifTrue: [
 			self

@@ -291,7 +291,7 @@ ChessCoachAppElement >> initialize [
 						  top: 8
 						  left: 16
 						  bottom: 0
-						  right: 16);
+						  right: 28);
 				 addChild: self newBell;
 				 yourself);
 		addChild: navigation;

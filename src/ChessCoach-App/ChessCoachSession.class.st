@@ -194,7 +194,7 @@ ChessCoachSession >> cancelLogin [
 
 { #category : 'notifications' }
 ChessCoachSession >> checkForNewGames [
-	"Download new games from every site with a username, as Refresh does, and notify them. A site that fails gets one error notification, replaced while it keeps failing"
+	"Download new games from every site with a username, as Refresh does, and notify them in one notification, replaced by the next check. A site that fails gets one error notification, replaced while it keeps failing"
 
 	| entries |
 	entries := OrderedCollection new.
@@ -207,7 +207,7 @@ ChessCoachSession >> checkForNewGames [
 					 doing: [ self chessComImporter importNewerGames ]) ].
 	entries ifEmpty: [ ^ self ].
 	self notifications post: (ChessCoachNotification
-			 key: 'new-games-' , DateAndTime now asUnixTime printString
+			 key: 'new-games'
 			 kind: #newGames
 			 title: (entries size = 1
 					  ifTrue: [ '1 new game' ]

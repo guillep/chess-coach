@@ -59,7 +59,6 @@ MistakesDashboardElementTest >> testShowsFrequenciesPhasesTrendAndDetail [
 			 'Opening: No blunder check ×1, Hope chess ×1').
 	self assert:
 		(dashboard texts includes: 'Endgame: No blunder check ×1').
-	self assert: (dashboard texts includes: 'No blunder check  9').
 	dashboard selectTag: 'hope-chess'.
 	self assert:
 		(dashboard texts includes: '2026-10-01 · game g1, move 11: too fast').

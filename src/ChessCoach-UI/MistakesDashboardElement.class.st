@@ -132,16 +132,32 @@ MistakesDashboardElement >> buildTimes [
 
 { #category : 'building' }
 MistakesDashboardElement >> buildTrend [
-	"A text sparkline per top tag: one block per 10 games, higher when the tag was more frequent"
+	"Small bars per top tag: one bar per block of 10 games, taller when the tag was more frequent"
 
 	| blocks top |
 	blocks := database tagFrequenciesByGames: 10.
 	top := database tagFrequencies keys first:
 		       (database tagFrequencies size min: 3).
 	top do: [ :tag |
-			content addChild:
-				(ToLabel text: (self nameOf: tag) , '  ' , (self sparkline:
-						  (blocks collect: [ :each | each at: tag ifAbsent: [ 0 ] ]))) ]
+			| counts max row |
+			counts := blocks collect: [ :each | each at: tag ifAbsent: [ 0 ] ].
+			max := counts max max: 1.
+			row := ToElement new
+				       layout:
+					       (BlLinearLayout horizontal alignBottomLeft cellSpacing: 3);
+				       hMatchParent;
+				       vFitContent;
+				       addChild: (ToLabel new
+						        text: (self nameOf: tag);
+						        width: 200;
+						        yourself);
+				       yourself.
+			counts do: [ :each |
+					row addChild: (BlElement new
+							 extent: 14 @ (each / max * 18) rounded + 2;
+							 background: (self colorOfTag: tag);
+							 yourself) ].
+			content addChild: row ]
 ]
 
 { #category : 'actions' }

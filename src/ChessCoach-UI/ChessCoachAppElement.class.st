@@ -736,7 +736,15 @@ ChessCoachAppElement >> openReview: aCoachReview of: aGameIndexEntry [
 	coach session: session entry: aGameIndexEntry review: aCoachReview.
 	self applyPieceSet.
 	coach whenExitDo: [ self exitCoach ].
-	coachTab := self openTab: 'Coach' icon: 'outlined_school' page: coach.
+	coachTab := self
+		            openTab: 'Coach'
+		            icon: 'outlined_school'
+		            page: (ChessCoachWidgets
+				             page:
+				             aGameIndexEntry players first , ' – '
+				             , aGameIndexEntry players second
+				             subtitle: 'Review with the coach'
+				             body: coach).
 	^ coach
 ]
 
@@ -775,9 +783,9 @@ ChessCoachAppElement >> pageButton: aPageId [
 
 { #category : 'actions' }
 ChessCoachAppElement >> playThrough: aGameIndexEntry [
-	"Look at the game move by move in its own closable page, replacing an open one"
+	"Look at the game move by move in its own closable page named after its players, replacing an open one"
 
-	| game colors |
+	| game colors title |
 	self closeTab: playThroughTab.
 	game := session gameFor: aGameIndexEntry.
 	colors := session myColorsIn: game.
@@ -787,10 +795,15 @@ ChessCoachAppElement >> playThrough: aGameIndexEntry [
 			 ifTrue: [ colors first ]
 			 ifFalse: [ #white ]).
 	playThrough game: game.
+	title := aGameIndexEntry players first , ' – '
+	         , aGameIndexEntry players second.
 	playThroughTab := self
 		                  openTab: 'Game'
 		                  icon: 'outlined_slideshow'
-		                  page: playThrough.
+		                  page: (ChessCoachWidgets
+				                   page: title
+				                   subtitle: aGameIndexEntry date
+				                   body: playThrough).
 	^ playThrough
 ]
 
@@ -1111,10 +1124,10 @@ ChessCoachAppElement >> updateAnalysisStatus [
 	analysisLabel text: (left = 0
 			 ifTrue: [ '' ]
 			 ifFalse: [
-					 'Analysing in the background: ' , left printString , ' game'
+					 'Stockfish is analysing: ' , left printString , ' game'
 					 , (left = 1
 							  ifTrue: [ '' ]
-							  ifFalse: [ 's' ]) , ' left' ])
+							  ifFalse: [ 's' ]) , ' left. You can keep working.' ])
 ]
 
 { #category : 'notifications' }

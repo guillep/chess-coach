@@ -186,57 +186,58 @@ CoachElement >> buildList [
 CoachElement >> buildMarking [
 
 	| marked |
-	currentZone addChild: (self paragraph:
-			 'Go through the game and mark the moves you want to talk about. The engine''s view stays hidden. Keys: left/right arrows to move, Enter or Space to mark or unmark.').
-	currentZone addChild: (self row: {
-				 (self
-					  button: ''
-					  icon: 'outlined_chevronleft'
-					  do: [ self showPly: shownPly - 1 ]).
-				 (self
-					  button: ''
-					  icon: 'outlined_chevronright'
-					  do: [ self showPly: shownPly + 1 ]) }).
-	shownPly > 0 ifTrue: [
-			marked := review isMarked: shownPly.
-			currentZone addChild:
-				(self paragraph: ('Move {1}: {2}{3}' format: {
-							  (shownPly + 1 // 2).
-							  (game moves at: shownPly) san.
-							  (marked
-								   ifTrue: [ ' (marked)' ]
-								   ifFalse: [ '' ]) })).
-			marked
-				ifTrue: [
-						currentZone addChild:
-							(self
-								 button: 'Unmark'
-								 icon: 'outlined_flag'
-								 do: [ self unmarkShown ]) ]
-				ifFalse: [
-						noteField := ToTextField new
-							             hMatchParent;
-							             yourself.
-						currentZone
-							addChild: (self paragraph: 'Note (optional):');
-							addChild: noteField;
-							addChild:
-								(self
-									 button: 'Mark'
-									 icon: 'outlined_flag'
-									 do: [ self markShown ]) ] ].
-	currentZone addChild: (self paragraph: 'Marked: '
-			 , (review marks ifEmpty: [ 'nothing yet' ] ifNotEmpty: [ :marks |
-						  ', ' join:
-							  (marks collect: [ :each |
-								   (game moves at: (each at: 'ply')) san ]) ])).
-	currentZone addChild: ChessCoachWidgets separator.
-	currentZone addChild: (self row: {
-				 (ChessCoachWidgets
-					  primaryButton: 'Done marking'
-					  icon: 'filled_arrowforward'
-					  do: [ self doneMarking ]).
-				 (self button: 'Back' do: [ exitBlock value ]) })
+	self section: 'Marking' build: [
+			currentZone addChild: (self paragraph:
+					 'Go through the game and mark the moves you want to talk about. The engine''s view stays hidden. Keys: left/right arrows to move, Enter or Space to mark or unmark.').
+			currentZone addChild: (self row: {
+						 (self
+							  button: ''
+							  icon: 'outlined_chevronleft'
+							  do: [ self showPly: shownPly - 1 ]).
+						 (self
+							  button: ''
+							  icon: 'outlined_chevronright'
+							  do: [ self showPly: shownPly + 1 ]) }).
+			shownPly > 0 ifTrue: [
+					marked := review isMarked: shownPly.
+					currentZone addChild:
+						(self paragraph: ('Move {1}: {2}{3}' format: {
+									  (shownPly + 1 // 2).
+									  (game moves at: shownPly) san.
+									  (marked
+										   ifTrue: [ ' (marked)' ]
+										   ifFalse: [ '' ]) })).
+					marked
+						ifTrue: [
+								currentZone addChild:
+									(self
+										 button: 'Unmark'
+										 icon: 'outlined_flag'
+										 do: [ self unmarkShown ]) ]
+						ifFalse: [
+								noteField := ToTextField new
+									             hMatchParent;
+									             yourself.
+								currentZone
+									addChild: (self paragraph: 'Note (optional):');
+									addChild: noteField;
+									addChild:
+										(self
+											 button: 'Mark'
+											 icon: 'outlined_flag'
+											 do: [ self markShown ]) ] ].
+			currentZone addChild: (self paragraph: 'Marked: '
+					 ,
+						 (review marks
+							  ifEmpty: [ 'nothing yet' ]
+							  ifNotEmpty: [ :marks |
+									  ', ' join:
+										  (marks collect: [ :each |
+											   (game moves at: (each at: 'ply')) san ]) ])) ].
+	currentZone addChild: (ChessCoachWidgets
+			 primaryButton: 'Done marking'
+			 icon: 'filled_arrowforward'
+			 do: [ self doneMarking ])
 ]
 
 { #category : 'building' }

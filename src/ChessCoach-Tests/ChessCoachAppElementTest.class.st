@@ -79,7 +79,7 @@ ChessCoachAppElementTest >> testAppTheme [
 	self click: (settings buttonLabeled: 'Dark').
 	scripter pulse.
 	self assert: session settings appTheme equals: 'Dark'.
-	self assert: (settings texts includes: '[Dark]').
+	self assert: (settings texts includes: '✓ Dark').
 	self assert: (app space root localTheme isKindOf: ToRawDarkTheme).
 	self click: (settings buttonLabeled: 'Light').
 	scripter pulse.

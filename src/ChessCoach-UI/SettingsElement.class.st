@@ -214,6 +214,15 @@ SettingsElement >> chessComRow [
 			  chessComStatus }
 ]
 
+{ #category : 'updating' }
+SettingsElement >> chosen: aName is: aChosenName [
+	"The label of a choice: the chosen one has a check mark"
+
+	^ aName = aChosenName
+		  ifTrue: [ '✓ ' , aName ]
+		  ifFalse: [ aName ]
+]
+
 { #category : 'actions' }
 SettingsElement >> forgetChessCom [
 
@@ -644,9 +653,7 @@ SettingsElement >> updateAccounts [
 SettingsElement >> updateAppTheme [
 
 	appThemeButtons keysAndValuesDo: [ :name :button |
-			button labelText: (name = session settings appTheme
-					 ifTrue: [ '[' , name , ']' ]
-					 ifFalse: [ name ]) ]
+		button labelText: (self chosen: name is: session settings appTheme) ]
 ]
 
 { #category : 'updating' }
@@ -685,16 +692,13 @@ SettingsElement >> updateNumbers [
 
 { #category : 'updating' }
 SettingsElement >> updatePieceSet [
-	"Bracket the chosen piece set and colour theme, and show them on the preview board"
+	"Check the chosen piece set and colour theme, and show them on the preview board"
 
 	pieceSetButtons keysAndValuesDo: [ :name :button |
-			button labelText: (name = session settings pieceSet
-					 ifTrue: [ '[' , name , ']' ]
-					 ifFalse: [ name ]) ].
+		button labelText: (self chosen: name is: session settings pieceSet) ].
 	themeButtons keysAndValuesDo: [ :name :button |
-			button labelText: (name = session settings boardTheme
-					 ifTrue: [ '[' , name , ']' ]
-					 ifFalse: [ name ]) ].
+		button labelText:
+			(self chosen: name is: session settings boardTheme) ].
 	previewBoard
 		pieceSet: (ChessPieceSet named: session settings pieceSet);
 		theme: session settings boardTheme

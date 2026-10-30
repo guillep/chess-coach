@@ -300,6 +300,58 @@ ChessCoachSessionTest >> testOpeningHeuristicNeedsLichess [
 ]
 
 { #category : 'tests' }
+ChessCoachSessionTest >> testOpeningTreeCountsTheGamesIPlayed [
+
+	| tree |
+	session login.
+	session loadMoreGames.
+	(root / 'lichess-username') ensureDelete.
+	session chessComUsername: 'alice'.
+	tree := OpeningTree
+		        named: 'White'
+		        color: #white
+		        speed: nil
+		        from: nil
+		        to: nil
+		        databaseSource: 'lichess'
+		        databaseSpeed: 'blitz'
+		        ratings: #(  ).
+	session buildOpeningTree: tree.
+	self assert: tree gameCount equals: session games size
+]
+
+{ #category : 'tests' }
+ChessCoachSessionTest >> testOpeningTreeIsBuiltSavedAndFindsItsGames [
+
+	| tree reread |
+	session login.
+	session loadMoreGames.
+	session explorer: LichessExplorerClientStub new.
+	tree := OpeningTree
+		        named: 'White'
+		        color: #white
+		        speed: nil
+		        from: nil
+		        to: nil
+		        databaseSource: 'lichess'
+		        databaseSpeed: 'blitz'
+		        ratings: #(  ).
+	session buildOpeningTree: tree.
+	self assert: session openingTrees size equals: 1.
+	reread := session openingTrees first.
+	self assert: reread gameCount equals: tree gameCount.
+	self assert: (session newGameCountOf: reread) equals: 0.
+	reread root ifNotNil: [ :root |
+			self
+				assert: (session entriesOf: reread at: root key) size
+				equals: root games.
+			session fetchDatabaseOf: root in: reread.
+			self assert: session openingTrees first root database notNil ].
+	session deleteOpeningTree: reread.
+	self assert: session openingTrees isEmpty
+]
+
+{ #category : 'tests' }
 ChessCoachSessionTest >> testRefreshFetchesEveryNewerGameWithoutGaps [
 
 	session login.

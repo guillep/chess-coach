@@ -149,6 +149,22 @@ ChessCoachSession >> appVersion [
 	^ head shortId
 ]
 
+{ #category : 'opening trees' }
+ChessCoachSession >> buildOpeningTree: anOpeningTree [
+	"Count the matching games and save the tree, keeping the database data already fetched. Slow: call it off the UI thread."
+
+	| databases |
+	databases := anOpeningTree databases.
+	anOpeningTree reset.
+	(self gamesMatching: anOpeningTree) do: [ :each |
+			anOpeningTree
+				addGame: each
+				points: (self pointsIn: each as: anOpeningTree color) ].
+	anOpeningTree finishBuildingOn: Date today yyyymmdd.
+	anOpeningTree restoreDatabases: databases.
+	self saveOpeningTree: anOpeningTree
+]
+
 { #category : 'games' }
 ChessCoachSession >> canImport [
 	"Whether some site is set up to download games from: a Lichess or Chess.com username"
@@ -161,6 +177,13 @@ ChessCoachSession >> canTimeBox [
 	"Time-boxed analyses need my times on at least 10 reviewed moments"
 
 	^ self reviewTimes reviewedMomentCount >= 10
+]
+
+{ #category : 'opening trees' }
+ChessCoachSession >> canUseDatabase [
+	"The explorer needs a Lichess login"
+
+	^ explorer notNil or: [ self isLoggedIn ]
 ]
 
 { #category : 'login' }
@@ -259,6 +282,17 @@ ChessCoachSession >> configure: aGameAnalyser [
 	^ aGameAnalyser
 ]
 
+{ #category : 'opening trees' }
+ChessCoachSession >> dateOf: aGame [
+	"The game's date as 'yyyy-mm-dd'"
+
+	^ (aGame metadata
+		   at: 'UTCDate'
+		   ifAbsent: [ aGame metadata at: 'Date' ifAbsent: [ '' ] ])
+		  copyReplaceAll: '.'
+		  with: '-'
+]
+
 { #category : 'degraded mode' }
 ChessCoachSession >> degradedModeNotes [
 	"One sentence per missing dependency, saying what is off. Slow (checks Ollama): call it off the UI thread."
@@ -274,6 +308,13 @@ ChessCoachSession >> degradedModeNotes [
 	^ notes
 ]
 
+{ #category : 'opening trees' }
+ChessCoachSession >> deleteOpeningTree: anOpeningTree [
+
+	(self openingTreesDirectory / (anOpeningTree id , '.json'))
+		ensureDelete
+]
+
 { #category : 'coach' }
 ChessCoachSession >> deleteReview: aCoachReview [
 	"Delete the review's file and rebuild the mistake database without it"
@@ -286,6 +327,31 @@ ChessCoachSession >> deleteReview: aCoachReview [
 		writeStreamDo: [ :stream |
 			stream nextPutAll: self rebuiltMistakeDatabase asJSON ].
 	self announceChanged
+]
+
+{ #category : 'opening trees' }
+ChessCoachSession >> entriesMatching: anOpeningTree collect: aBlock [
+	"aBlock receives the index entry and the parsed game of each game that passes the tree's filters. Games I didn't play are left out."
+
+	| matching |
+	matching := OrderedCollection new.
+	(self gamesWithSpeed: anOpeningTree speed) do: [ :entry |
+			| game |
+			game := self gameFor: entry.
+			((self myColorsIn: game) asArray = { anOpeningTree color } and: [
+				 anOpeningTree matchesDate: (self dateOf: game) ]) ifTrue: [
+				matching add: (aBlock value: entry value: game) ] ].
+	^ matching
+]
+
+{ #category : 'opening trees' }
+ChessCoachSession >> entriesOf: anOpeningTree at: aKey [
+	"The index entries of the matching games that reach the position, found by replaying them"
+
+	^ (self entriesMatching: anOpeningTree collect: [ :entry :game |
+			   (self game: game reaches: aKey)
+				   ifTrue: [ entry ]
+				   ifFalse: [ nil ] ]) reject: [ :each | each isNil ]
 ]
 
 { #category : 'errors' }
@@ -306,6 +372,20 @@ ChessCoachSession >> explorer [
 ChessCoachSession >> explorer: aLichessExplorerClient [
 
 	explorer := aLichessExplorerClient
+]
+
+{ #category : 'opening trees' }
+ChessCoachSession >> fetchDatabaseOf: anOpeningNode in: anOpeningTree [
+	"Ask the explorer about the position and keep the answer in the tree. Slow: call it off the UI thread."
+
+	anOpeningNode database: (anOpeningTree databaseSource = 'masters'
+			 ifTrue: [ self explorer mastersMovesFor: anOpeningNode fen ]
+			 ifFalse: [
+					 self explorer
+						 lichessMovesFor: anOpeningNode fen
+						 speed: anOpeningTree databaseSpeed
+						 ratings: anOpeningTree ratings ]).
+	self saveOpeningTree: anOpeningTree
 ]
 
 { #category : 'coach' }
@@ -347,6 +427,18 @@ ChessCoachSession >> finishMarking: aCoachReview of: aGameIndexEntry onProgress:
 	^ problems
 ]
 
+{ #category : 'opening trees' }
+ChessCoachSession >> game: aGame reaches: aKey [
+
+	| position |
+	position := aGame initialPosition.
+	(OpeningTree keyOf: position) = aKey ifTrue: [ ^ true ].
+	aGame moves do: [ :move |
+			position := position move: move san.
+			(OpeningTree keyOf: position) = aKey ifTrue: [ ^ true ] ].
+	^ false
+]
+
 { #category : 'accessing' }
 ChessCoachSession >> gameFor: aGameIndexEntry [
 
@@ -359,6 +451,15 @@ ChessCoachSession >> games [
 	"Index entries of the stored games, newest first"
 
 	^ importer games
+]
+
+{ #category : 'opening trees' }
+ChessCoachSession >> gamesMatching: anOpeningTree [
+	"The parsed games that pass the tree's filters"
+
+	^ self
+		  entriesMatching: anOpeningTree
+		  collect: [ :entry :game | game ]
 ]
 
 { #category : 'games' }
@@ -654,6 +755,14 @@ ChessCoachSession >> newCoachReviewFor: aGameIndexEntry [
 	^ review
 ]
 
+{ #category : 'opening trees' }
+ChessCoachSession >> newGameCountOf: anOpeningTree [
+	"How many more games match than when the tree was built"
+
+	^ anOpeningTree gameCount negated
+	  + (self gamesMatching: anOpeningTree) size max: 0
+]
+
 { #category : 'coach' }
 ChessCoachSession >> newReviewFor: aGameIndexEntry [
 	"Start the next review of the game, in its manual marking pass"
@@ -689,6 +798,39 @@ ChessCoachSession >> notifications [
 							   notifications: notifications;
 							   yourself) ].
 			  notifications ]
+]
+
+{ #category : 'opening trees' }
+ChessCoachSession >> openingTrees [
+	"The saved opening trees, by name"
+
+	self openingTreesDirectory exists ifFalse: [ ^ #(  ) ].
+	^ (self openingTreesDirectory files collect: [ :file |
+		   OpeningTree fromJSON: file contents ]) asArray sort: [ :a :b |
+		  a name < b name ]
+]
+
+{ #category : 'opening trees' }
+ChessCoachSession >> openingTreesDirectory [
+
+	^ importer fileStore baseDirectory / 'opening-trees'
+]
+
+{ #category : 'opening trees' }
+ChessCoachSession >> pointsIn: aGame as: aColor [
+	"What aColor scored: 1, 0.5 or 0. An unfinished game counts as a draw."
+
+	| result |
+	result := aGame metadata at: 'Result' ifAbsent: [ '*' ].
+	result = '1-0' ifTrue: [
+			^ aColor = #white
+				  ifTrue: [ 1 ]
+				  ifFalse: [ 0 ] ].
+	result = '0-1' ifTrue: [
+			^ aColor = #black
+				  ifTrue: [ 1 ]
+				  ifFalse: [ 0 ] ].
+	^ 0.5
 ]
 
 { #category : 'private' }
@@ -765,6 +907,15 @@ ChessCoachSession >> reviewsFor: aGameIndexEntry [
 	^ ((self reviewFilesOf: aGameIndexEntry gameId) collect: [ :file |
 		   self review: aGameIndexEntry from: file contents ]) asArray
 		  sort: [ :a :b | a number < b number ]
+]
+
+{ #category : 'opening trees' }
+ChessCoachSession >> saveOpeningTree: anOpeningTree [
+
+	self openingTreesDirectory ensureCreateDirectory.
+	(self openingTreesDirectory / (anOpeningTree id , '.json'))
+		ensureDelete;
+		writeStreamDo: [ :stream | stream nextPutAll: anOpeningTree asJSON ]
 ]
 
 { #category : 'coach' }

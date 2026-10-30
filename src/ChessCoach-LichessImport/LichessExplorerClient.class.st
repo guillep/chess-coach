@@ -95,6 +95,19 @@ LichessExplorerClient >> lichessMovesFor: aFEN speed: aSpeed ratings: someRating
 		  (self cachedAt: key ifAbsent: [ self get: url ])
 ]
 
+{ #category : 'querying' }
+LichessExplorerClient >> mastersMovesFor: aFEN [
+	"The masters database's moves from aFEN"
+
+	| url |
+	url := 'https://explorer.lichess.ovh/masters' asZnUrl.
+	url
+		queryAt: 'fen' put: aFEN;
+		queryAt: 'moves' put: '12'.
+	^ STONJSON fromString:
+		  (self cachedAt: url printString ifAbsent: [ self get: url ])
+]
+
 { #category : 'initialization' }
 LichessExplorerClient >> setAccessToken: aToken cacheDirectory: aFileReference [
 

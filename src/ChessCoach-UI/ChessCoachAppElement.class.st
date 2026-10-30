@@ -33,7 +33,9 @@ Class {
 		'reviewedIds',
 		'notReviewedButton',
 		'gameTable',
-		'shownGameId'
+		'shownGameId',
+		'openings',
+		'openingTreeTab'
 	],
 	#category : 'ChessCoach-UI-App',
 	#package : 'ChessCoach-UI',
@@ -137,7 +139,8 @@ ChessCoachAppElement >> backgroundRunner: aBlock [
 	"aBlock receives the work block to run; tests pass [ :work | work value ]"
 
 	backgroundRunner := aBlock.
-	settingsElement backgroundRunner: aBlock
+	settingsElement backgroundRunner: aBlock.
+	openings backgroundRunner: aBlock
 ]
 
 { #category : 'accessing' }
@@ -499,7 +502,7 @@ ChessCoachAppElement >> newGamesPage [
 
 { #category : 'initialization' }
 ChessCoachAppElement >> newNavigation [
-	"Stats, Games and Settings as pages of a Toplo tab pane, tabs in a column on the left. Pages are built once and kept. The coach and a played-through game open as closable pages after them."
+	"Stats, Games, Openings and Settings as pages of a Toplo tab pane, tabs in a column on the left. Pages are built once and kept. The coach, a played-through game and an opening tree open as closable pages after them."
 
 	| pane |
 	pane := ToTabPaneElement new.
@@ -515,6 +518,12 @@ ChessCoachAppElement >> newNavigation [
 			 newPageButton: 'Games'
 			 icon: 'outlined_managesearch'
 			 page: gamesPage).
+	openings := OpeningsElement new.
+	openings whenOpenDo: [ :tree | self openOpeningTree: tree ].
+	pane addItem: (self
+			 newPageButton: 'Openings'
+			 icon: 'outlined_accounttree'
+			 page: openings).
 	pane addItem: (self
 			 newPageButton: 'Settings'
 			 icon: 'outlined_settings'
@@ -688,6 +697,29 @@ ChessCoachAppElement >> openMistake: aMistakeRecord [
 		aMistakeRecord ply
 ]
 
+{ #category : 'actions' }
+ChessCoachAppElement >> openOpeningTree: anOpeningTree [
+	"Explore a tree in its own closable page, replacing an open one. A new tree is built there."
+
+	| element |
+	self closeTab: openingTreeTab.
+	element := OpeningTreeElement
+		           session: session
+		           tree: anOpeningTree
+		           runner: backgroundRunner.
+	element board
+		pieceSet: (ChessPieceSet named: session settings pieceSet);
+		theme: session settings boardTheme.
+	element whenGameChosenDo: [ :entry | self playThrough: entry ].
+	element whenBuiltDo: [ openings updateTrees ].
+	openingTreeTab := self
+		                  openTab: 'Tree'
+		                  icon: 'outlined_accounttree'
+		                  page: element.
+	element start.
+	^ element
+]
+
 { #category : 'coach' }
 ChessCoachAppElement >> openReview: aCoachReview of: aGameIndexEntry [
 	"Show a coach review in its own closable page, replacing an open one. Its game is queued for analysis (Stockfish analyses only the games you review), which the end of the marking pass needs."
@@ -723,6 +755,12 @@ ChessCoachAppElement >> openTab: aString icon: anIconName page: anElement [
 	navigation addItem: button.
 	self showTab: button.
 	^ button
+]
+
+{ #category : 'accessing' }
+ChessCoachAppElement >> openings [
+
+	^ openings
 ]
 
 { #category : 'navigation' }
@@ -888,6 +926,7 @@ ChessCoachAppElement >> session: aChessCoachSession [
 	settingsElement backgroundRunner: backgroundRunner.
 	settingsElement session: session.
 	settingsElement whenSetupRequestedDo: [ self showWizard ].
+	openings session: session.
 	self updateFromSession.
 	self updateBell.
 	self showPage: (session mistakeDatabase records
@@ -1025,7 +1064,7 @@ ChessCoachAppElement >> statusLabel [
 
 { #category : 'navigation' }
 ChessCoachAppElement >> tabClosed: aTabButton wasSelected: aBoolean [
-	"A closable page was closed, from its tab or from its own close button. If it was showing, go back to Games rather than to the neighbouring tab, unless a new page of the same kind replaced it. Toplo checks the neighbour in a postponed action queued after this event, so Games is shown one postponed action later."
+	"A closable page was closed, from its tab or from its own close button. If it was showing, go back to the page it came from rather than to the neighbouring tab, unless a new page of the same kind replaced it. Toplo checks the neighbour in a postponed action queued after this event, so the page is shown one postponed action later."
 
 	aTabButton == coachTab ifTrue: [
 			coach review leaveMoment.
@@ -1042,7 +1081,13 @@ ChessCoachAppElement >> tabClosed: aTabButton wasSelected: aBoolean [
 			aBoolean ifTrue: [
 					navigation itemList postponeAction: [
 							navigation itemList postponeAction: [
-								playThroughTab ifNil: [ self showPage: #Games ] ] ] ] ]
+								playThroughTab ifNil: [ self showPage: #Games ] ] ] ] ].
+	aTabButton == openingTreeTab ifTrue: [
+			openingTreeTab := nil.
+			aBoolean ifTrue: [
+					navigation itemList postponeAction: [
+							navigation itemList postponeAction: [
+								openingTreeTab ifNil: [ self showPage: #Openings ] ] ] ] ]
 ]
 
 { #category : 'notifications' }

@@ -131,7 +131,7 @@ ChessCoachAppElementTest >> testCoachAndPlayThroughOpenInClosableTabs [
 	self assert: coach isAttachedToSceneGraph.
 	self
 		assert: (app navigation items asArray collect: [ :each | each id ])
-		equals: #( #Stats #Games #Settings #Coach ).
+		equals: #( #Stats #Games #Openings #Settings #Coach ).
 	coachTab := app navigation items asArray last.
 	app showPage: #Stats.
 	scripter pulse.
@@ -141,11 +141,11 @@ ChessCoachAppElementTest >> testCoachAndPlayThroughOpenInClosableTabs [
 	self assert: (coach review instVarNamed: #pausedAt) isNil.
 	app playThrough: app selectedEntry.
 	scripter pulse.
-	self assert: app navigation items size equals: 5.
+	self assert: app navigation items size equals: 6.
 	app navigation removeItem: coachTab.
 	scripter pulse.
 	self assert: app coach isNil.
-	self assert: app navigation items size equals: 4
+	self assert: app navigation items size equals: 5
 ]
 
 { #category : 'tests' }
@@ -375,6 +375,40 @@ ChessCoachAppElementTest >> testOnlyReviewedGamesAreQueuedForAnalysis [
 		assert: queue pendingGameIds asArray
 		equals: { app games second gameId }.
 	queue stop
+]
+
+{ #category : 'tests' }
+ChessCoachAppElementTest >> testOpeningsBuildAnOpeningTree [
+
+	| tree element |
+	self click: app loginButton.
+	self click: app loadMoreButton.
+	session explorer: LichessExplorerClientStub new.
+	app showPage: #Openings.
+	scripter pulse.
+	self assert: app openings isAttachedToSceneGraph.
+	tree := app openings newTree.
+	self assert: tree ratings equals: #(  ).
+	element := app openOpeningTree: tree.
+	scripter pulse.
+	scripter pulse.
+	self assert: element isAttachedToSceneGraph.
+	self assert: element message equals: nil.
+	self assert: tree builtOn notNil.
+	self assert: session openingTrees size equals: 1
+]
+
+{ #category : 'tests' }
+ChessCoachAppElementTest >> testOpeningsDropdownListsItsOptions [
+
+	| select |
+	select := OpeningsElement new newSelect: {
+			          ('One' -> 1).
+			          ('Two' -> 2) }.
+	scripter space root addChild: select popupListElement.
+	scripter pulse.
+	self assert: select popupListElement isAttachedToSceneGraph.
+	self assert: select selectedDataItem value equals: 1
 ]
 
 { #category : 'tests' }

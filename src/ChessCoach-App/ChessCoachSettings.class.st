@@ -33,6 +33,7 @@ ChessCoachSettings class >> defaults [
 		  at: 'findOnlyMoves' put: true;
 		  at: 'findLongThinks' put: true;
 		  at: 'findOpeningChoices' put: true;
+		  at: 'openingDatabaseMinGames' put: 5;
 		  at: 'setupDone' put: false;
 		  yourself
 ]

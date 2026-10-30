@@ -135,6 +135,16 @@ SettingsElement >> build [
 						 (self heuristicRow: 'Long thinks' key: 'findLongThinks').
 						 (self heuristicRow: 'Opening choices' key: 'findOpeningChoices') });
 		addChild: (widgets
+				 section: 'Openings'
+				 help:
+				 'In an opening tree, positions with more games than this load their database data when clicked. The others show a button, to save Lichess requests.'
+				 rows: { (self
+						  numberRow: 'Load database data above (games)'
+						  key: 'openingDatabaseMinGames'
+						  from: 1
+						  to: 50
+						  by: 1) });
+		addChild: (widgets
 				 section: 'Coach (local LLM)'
 				 help:
 				 'A local model, run by Ollama on this computer, sorts your written answers into mistake types. Load models lists the installed ones; Test classifies a sample answer and shows how long it took.'

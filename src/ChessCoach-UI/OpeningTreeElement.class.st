@@ -15,7 +15,10 @@ Class {
 		'entries',
 		'newGames',
 		'message',
-		'builtBlock'
+		'builtBlock',
+		'view',
+		'positionButton',
+		'engineLines'
 	],
 	#category : 'ChessCoach-UI-Openings',
 	#package : 'ChessCoach-UI',
@@ -29,6 +32,23 @@ OpeningTreeElement class >> session: aChessCoachSession tree: anOpeningTree runn
 		  session: aChessCoachSession
 		  tree: anOpeningTree
 		  runner: aBlock
+]
+
+{ #category : 'actions' }
+OpeningTreeElement >> analyseWithEngine: anOpeningNode [
+	"Ask Stockfish for its top moves, off the UI thread, since it takes a few seconds. They are not stored."
+
+	session isEngineAvailable ifFalse: [ ^ self ].
+	self inBackground: [
+			| lines |
+			lines := session analyser engine
+				         analyse: anOpeningNode fen
+				         multiPV: (session settings multiPV max: 3)
+				         depth: session settings depth.
+			self enqueueTask: (BlTaskAction new action: [
+						 anOpeningNode == self shownNode ifTrue: [
+								 engineLines := lines.
+								 self refresh ] ]) ]
 ]
 
 { #category : 'accessing' }
@@ -59,6 +79,25 @@ OpeningTreeElement >> buildDatabase [
 							  (node gamesOfDatabaseMove: each).
 							  (self percent:
 								   (node databaseScoreOf: (each at: 'uci') for: tree color)) })) ]
+]
+
+{ #category : 'building' }
+OpeningTreeElement >> buildEngine [
+
+	| position |
+	self
+		heading: 'Engine top moves'
+		help: 'Stockfish''s best moves here. Scores are from White''s side.'.
+	session isEngineAvailable ifFalse: [
+		^ panel addChild: (ToLabel text: 'Stockfish isn''t available') ].
+	engineLines ifNil: [
+		^ panel addChild: (ToLabel text: 'Calculating…') ].
+	position := ChessPosition fromFEN: self shownNode fen.
+	engineLines do: [ :each |
+			each firstMove ifNotNil: [ :move |
+					panel addChild: (ToLabel text: ('{1} · {2}' format: {
+									  (position sanForUCI: move).
+									  each scoreString })) ] ]
 ]
 
 { #category : 'building' }
@@ -185,7 +224,7 @@ OpeningTreeElement >> buildWeakSpots [
 
 { #category : 'actions' }
 OpeningTreeElement >> goTo: anOpeningNode [
-	"Show a position: go back to it when it is on the path, otherwise extend the path. Its games are looked up, and its database data is fetched above the threshold in the settings."
+	"Show a position: go back to it when it is on the path, otherwise extend the path. Its games are looked up, Stockfish is asked for its top moves, and its database data is fetched above the threshold in the settings."
 
 	| index |
 	index := path indexOf: anOpeningNode.
@@ -193,8 +232,10 @@ OpeningTreeElement >> goTo: anOpeningNode [
 		ifTrue: [ path := path first: index ]
 		ifFalse: [ path add: anOpeningNode ].
 	entries := nil.
+	engineLines := nil.
 	message := nil.
 	self refresh.
+	self analyseWithEngine: anOpeningNode.
 	self inBackground: [
 			| found count |
 			(anOpeningNode database isNil and: [
@@ -247,9 +288,10 @@ OpeningTreeElement >> isBelowDatabase: anOpeningMove [
 
 { #category : 'actions' }
 OpeningTreeElement >> jumpTo: anOpeningWeakSpot [
-	"A weak spot is reached directly, so the path restarts at it"
+	"A weak spot is reached directly, so the path restarts at it and its position is shown"
 
 	path := OrderedCollection new.
+	positionButton check.
 	self goTo: (tree nodeAt: anOpeningWeakSpot key)
 ]
 
@@ -287,6 +329,34 @@ OpeningTreeElement >> moveLine: anOpeningMove [
 				   ' · ' , seconds rounded printString , ' s' ]) }
 ]
 
+{ #category : 'initialization' }
+OpeningTreeElement >> newViewBar [
+	"Two views of the right side: the shown position, and the tree as a whole"
+
+	| bar group |
+	bar := ToElement new
+		       layout: BlLinearLayout horizontal;
+		       fitContent;
+		       margin: (BlInsets bottom: 8);
+		       yourself.
+	group := ToCheckableGroup new.
+	{
+		('This position' -> #position).
+		('Whole tree' -> #tree) } do: [ :each |
+			| button |
+			button := ToToggleButton new
+				          labelText: each key;
+				          yourself.
+			group register: button.
+			each value = view ifTrue: [
+					button check.
+					positionButton := button ].
+			button newCheckAction: [
+				button isChecked ifTrue: [ self showView: each value ] ].
+			bar addChild: button ].
+	^ bar
+]
+
 { #category : 'building' }
 OpeningTreeElement >> percent: aNumberOrNil [
 
@@ -314,7 +384,9 @@ OpeningTreeElement >> refresh [
 	message ifNotNil: [
 		panel addChild: (ChessCoachWidgets paragraph: message) ].
 	tree builtOn ifNil: [ ^ self ].
-	self buildHeader.
+	path ifNotEmpty: [
+		board chessPosition: (ChessPosition fromFEN: self shownNode fen) ].
+	(view = #tree or: [ path isEmpty ]) ifTrue: [ self buildHeader ].
 	path ifEmpty: [
 			^ panel addChild:
 				  (ChessCoachWidgets paragraph: (tree gameCount = 0
@@ -324,12 +396,12 @@ OpeningTreeElement >> refresh [
 								    '. Only games you played count, so check your usernames in Settings too.' ]
 						    ifFalse: [
 						    'Only one game matches, so there is no tree to show yet.' ])) ].
-	board chessPosition: (ChessPosition fromFEN: self shownNode fen).
+	view = #tree ifTrue: [ ^ self buildWeakSpots ].
 	self buildPath.
 	self buildMoves.
+	self buildEngine.
 	self buildDatabase.
-	self buildGames.
-	self buildWeakSpots
+	self buildGames
 ]
 
 { #category : 'initialization' }
@@ -340,6 +412,7 @@ OpeningTreeElement >> session: aChessCoachSession tree: anOpeningTree runner: aB
 	backgroundRunner := aBlock.
 	gameBlock := [ :entry |  ].
 	builtBlock := [ ].
+	view := #position.
 	self layout: BlLinearLayout horizontal.
 	self matchParent.
 	board := ChessBoardElement new
@@ -355,9 +428,10 @@ OpeningTreeElement >> session: aChessCoachSession tree: anOpeningTree runner: aB
 	self
 		addChild: board;
 		addChild: (ToElement new
-				 layout: BlFrameLayout new;
+				 layout: BlLinearLayout vertical;
 				 width: 460;
 				 vMatchParent;
+				 addChild: self newViewBar;
 				 addChild: (ChessCoachWidgets scrollable: panel);
 				 yourself).
 	path := OrderedCollection new
@@ -370,6 +444,14 @@ OpeningTreeElement >> showRoot [
 	tree root
 		ifNil: [ self refresh ]
 		ifNotNil: [ :root | self goTo: root ]
+]
+
+{ #category : 'actions' }
+OpeningTreeElement >> showView: aView [
+	"#position or #tree"
+
+	view := aView.
+	self refresh
 ]
 
 { #category : 'accessing' }

@@ -409,11 +409,13 @@ CoachElement >> buildSummary [
 	self section: 'Moments' build: [
 			review reviewedMoments do: [ :moment |
 					currentZone addChild: (self
-							 button: (self describeMoment: moment) , ' · '
-								 , (', ' join: (moment countedLabels collect: [ :each |
-											   (MistakeTaxonomy default tagAt: each tagId) name ]))
+							 button: (self describeMoment: moment)
 							 icon: (self stateIconNameOf: moment)
-							 do: [ self showMoment: moment ]) ] ].
+							 do: [ self showMoment: moment ]).
+					moment countedLabels ifNotEmpty: [ :labels |
+							currentZone addChild:
+								(self paragraph: (', ' join: (labels collect: [ :each |
+											   (MistakeTaxonomy default tagAt: each tagId) name ]))) ] ] ].
 	currentZone addChild: (self row: {
 				 (self button: 'Back to list' do: [ self backToList ]).
 				 (self button: 'Back to the game' do: [ exitBlock value ]) })
@@ -1091,6 +1093,15 @@ CoachElement >> scrollToNewest [
 	currentZone whenLayoutedDoOnce: [ panelScroller scrollBy: 0 @ 100000 ]
 ]
 
+{ #category : 'updating' }
+CoachElement >> scrollToTop [
+	"Once the panel is laid out again, scroll to its start. scrollBy: clamps to the content"
+
+	panelScroller ifNil: [ ^ self ].
+	currentZone whenLayoutedDoOnce: [
+		panelScroller scrollBy: 0 @ -100000 ]
+]
+
 { #category : 'building' }
 CoachElement >> section: aTitle build: aBlock [
 	"Build a bordered group: aBlock adds its rows to currentZone, which points to the group meanwhile"
@@ -1308,13 +1319,15 @@ CoachElement >> updateBoard [
 
 { #category : 'updating' }
 CoachElement >> updateCurrentZone [
-	"Rebuild the panel below the history and scroll down to it. The answer being typed is kept as a draft of its question, so that a refresh (a classification finishing, a progress update) doesn't empty the field."
+	"Rebuild the panel below the history and scroll to what matters: down to the moment being discussed, or up to the start of a list or report. The answer being typed is kept as a draft of its question, so that a refresh (a classification finishing, a progress update) doesn't empty the field."
 
 	answerField ifNotNil: [ draft := answerField text asString ].
 	currentZone removeChildren.
 	answerField := nil.
 	noteField := nil.
-	self scrollToNewest.
+	mode = #moment
+		ifTrue: [ self scrollToNewest ]
+		ifFalse: [ self scrollToTop ].
 	busy ifNotNil: [ ^ currentZone addChild: (self paragraph: busy) ].
 	mode = #marking ifTrue: [ self buildMarking ].
 	mode = #list ifTrue: [ self buildList ].

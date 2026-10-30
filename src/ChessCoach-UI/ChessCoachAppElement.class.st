@@ -699,7 +699,7 @@ ChessCoachAppElement >> openMistake: aMistakeRecord [
 
 { #category : 'actions' }
 ChessCoachAppElement >> openOpeningTree: anOpeningTree [
-	"Explore a tree in its own closable page, replacing an open one. A new tree is built there."
+	"Explore a tree in its own closable page named after it, replacing an open one. A new tree is built there."
 
 	| element |
 	self closeTab: openingTreeTab.
@@ -713,9 +713,13 @@ ChessCoachAppElement >> openOpeningTree: anOpeningTree [
 	element whenGameChosenDo: [ :entry | self playThrough: entry ].
 	element whenBuiltDo: [ openings updateTrees ].
 	openingTreeTab := self
-		                  openTab: 'Tree'
+		                  openTab: anOpeningTree name
 		                  icon: 'outlined_accounttree'
-		                  page: element.
+		                  page: (ChessCoachWidgets
+				                   page: anOpeningTree name
+				                   subtitle:
+				                   'Your games compared with the database.'
+				                   body: element).
 	element start.
 	^ element
 ]

@@ -16,9 +16,9 @@ Class {
 		'newGames',
 		'message',
 		'builtBlock',
-		'view',
-		'positionButton',
-		'engineLines'
+		'engineLines',
+		'treePanel',
+		'tabs'
 	],
 	#category : 'ChessCoach-UI-Openings',
 	#package : 'ChessCoach-UI',
@@ -119,7 +119,7 @@ OpeningTreeElement >> buildGames [
 { #category : 'building' }
 OpeningTreeElement >> buildHeader [
 
-	panel
+	treePanel
 		addChild: (ChessCoachWidgets paragraph:
 					 ('{1}: {2} games, built on {3}{4}' format: {
 								  tree name.
@@ -191,10 +191,11 @@ OpeningTreeElement >> buildPath [
 { #category : 'building' }
 OpeningTreeElement >> buildSpots: someSpots title: aTitle help: aHelpString [
 
-	self heading: aTitle help: aHelpString.
-	someSpots ifEmpty: [ ^ panel addChild: (ToLabel text: 'None') ].
+	treePanel addChild:
+		(ChessCoachWidgets heading: aTitle help: aHelpString).
+	someSpots ifEmpty: [ ^ treePanel addChild: (ToLabel text: 'None') ].
 	someSpots do: [ :each |
-			panel addChild: (ToButton new
+			treePanel addChild: (ToButton new
 					 labelText: ('{1} · {2} games · {3}' format: {
 									  each san.
 									  each games.
@@ -288,10 +289,10 @@ OpeningTreeElement >> isBelowDatabase: anOpeningMove [
 
 { #category : 'actions' }
 OpeningTreeElement >> jumpTo: anOpeningWeakSpot [
-	"A weak spot is reached directly, so the path restarts at it and its position is shown"
+	"A weak spot is reached directly, so the path restarts at it and its position's tab is shown"
 
 	path := OrderedCollection new.
-	positionButton check.
+	tabs selecter selectIndex: 1.
 	self goTo: (tree nodeAt: anOpeningWeakSpot key)
 ]
 
@@ -330,31 +331,29 @@ OpeningTreeElement >> moveLine: anOpeningMove [
 ]
 
 { #category : 'initialization' }
-OpeningTreeElement >> newViewBar [
-	"Two views of the right side: the shown position, and the tree as a whole"
+OpeningTreeElement >> newPanel [
 
-	| bar group |
-	bar := ToElement new
-		       layout: BlLinearLayout horizontal;
-		       fitContent;
-		       margin: (BlInsets bottom: 8);
-		       yourself.
-	group := ToCheckableGroup new.
-	{
-		('This position' -> #position).
-		('Whole tree' -> #tree) } do: [ :each |
-			| button |
-			button := ToToggleButton new
-				          labelText: each key;
-				          yourself.
-			group register: button.
-			each value = view ifTrue: [
-					button check.
-					positionButton := button ].
-			button newCheckAction: [
-				button isChecked ifTrue: [ self showView: each value ] ].
-			bar addChild: button ].
-	^ bar
+	^ ToElement new
+		  layout: (BlLinearLayout vertical cellSpacing: 10);
+		  hMatchParent;
+		  vFitContent;
+		  padding: (BlInsets
+				   top: 8
+				   left: 0
+				   bottom: 0
+				   right: 16);
+		  yourself
+]
+
+{ #category : 'initialization' }
+OpeningTreeElement >> newTab: aString panel: anElement [
+
+	^ ToTabButton new
+		  labelText: aString;
+		  removable: false;
+		  paneBuilder: [ :pane :button :holder |
+			  pane addChild: (ChessCoachWidgets scrollable: anElement) ];
+		  yourself
 ]
 
 { #category : 'building' }
@@ -381,12 +380,11 @@ OpeningTreeElement >> rebuild [
 OpeningTreeElement >> refresh [
 
 	panel removeChildren.
+	treePanel removeChildren.
 	message ifNotNil: [
 		panel addChild: (ChessCoachWidgets paragraph: message) ].
 	tree builtOn ifNil: [ ^ self ].
-	path ifNotEmpty: [
-		board chessPosition: (ChessPosition fromFEN: self shownNode fen) ].
-	(view = #tree or: [ path isEmpty ]) ifTrue: [ self buildHeader ].
+	self buildHeader.
 	path ifEmpty: [
 			^ panel addChild:
 				  (ChessCoachWidgets paragraph: (tree gameCount = 0
@@ -396,7 +394,8 @@ OpeningTreeElement >> refresh [
 								    '. Only games you played count, so check your usernames in Settings too.' ]
 						    ifFalse: [
 						    'Only one game matches, so there is no tree to show yet.' ])) ].
-	view = #tree ifTrue: [ ^ self buildWeakSpots ].
+	board chessPosition: (ChessPosition fromFEN: self shownNode fen).
+	self buildWeakSpots.
 	self buildPath.
 	self buildMoves.
 	self buildEngine.
@@ -412,27 +411,27 @@ OpeningTreeElement >> session: aChessCoachSession tree: anOpeningTree runner: aB
 	backgroundRunner := aBlock.
 	gameBlock := [ :entry |  ].
 	builtBlock := [ ].
-	view := #position.
 	self layout: BlLinearLayout horizontal.
 	self matchParent.
 	board := ChessBoardElement new
 		         matchParent;
 		         yourself.
 	board orientation: tree color.
-	panel := ToElement new
-		         layout: (BlLinearLayout vertical cellSpacing: 10);
-		         hMatchParent;
-		         vFitContent;
-		         padding: (BlInsets right: 16);
-		         yourself.
+	panel := self newPanel.
+	treePanel := self newPanel.
+	tabs := ToTabPaneElement new.
+	tabs matchParent.
+	tabs showAddTabItemButton: false.
+	tabs addItem: (self newTab: 'This position' panel: panel).
+	tabs addItem: (self newTab: 'Whole tree' panel: treePanel).
+	tabs selecter selectIndex: 1.
 	self
 		addChild: board;
 		addChild: (ToElement new
-				 layout: BlLinearLayout vertical;
+				 layout: BlFrameLayout new;
 				 width: 460;
 				 vMatchParent;
-				 addChild: self newViewBar;
-				 addChild: (ChessCoachWidgets scrollable: panel);
+				 addChild: tabs;
 				 yourself).
 	path := OrderedCollection new
 ]
@@ -444,14 +443,6 @@ OpeningTreeElement >> showRoot [
 	tree root
 		ifNil: [ self refresh ]
 		ifNotNil: [ :root | self goTo: root ]
-]
-
-{ #category : 'actions' }
-OpeningTreeElement >> showView: aView [
-	"#position or #tree"
-
-	view := aView.
-	self refresh
 ]
 
 { #category : 'accessing' }

@@ -111,14 +111,12 @@ GameReviewsElement >> initialize [
 		               vFitContent;
 		               yourself.
 	timeBoxNote := ToLabel text: ''.
-	analyses := ToElement new
-		            layout: BlLinearLayout vertical;
-		            matchParent;
-		            addChild: (ChessCoachWidgets
-				             heading: 'Analyses with the coach'
-				             help:
-					             'Each analysis is one pass with the coach: you mark the moves you found interesting, then answer questions about the important moments. Click one to continue it or look at it again.');
-		            addChild: (ChessCoachWidgets scrollable: reviewsZone);
+	analyses := (ChessCoachWidgets
+		             section: 'Analyses with the coach'
+		             help:
+			             'Each analysis is one pass with the coach: you mark the moves you found interesting, then answer questions about the important moments. Click one to continue it or look at it again.'
+		             rows: { (ChessCoachWidgets scrollable: reviewsZone) })
+		            vMatchParent;
 		            yourself.
 	actions := ToElement new
 		           layout: (BlLinearLayout vertical cellSpacing: 8);

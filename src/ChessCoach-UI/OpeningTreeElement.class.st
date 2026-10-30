@@ -62,10 +62,6 @@ OpeningTreeElement >> buildDatabase [
 
 	| node |
 	node := self shownNode.
-	self
-		heading: 'Database top moves'
-		help:
-		'The five moves most played in the database from this position.'.
 	node database ifNil: [
 			session canUseDatabase ifFalse: [
 				^ panel addChild: (ToLabel text: 'Log in to Lichess') ].
@@ -85,9 +81,6 @@ OpeningTreeElement >> buildDatabase [
 OpeningTreeElement >> buildEngine [
 
 	| position |
-	self
-		heading: 'Engine top moves'
-		help: 'Stockfish''s best moves here. Scores are from White''s side.'.
 	session isEngineAvailable ifFalse: [
 		^ panel addChild: (ToLabel text: 'Stockfish isn''t available') ].
 	engineLines ifNil: [
@@ -103,7 +96,6 @@ OpeningTreeElement >> buildEngine [
 { #category : 'building' }
 OpeningTreeElement >> buildGames [
 
-	self heading: 'Games' help: 'Your games that reached this position.'.
 	entries ifNil: [
 		^ panel addChild: (ToLabel text: 'Looking for them…') ].
 	entries do: [ :each |
@@ -119,30 +111,28 @@ OpeningTreeElement >> buildGames [
 { #category : 'building' }
 OpeningTreeElement >> buildHeader [
 
-	treePanel
-		addChild: (ChessCoachWidgets paragraph:
-					 ('{1}: {2} games, built on {3}{4}' format: {
-								  tree name.
-								  tree gameCount.
-								  tree builtOn.
-								  ((newGames isNil or: [ newGames = 0 ])
-									   ifTrue: [ '' ]
-									   ifFalse: [
-										   ', ' , newGames printString , ' new games match' ]) }));
-		addChild: (ToButton new
-				 labelText: 'Rebuild';
-				 tooltipText: 'Count the games again, including new ones';
-				 clickAction: [ self rebuild ];
-				 yourself)
+	treePanel addChild: (ChessCoachWidgets
+			 section: 'This tree'
+			 help: 'Rebuild counts the games again, including new ones.'
+			 rows: {
+					 (ChessCoachWidgets paragraph:
+						  ('{1}: {2} games, built on {3}{4}' format: {
+								   tree name.
+								   tree gameCount.
+								   tree builtOn.
+								   ((newGames isNil or: [ newGames = 0 ])
+									    ifTrue: [ '' ]
+									    ifFalse: [
+									    ', ' , newGames printString , ' new games match' ]) })).
+					 (ToButton new
+						  labelText: 'Rebuild';
+						  clickAction: [ self rebuild ];
+						  yourself) })
 ]
 
 { #category : 'building' }
 OpeningTreeElement >> buildMoves [
 
-	self
-		heading: 'Moves'
-		help:
-		'Moves played here, with my score after each one and the database''s score for my colour. A warning marks a move scoring at least 10 points below the database. A move without a button is where a line reached a single game.'.
 	self shownNode moves do: [ :each |
 			| row |
 			row := ToElement new
@@ -191,17 +181,19 @@ OpeningTreeElement >> buildPath [
 { #category : 'building' }
 OpeningTreeElement >> buildSpots: someSpots title: aTitle help: aHelpString [
 
-	treePanel addChild:
-		(ChessCoachWidgets heading: aTitle help: aHelpString).
-	someSpots ifEmpty: [ ^ treePanel addChild: (ToLabel text: 'None') ].
-	someSpots do: [ :each |
-			treePanel addChild: (ToButton new
-					 labelText: ('{1} · {2} games · {3}' format: {
-									  each san.
-									  each games.
-									  (self percent: each score) });
-					 clickAction: [ self jumpTo: each ];
-					 yourself) ]
+	treePanel addChild: (ChessCoachWidgets
+			 section: aTitle
+			 help: aHelpString
+			 rows:
+				 (someSpots ifEmpty: [ { (ToLabel text: 'None') } ] ifNotEmpty: [
+						  someSpots collect: [ :each |
+								  ToButton new
+									  labelText: ('{1} · {2} games · {3}' format: {
+													   each san.
+													   each games.
+													   (self percent: each score) });
+									  clickAction: [ self jumpTo: each ];
+									  yourself ] ]))
 ]
 
 { #category : 'building' }
@@ -251,13 +243,6 @@ OpeningTreeElement >> goTo: anOpeningNode [
 						 anOpeningNode == self shownNode ifTrue: [
 								 entries := found.
 								 self refresh ] ]) ]
-]
-
-{ #category : 'building' }
-OpeningTreeElement >> heading: aString help: aHelpString [
-
-	panel addChild:
-		(ChessCoachWidgets heading: aString help: aHelpString)
 ]
 
 { #category : 'private' }
@@ -397,10 +382,39 @@ OpeningTreeElement >> refresh [
 	board chessPosition: (ChessPosition fromFEN: self shownNode fen).
 	self buildWeakSpots.
 	self buildPath.
-	self buildMoves.
-	self buildEngine.
-	self buildDatabase.
-	self buildGames
+	self
+		section: 'Moves'
+		help:
+		'Moves played here, with my score after each one and the database''s score for my colour. A warning marks a move scoring at least 10 points below the database. A move without a button is where a line reached a single game.'
+		build: [ self buildMoves ].
+	self
+		section: 'Engine top moves'
+		help: 'Stockfish''s best moves here. Scores are from White''s side.'
+		build: [ self buildEngine ].
+	self
+		section: 'Database top moves'
+		help:
+		'The five moves most played in the database from this position.'
+		build: [ self buildDatabase ].
+	self
+		section: 'Games'
+		help: 'Your games that reached this position.'
+		build: [ self buildGames ]
+]
+
+{ #category : 'building' }
+OpeningTreeElement >> section: aTitle help: aHelpString build: aBlock [
+	"Build a bordered group: aBlock adds its rows to panel, which points to the group meanwhile"
+
+	| page box |
+	page := panel.
+	box := ChessCoachWidgets
+		       section: aTitle
+		       help: aHelpString
+		       rows: #(  ).
+	panel := box.
+	aBlock ensure: [ panel := page ].
+	panel addChild: box
 ]
 
 { #category : 'initialization' }

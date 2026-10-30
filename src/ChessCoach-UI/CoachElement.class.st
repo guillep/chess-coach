@@ -372,19 +372,16 @@ CoachElement >> buildReveal [
 	reveal := review revealOf: shownMoment.
 	before := self positionBefore: shownMoment.
 	after := game positionAfterPly: shownMoment ply.
-	currentZone addChild: (self heading: 'The engine''s view').
-	review hasEngine
-		ifTrue: [
-		self buildEngineRevealOf: reveal before: before after: after ]
-		ifFalse: [
-				currentZone addChild: (self paragraph:
-						 'Stockfish isn''t available, so there is no engine evaluation for this moment.') ].
-	currentZone addChild: (self paragraph:
-			 'Time on this moment: ' , (self minutes: shownMoment seconds)).
-	currentZone addChild: ChessCoachWidgets separator.
-	currentZone addChild: (self heading: 'Mistakes').
-	self buildTagsOf: shownMoment.
-	currentZone addChild: ChessCoachWidgets separator.
+	self section: 'The engine''s view' build: [
+			review hasEngine
+				ifTrue: [
+				self buildEngineRevealOf: reveal before: before after: after ]
+				ifFalse: [
+						currentZone addChild: (self paragraph:
+								 'Stockfish isn''t available, so there is no engine evaluation for this moment.') ].
+			currentZone addChild: (self paragraph:
+					 'Time on this moment: ' , (self minutes: shownMoment seconds)) ].
+	self section: 'Mistakes' build: [ self buildTagsOf: shownMoment ].
 	currentZone addChild:
 		(self row: ((walking and: [ self isActive: shownMoment ])
 				  ifTrue: [
@@ -403,23 +400,20 @@ CoachElement >> buildReveal [
 CoachElement >> buildSummary [
 	"The review report: numbers, mistakes by category, tags more frequent than usual, time and the reviewed moments"
 
-	currentZone addChild: (self heading: 'Numbers').
-	self buildReportNumbers.
-	currentZone addChild: (self heading: 'Mistakes').
-	self buildReportMistakes.
-	currentZone addChild:
-		(self heading: 'Compared with your other games').
-	self buildReportComparison.
-	currentZone addChild: (self heading: 'Time').
-	self buildReportTime.
-	currentZone addChild: (self heading: 'Moments').
-	review reviewedMoments do: [ :moment |
-			currentZone addChild: (self
-					 button: (self describeMoment: moment) , ' · '
-						 , (', ' join: (moment countedLabels collect: [ :each |
-									   (MistakeTaxonomy default tagAt: each tagId) name ]))
-					 icon: (self stateIconNameOf: moment)
-					 do: [ self showMoment: moment ]) ].
+	self section: 'Numbers' build: [ self buildReportNumbers ].
+	self section: 'Mistakes' build: [ self buildReportMistakes ].
+	self
+		section: 'Compared with your other games'
+		build: [ self buildReportComparison ].
+	self section: 'Time' build: [ self buildReportTime ].
+	self section: 'Moments' build: [
+			review reviewedMoments do: [ :moment |
+					currentZone addChild: (self
+							 button: (self describeMoment: moment) , ' · '
+								 , (', ' join: (moment countedLabels collect: [ :each |
+											   (MistakeTaxonomy default tagAt: each tagId) name ]))
+							 icon: (self stateIconNameOf: moment)
+							 do: [ self showMoment: moment ]) ] ].
 	currentZone addChild: (self row: {
 				 (self button: 'Back to list' do: [ self backToList ]).
 				 (self button: 'Back to the game' do: [ exitBlock value ]) })
@@ -1095,6 +1089,18 @@ CoachElement >> scrollToNewest [
 
 	panelScroller ifNil: [ ^ self ].
 	currentZone whenLayoutedDoOnce: [ panelScroller scrollBy: 0 @ 100000 ]
+]
+
+{ #category : 'building' }
+CoachElement >> section: aTitle build: aBlock [
+	"Build a bordered group: aBlock adds its rows to currentZone, which points to the group meanwhile"
+
+	| zone box |
+	zone := currentZone.
+	box := ChessCoachWidgets section: aTitle help: nil rows: #(  ).
+	currentZone := box.
+	aBlock ensure: [ currentZone := zone ].
+	currentZone addChild: box
 ]
 
 { #category : 'accessing' }

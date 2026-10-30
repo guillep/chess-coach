@@ -29,9 +29,9 @@ jobs:
         run: packaging/build-app.sh "$GITHUB_SHA"
 
       - name: Archive the app
-        run: ditto -c -k --keepParent "packaging/build/Chess Coach.app" ChessCoach.zip
+        run: ditto -c -k --keepParent "packaging/build/Chessmate.app" Chessmate.zip
 
       - uses: actions/upload-artifact@v4
         with:
-          name: ChessCoach
-          path: ChessCoach.zip
+          name: Chessmate
+          path: Chessmate.zip

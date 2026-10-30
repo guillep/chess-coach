@@ -74,6 +74,7 @@ MistakesDashboardElement >> buildDetail [
 MistakesDashboardElement >> buildEmptyState [
 
 	content
+		addChild: (ChessCoachWidgets logo: 128);
 		addChild: (self title: 'No reviewed mistakes yet');
 		addChild: (ToLabel new
 				 beMultiLine;

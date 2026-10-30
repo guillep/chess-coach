@@ -56,7 +56,7 @@ ChessCoachAppElement class >> openOn: aChessCoachSession [
 	| app space |
 	app := self session: aChessCoachSession.
 	space := BlSpace new.
-	space title: 'Chess Coach'.
+	space title: 'Chessmate'.
 	space extent: 1200 @ 760.
 	space root addChild: app.
 	space
@@ -112,21 +112,21 @@ ChessCoachAppElement >> analysisStateChangedOf: aGameIdOrNil [
 
 { #category : 'settings' }
 ChessCoachAppElement >> applyAppTheme [
-	"Toplo's light or dark theme for the whole window, with a matching page background and icon tint, for the icons shown and those built later.
+	"The Chessmate light or dark theme for the whole window, with a matching page background and icon tint, for the icons shown and those built later.
 	The theme goes on the space: under an element's local theme, Toplo installs no skin on a list's scrollbar (logged as an upstream candidate)."
 
 	| dark tint |
 	dark := session settings appTheme = 'Dark'.
 	self isAttachedToSceneGraph ifTrue: [
 			self space toTheme: (dark
-					 ifTrue: [ ToRawDarkTheme new ]
-					 ifFalse: [ ToRawTheme new ]) ].
+					 ifTrue: [ ChessmateDarkTheme new ]
+					 ifFalse: [ ChessmateTheme new ]) ].
 	self background: (Color fromHexString: (dark
-				  ifTrue: [ '#2d2f34' ]
-				  ifFalse: [ '#ffffff' ])).
-	tint := dark
-		        ifTrue: [ Color fromHexString: '#d4d4d8' ]
-		        ifFalse: [ Color black ].
+				  ifTrue: [ '#12281b' ]
+				  ifFalse: [ '#f6ead2' ])).
+	tint := Color fromHexString: (dark
+			         ifTrue: [ '#f6ead2' ]
+			         ifFalse: [ '#12281b' ]).
 	ChessCoachWidgets iconColor: tint.
 	self allChildrenBreadthFirstDo: [ :each |
 			((each isKindOf: ToImage) and: [
@@ -380,6 +380,19 @@ ChessCoachAppElement >> newBell [
 		  fitContent;
 		  addChild: bell;
 		  addChild: bellBadge;
+		  yourself
+]
+
+{ #category : 'initialization' }
+ChessCoachAppElement >> newBrand [
+	"The icon and name at the start of the top bar; the bar's buttons stay on the right"
+
+	^ ToElement new
+		  layout: (BlLinearLayout horizontal alignCenterLeft cellSpacing: 8);
+		  hMatchParent;
+		  vFitContent;
+		  addChild: (ChessCoachWidgets logo: 28);
+		  addChild: (ToLabel text: 'Chessmate');
 		  yourself
 ]
 
@@ -930,9 +943,10 @@ ChessCoachAppElement >> session: aChessCoachSession [
 		                do: [ self updateApp ].
 	(self childWithId: #topBar)
 		addChildFirst: updateButton;
+		addChildFirst: self newBrand;
 		addChild:
-			(ChessCoachWidgets help: 'Chess Coach ' , session appVersion)
-		at: 2.
+			(ChessCoachWidgets help: 'Chessmate ' , session appVersion)
+		at: 3.
 	session announcer
 		when: ChessCoachSessionChanged
 		do: [ :announcement |
@@ -994,9 +1008,11 @@ ChessCoachAppElement >> showDefaultPane [
 	"The view of the selected game, or a hint"
 
 	self showInPane: (gameView ifNil: [
-				 ToLabel new
-					 text: 'Select a game';
-					 padding: (BlInsets all: 16);
+				 ToElement new
+					 layout: (BlLinearLayout vertical alignCenter cellSpacing: 12);
+					 matchParent;
+					 addChild: (ChessCoachWidgets logo: 128);
+					 addChild: (ToLabel text: 'Select a game');
 					 yourself ])
 ]
 

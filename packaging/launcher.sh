@@ -3,7 +3,7 @@
 set -euo pipefail
 
 RESOURCES="$(cd "$(dirname "$0")/../Resources" && pwd)"
-DATA="$HOME/Library/Application Support/ChessCoach"
+DATA="$HOME/Library/Application Support/Chessmate"
 
 if [ ! -f "$DATA/Pharo.image" ]; then
   mkdir -p "$DATA"

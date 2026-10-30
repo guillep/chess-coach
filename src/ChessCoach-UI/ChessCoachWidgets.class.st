@@ -118,6 +118,26 @@ ChessCoachWidgets class >> iconColor: aColor [
 ]
 
 { #category : 'building' }
+ChessCoachWidgets class >> logo: aSize [
+	"The Chessmate icon, from the assets of the app's repository; an empty element without them"
+
+	| element file |
+	element := BlElement new
+		           extent: aSize asPoint;
+		           yourself.
+	file := (IceRepository registry
+		         detect: [ :each | each name = 'chess-coach' ]
+		         ifNone: [ ^ element ]) location / 'assets'
+	        / 'chessmate-128.png'.
+	file exists ifFalse: [ ^ element ].
+	^ element
+		  background:
+			  ((PNGReadWriter formFromFileNamed: file fullName) scaledToSize:
+					   aSize asPoint);
+		  yourself
+]
+
+{ #category : 'building' }
 ChessCoachWidgets class >> page: someElements [
 	"A page's top-level column, with the same margins on every page"
 
@@ -216,7 +236,7 @@ ChessCoachWidgets class >> primaryButton: aString icon: anIconName do: aBlock [
 				           bottom: 8
 				           right: 16);
 		          yourself.
-	primary := Color fromHexString: '#2563eb'.
+	primary := Color fromHexString: '#2f6b45'.
 	button
 		addTokenNamed: #'color-bg-container' withValue: primary;
 		addTokenNamed: #'color-border' withValue: primary;

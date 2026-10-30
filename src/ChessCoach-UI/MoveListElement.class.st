@@ -57,6 +57,7 @@ MoveListElement >> buildUI [
 			c vertical fitContent ].
 	toggleButton := ToToggleButton new
 		                labelText: 'Compact';
+		                tooltipString: 'Show the moves as running text';
 		                margin: (BlInsets all: 4);
 		                yourself.
 	toggleButton checked: layoutMode = #compact.

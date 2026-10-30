@@ -133,21 +133,31 @@ OpeningTreeElement >> buildHeader [
 { #category : 'building' }
 OpeningTreeElement >> buildMoves [
 
+	panel addChild: (self tableRow:
+			 (#( 'Move' 'Games' 'You' 'DB' 'Time' ) collect: [ :each |
+					  ToLabel new
+						  text: each asRopedText bold;
+						  yourself ])).
 	self shownNode moves do: [ :each |
-			| row |
-			row := ToElement new
-				       layout:
-					       (BlLinearLayout horizontal alignCenterLeft cellSpacing: 6);
-				       hMatchParent;
-				       vFitContent;
-				       yourself.
-			row addChild: ((tree nodeAt: each nextKey)
-					 ifNil: [ ToLabel text: (self moveLine: each) ]
-					 ifNotNil: [ :next |
-							 ToButton new
-								 labelText: (self moveLine: each);
-								 clickAction: [ self goTo: next ];
-								 yourself ]).
+			| database row |
+			database := self shownNode
+				            databaseScoreOf: each uci
+				            for: tree color.
+			row := self tableRow: {
+					       ((tree nodeAt: each nextKey)
+						        ifNil: [ ToLabel text: each san ]
+						        ifNotNil: [ :next |
+								        ToButton new
+									        labelText: each san;
+									        clickAction: [ self goTo: next ];
+									        yourself ]).
+					       (ToLabel text: each games printString).
+					       (ToLabel text: (self percent: each score)).
+					       (ToLabel text: (self percent: database)).
+					       (ToLabel text: (each averageSeconds
+							         ifNil: [ '–' ]
+							         ifNotNil: [ :seconds |
+							         seconds rounded printString , ' s' ])) }.
 			(self isBelowDatabase: each) ifTrue: [
 					row addChild:
 						((ToMaterialDesignIconProvider iconNamed: 'outlined_warning')
@@ -296,24 +306,6 @@ OpeningTreeElement >> loadDatabase [
 OpeningTreeElement >> message [
 
 	^ message
-]
-
-{ #category : 'building' }
-OpeningTreeElement >> moveLine: anOpeningMove [
-	"Games, my score, the database's and my thinking time"
-
-	^ '{1} · {2} games · {3} · db {4}{5}' format: {
-			  anOpeningMove san.
-			  anOpeningMove games.
-			  (self percent: anOpeningMove score).
-			  (self percent:
-				   (self shownNode
-					    databaseScoreOf: anOpeningMove uci
-					    for: tree color)).
-			  (anOpeningMove averageSeconds
-				   ifNil: [ '' ]
-				   ifNotNil: [ :seconds |
-				   ' · ' , seconds rounded printString , ' s' ]) }
 ]
 
 { #category : 'initialization' }
@@ -473,6 +465,29 @@ OpeningTreeElement >> start [
 
 	tree builtOn ifNil: [ ^ self rebuild ].
 	self showRoot
+]
+
+{ #category : 'building' }
+OpeningTreeElement >> tableRow: someElements [
+	"A row of fixed-width cells; the first one is the widest"
+
+	| row |
+	row := ToElement new
+		       layout:
+			       (BlLinearLayout horizontal alignCenterLeft cellSpacing: 6);
+		       hMatchParent;
+		       vFitContent;
+		       yourself.
+	someElements withIndexDo: [ :each :index |
+			row addChild: (ToElement new
+					 layout: BlLinearLayout horizontal alignCenterLeft;
+					 width: (index = 1
+							  ifTrue: [ 96 ]
+							  ifFalse: [ 58 ]);
+					 vFitContent;
+					 addChild: each;
+					 yourself) ].
+	^ row
 ]
 
 { #category : 'building' }

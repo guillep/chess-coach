@@ -783,9 +783,9 @@ ChessCoachAppElement >> pageButton: aPageId [
 
 { #category : 'actions' }
 ChessCoachAppElement >> playThrough: aGameIndexEntry [
-	"Look at the game move by move in its own closable page named after its players, replacing an open one"
+	"Look at the game move by move in its own closable page named after its players, replacing an open one. Its tab shows my opponent."
 
-	| game colors title |
+	| game colors title opponent |
 	self closeTab: playThroughTab.
 	game := session gameFor: aGameIndexEntry.
 	colors := session myColorsIn: game.
@@ -797,8 +797,11 @@ ChessCoachAppElement >> playThrough: aGameIndexEntry [
 	playThrough game: game.
 	title := aGameIndexEntry players first , ' – '
 	         , aGameIndexEntry players second.
+	opponent := colors asArray = #( #white )
+		            ifTrue: [ aGameIndexEntry players second ]
+		            ifFalse: [ aGameIndexEntry players first ].
 	playThroughTab := self
-		                  openTab: 'Game'
+		                  openTab: (opponent truncateTo: 10)
 		                  icon: 'outlined_slideshow'
 		                  page: (ChessCoachWidgets
 				                   page: title

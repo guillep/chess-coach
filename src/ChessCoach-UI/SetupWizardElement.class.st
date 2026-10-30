@@ -44,13 +44,13 @@ SetupWizardElement >> buildSection: aSection title: aTitle text: aString [
 	"One part of the settings, reused from SettingsElement"
 
 	content
-		addChild: (self paragraph: aTitle);
-		addChild: (self paragraph: aString);
-		addChild: (SettingsElement new
-				 backgroundRunner: backgroundRunner;
-				 session: session section: aSection;
-				 vFitContent;
-				 yourself);
+		addChild: (ChessCoachWidgets section: aTitle help: nil rows: {
+						 (self paragraph: aString).
+						 (SettingsElement new
+							  backgroundRunner: backgroundRunner;
+							  session: session section: aSection;
+							  vFitContent;
+							  yourself) });
 		addChild: self navigationRow
 ]
 

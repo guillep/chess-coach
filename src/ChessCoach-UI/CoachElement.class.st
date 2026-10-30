@@ -154,25 +154,27 @@ CoachElement >> buildList [
 		(self row: (#( #all #mistakes #blunders ) collect: [ :each |
 					  self
 						  button: (each = self filter
-								   ifTrue: [ '[' , (self filterLabel: each) , ']' ]
+								   ifTrue: [ '✓ ' , (self filterLabel: each) ]
 								   ifFalse: [ self filterLabel: each ])
 						  do: [ self filter: each ] ])).
 	self buildTimeBox.
 	moments := review momentsPassing: self filter.
-	moments ifEmpty: [
-		currentZone addChild:
-			(self paragraph: 'No moments with this filter.') ].
-	moments do: [ :each |
-			currentZone addChild: (self
-					 button: (self describeMoment: each) , ((review isPlanned: each)
-							  ifTrue: [ '' ]
-							  ifFalse: [ ' · not planned' ])
-					 icon: (self stateIconNameOf: each)
-					 do: [ self showMoment: each ]) ].
-	currentZone addChild:
-		(self paragraph: ('Marking {1} · moments {2}' format: {
-					  (self minutes: review markingSeconds).
-					  (self minutes: review reviewingSeconds) })).
+	self section: 'Moments' build: [
+			moments ifEmpty: [
+				currentZone addChild:
+					(self paragraph: 'No moments with this filter.') ].
+			moments do: [ :each |
+					currentZone addChild: (self
+							 button:
+								 (self describeMoment: each) , ((review isPlanned: each)
+									  ifTrue: [ '' ]
+									  ifFalse: [ ' · not planned' ])
+							 icon: (self stateIconNameOf: each)
+							 do: [ self showMoment: each ]) ].
+			currentZone addChild:
+				(self paragraph: ('Marking {1} · moments {2}' format: {
+							  (self minutes: review markingSeconds).
+							  (self minutes: review reviewingSeconds) })) ].
 	currentZone addChild: (self row: {
 				 (self
 					  button: 'Continue review'
@@ -256,12 +258,13 @@ CoachElement >> buildMoment [
 		currentZone addChild: (self paragraph: 'Time box reached.') ].
 	shownMoment isRevealed ifTrue: [ ^ self buildReveal ].
 	question := review currentQuestion.
-	currentZone addChild: (self questionTitle: question).
-	question expectsMoves
-		ifTrue: [ self buildBoardAnswer ]
-		ifFalse: [ self buildTextAnswer ].
-	message ifNotNil: [ currentZone addChild: (self paragraph: message) ].
-	currentZone addChild: ChessCoachWidgets separator.
+	self section: 'Your answer' build: [
+			currentZone addChild: (self questionTitle: question).
+			question expectsMoves
+				ifTrue: [ self buildBoardAnswer ]
+				ifFalse: [ self buildTextAnswer ].
+			message ifNotNil: [
+				currentZone addChild: (self paragraph: message) ] ].
 	currentZone addChild: (self row: {
 				 (self button: 'Stop' do: [ self stop ]).
 				 (self button: 'Pause' do: [ self pause ]) })

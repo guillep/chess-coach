@@ -50,7 +50,12 @@ OpeningsElement >> build [
 				            help:
 					            'A saved tree keeps its numbers until you rebuild it, so it opens at once.'
 				            rows: { treesZone });
-		           addChild: self newForm;
+		           addChild: self newGamesForm;
+		           addChild: self newDatabaseForm;
+		           addChild: (ChessCoachWidgets
+				            primaryButton: 'Build tree'
+				            icon: 'filled_arrowforward'
+				            do: [ self buildTree ]);
 		           yourself.
 	self removeChildren.
 	self addChild: (ChessCoachWidgets
@@ -105,7 +110,29 @@ OpeningsElement >> newChoiceBar: someAssociations selected: aValue do: aBlock [
 ]
 
 { #category : 'building' }
-OpeningsElement >> newForm [
+OpeningsElement >> newDatabaseForm [
+
+	ratingSelect := self newSelect: self ratingOptions.
+	^ ChessCoachWidgets
+		  section: 'New tree: database to compare with'
+		  help: 'Your scores are compared with these games.'
+		  rows: {
+				  (self
+					   newChoiceBar: {
+							   ('Lichess players' -> 'lichess').
+							   ('Masters' -> 'masters') }
+					   selected: databaseSource
+					   do: [ :each | databaseSource := each ]).
+				  (ToLabel text: 'Time control').
+				  (ChessCoachWidgets
+					   speedBar: databaseSpeed
+					   do: [ :each | databaseSpeed := each ]).
+				  (ToLabel text: 'Rating').
+				  ratingSelect }
+]
+
+{ #category : 'building' }
+OpeningsElement >> newGamesForm [
 
 	nameField := ToTextField new
 		             hMatchParent;
@@ -116,11 +143,10 @@ OpeningsElement >> newForm [
 			                ('Last week' -> 7).
 			                ('Last month' -> 30).
 			                ('Last year' -> 365) }.
-	ratingSelect := self newSelect: self ratingOptions.
 	^ ChessCoachWidgets
-		  section: 'New tree'
+		  section: 'New tree: your games'
 		  help:
-		  'Choose your games, then the database to compare with. The period counts back from each build, so Rebuild moves it forward.'
+		  'The period counts back from each build, so Rebuild moves it forward.'
 		  rows: {
 				  (ToLabel text: 'Name').
 				  nameField.
@@ -134,64 +160,46 @@ OpeningsElement >> newForm [
 				  (ToLabel text: 'Time control').
 				  (ChessCoachWidgets speedBar: speed do: [ :each | speed := each ]).
 				  (ToLabel text: 'Period').
-				  periodSelect.
-				  (ToLabel text: 'Database').
-				  (self
-					   newChoiceBar: {
-							   ('Lichess players' -> 'lichess').
-							   ('Masters' -> 'masters') }
-					   selected: databaseSource
-					   do: [ :each | databaseSource := each ]).
-				  (ToLabel text: 'Database time control').
-				  (ChessCoachWidgets
-					   speedBar: databaseSpeed
-					   do: [ :each | databaseSpeed := each ]).
-				  (ToLabel text: 'Database rating').
-				  ratingSelect.
-				  (ChessCoachWidgets
-					   primaryButton: 'Build tree'
-					   icon: 'filled_arrowforward'
-					   do: [ self buildTree ]) }
+				  periodSelect }
 ]
 
 { #category : 'building' }
 OpeningsElement >> newRowOf: anOpeningTree [
-	"Open, rename and delete a tree"
+	"The tree's name opens it; Rename swaps the row for a name field"
 
-	| field |
-	field := ToTextField new
-		         hMatchParent;
-		         text: anOpeningTree name;
-		         yourself.
-	^ ToElement new
-		  layout: (BlLinearLayout horizontal cellSpacing: 8);
-		  hMatchParent;
-		  vFitContent;
-		  addChild: (ToButton new
-				   labelText: ('{1} games · {2}' format: {
-								    anOpeningTree gameCount.
-								    anOpeningTree color });
-				   clickAction: [ openBlock value: anOpeningTree ];
-				   yourself);
-		  addChild: field;
-		  addChild: (ToButton new
-				   labelText: 'Rename';
-				   clickAction: [
-						   anOpeningTree name: field text asString trimBoth.
-						   session saveOpeningTree: anOpeningTree.
-						   self updateTrees ];
-				   yourself);
-		  addChild: (ToButton new
-				   icon:
-					   ((ToMaterialDesignIconProvider iconNamed: 'outlined_delete')
-						    extent: 16 @ 16;
-						    yourself);
-				   tooltipText: 'Delete this tree';
-				   clickAction: [
-						   session deleteOpeningTree: anOpeningTree.
-						   self updateTrees ];
-				   yourself);
-		  yourself
+	| row |
+	row := ToElement new
+		       layout:
+			       (BlLinearLayout horizontal alignCenterLeft cellSpacing: 8);
+		       hMatchParent;
+		       vFitContent;
+		       yourself.
+	row
+		addChild: (ToButton new
+				 labelText: anOpeningTree name;
+				 clickAction: [ openBlock value: anOpeningTree ];
+				 yourself);
+		addChild: (ToLabel new
+				 hMatchParent;
+				 text: ('{1} games · {2}' format: {
+								  anOpeningTree gameCount.
+								  anOpeningTree color });
+				 yourself);
+		addChild: (ToButton new
+				 labelText: 'Rename';
+				 clickAction: [ self rename: anOpeningTree in: row ];
+				 yourself);
+		addChild: (ToButton new
+				 icon:
+					 ((ToMaterialDesignIconProvider iconNamed: 'outlined_delete')
+						  extent: 16 @ 16;
+						  yourself);
+				 tooltipText: 'Delete this tree';
+				 clickAction: [
+						 session deleteOpeningTree: anOpeningTree.
+						 self updateTrees ];
+				 yourself).
+	^ row
 ]
 
 { #category : 'building' }
@@ -256,6 +264,30 @@ OpeningsElement >> ratingOptions [
 			   (a value first + 100 - rating) abs
 			   <= (b value first + 100 - rating) abs ]) asArray
 	  , { ('Any rating' -> #(  )) }
+]
+
+{ #category : 'actions' }
+OpeningsElement >> rename: anOpeningTree in: aRow [
+
+	| field |
+	field := ToTextField new
+		         hMatchParent;
+		         text: anOpeningTree name;
+		         yourself.
+	aRow removeChildren.
+	aRow
+		addChild: field;
+		addChild: (ToButton new
+				 labelText: 'Save';
+				 clickAction: [
+						 anOpeningTree name: field text asString trimBoth.
+						 session saveOpeningTree: anOpeningTree.
+						 self updateTrees ];
+				 yourself);
+		addChild: (ToButton new
+				 labelText: 'Cancel';
+				 clickAction: [ self updateTrees ];
+				 yourself)
 ]
 
 { #category : 'accessing' }

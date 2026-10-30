@@ -59,12 +59,14 @@ ChessCoachWidgets class >> heading: aString help: aHelpStringOrNil [
 
 { #category : 'building' }
 ChessCoachWidgets class >> help: aString [
-	"A small help icon; its tooltip says aString, on hover or on click. The tooltip stays open after the click (not closed on release); a click outside closes it."
+	"A small help icon; its tooltip says aString, on hover or on click. The tooltip stays open after the click (not closed on release); a click outside closes it. Its light disc keeps the black icon readable on the dark theme."
 
 	| icon |
 	icon := (ToMaterialDesignIconProvider iconNamed:
 			         'outlined_helpoutline')
 		        extent: 16 @ 16;
+		        geometry: BlCircleGeometry new;
+		        background: Color white;
 		        tooltipString: aString;
 		        yourself.
 	icon tooltipManagerDo: [ :manager | manager closeOnReleased: false ].

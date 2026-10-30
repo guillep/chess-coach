@@ -209,16 +209,22 @@ OpeningTreeElement >> buildSpots: someSpots title: aTitle help: aHelpString [
 
 { #category : 'building' }
 OpeningTreeElement >> buildWeakSpots [
+	"Low score leaves out what Below the database already shows"
 
+	| belowDatabase |
+	belowDatabase := tree scoreGapSpots.
 	self
-		buildSpots: tree scoreGapSpots
+		buildSpots: belowDatabase
 		title: 'Below the database'
 		help:
 		'Your moves with at least 5 games, scoring at least 10 points below the database, most points lost first. Only positions whose database data was loaded count, so this list grows as you explore.'.
 	self
-		buildSpots: tree lowScoreSpots
+		buildSpots: (tree lowScoreSpots reject: [ :each |
+					 belowDatabase anySatisfy: [ :other |
+						 other key = each key and: [ other san = each san ] ] ])
 		title: 'Low score'
-		help: 'Your moves with at least 5 games and a score below 40%.'.
+		help:
+		'Your other moves with at least 5 games and a score below 40%.'.
 	self
 		buildSpots: tree prepGapSpots
 		title: 'Prep gaps'

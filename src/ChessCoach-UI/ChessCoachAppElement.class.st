@@ -103,18 +103,27 @@ ChessCoachAppElement >> analysisStateChangedOf: aGameIdOrNil [
 
 { #category : 'settings' }
 ChessCoachAppElement >> applyAppTheme [
-	"Toplo's light or dark theme for the whole window, with a matching page background.
+	"Toplo's light or dark theme for the whole window, with a matching page background and icon tint, for the icons shown and those built later.
 	The theme goes on the space: under an element's local theme, Toplo installs no skin on a list's scrollbar (logged as an upstream candidate)."
 
-	| dark |
+	| dark tint |
 	dark := session settings appTheme = 'Dark'.
 	self isAttachedToSceneGraph ifTrue: [
 			self space toTheme: (dark
 					 ifTrue: [ ToRawDarkTheme new ]
 					 ifFalse: [ ToRawTheme new ]) ].
 	self background: (Color fromHexString: (dark
-				  ifTrue: [ '#1f2124' ]
-				  ifFalse: [ '#ffffff' ]))
+				  ifTrue: [ '#2d2f34' ]
+				  ifFalse: [ '#ffffff' ])).
+	tint := dark
+		        ifTrue: [ Color fromHexString: '#d4d4d8' ]
+		        ifFalse: [ Color black ].
+	ChessCoachWidgets iconColor: tint.
+	self allChildrenBreadthFirstDo: [ :each |
+			((each isKindOf: ToImage) and: [
+					 (each anyInParentsSatisfy: [ :parent |
+						  parent isKindOf: ToButton ]) not ]) ifTrue: [
+				each innerImageColor: tint ] ]
 ]
 
 { #category : 'settings' }

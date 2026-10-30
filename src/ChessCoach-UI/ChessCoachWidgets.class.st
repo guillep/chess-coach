@@ -4,6 +4,9 @@ The building blocks every page shares, so they look alike: page titles in a larg
 Class {
 	#name : 'ChessCoachWidgets',
 	#superclass : 'Object',
+	#classInstVars : [
+		'iconColor'
+	],
 	#category : 'ChessCoach-UI-App',
 	#package : 'ChessCoach-UI',
 	#tag : 'App'
@@ -59,14 +62,10 @@ ChessCoachWidgets class >> heading: aString help: aHelpStringOrNil [
 
 { #category : 'building' }
 ChessCoachWidgets class >> help: aString [
-	"A small help icon; its tooltip says aString, on hover or on click. The tooltip stays open after the click (not closed on release); a click outside closes it. Its light disc keeps the black icon readable on the dark theme."
+	"A small help icon; its tooltip says aString, on hover or on click. The tooltip stays open after the click (not closed on release); a click outside closes it."
 
 	| icon |
-	icon := (ToMaterialDesignIconProvider iconNamed:
-			         'outlined_helpoutline')
-		        extent: 16 @ 16;
-		        geometry: BlCircleGeometry new;
-		        background: Color white;
+	icon := (self icon: 'outlined_helpoutline' extent: 16 @ 16)
 		        tooltipString: aString;
 		        yourself.
 	icon tooltipManagerDo: [ :manager | manager closeOnReleased: false ].
@@ -83,6 +82,25 @@ ChessCoachWidgets class >> humanize: aKind [
 			  aKind do: [ :each |
 					  each isUppercase ifTrue: [ stream space ].
 					  stream nextPut: each asLowercase ] ]
+]
+
+{ #category : 'building' }
+ChessCoachWidgets class >> icon: aName extent: aPoint [
+	"A Material Design icon outside a button, in the tint of the app theme"
+
+	| icon |
+	icon := (ToMaterialDesignIconProvider iconNamed: aName)
+		        extent: aPoint;
+		        yourself.
+	iconColor ifNotNil: [ icon innerImageColor: iconColor ].
+	^ icon
+]
+
+{ #category : 'accessing' }
+ChessCoachWidgets class >> iconColor: aColor [
+	"The tint of the icons outside buttons, which Toplo's skins don't reach"
+
+	iconColor := aColor
 ]
 
 { #category : 'building' }

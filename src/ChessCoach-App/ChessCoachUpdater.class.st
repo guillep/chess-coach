@@ -62,6 +62,18 @@ ChessCoachUpdater >> isRelease: aTagName [
 	^ aTagName matchesRegex: 'v\d+\.\d+\.\d+'
 ]
 
+{ #category : 'private - io' }
+ChessCoachUpdater >> loadBaseline [
+	"Load the checked-out baseline, for new packages and dependencies"
+
+	Metacello new
+		baseline: 'ChessCoach';
+		repository: 'tonel://' , (self repository location / 'src') fullName;
+		onConflictUseIncoming;
+		onUpgradeUseIncoming;
+		load
+]
+
 { #category : 'private' }
 ChessCoachUpdater >> numbersOf: aTagName [
 	"v1.2.3 as #( 1 2 3 )"
@@ -96,10 +108,11 @@ ChessCoachUpdater >> saveImage [
 
 { #category : 'updating' }
 ChessCoachUpdater >> updateTo: aTagName thenDo: aBlock [
-	"Load the tag and save the image, then evaluate aBlock with nil, or with the error if it failed. Off the UI thread; the window must be closed first."
+	"Load the tag and its baseline and, only if that worked, save the image. Then evaluate aBlock with nil, or with the error if it failed. Off the UI thread; the window must be closed first."
 
 	[
 		self checkOut: aTagName.
+		self loadBaseline.
 		self saveImage.
 		aBlock value: nil ]
 		on: Error

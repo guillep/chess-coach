@@ -48,5 +48,7 @@ ChessCoachUpdaterTest >> testUpdateChecksOutThenSaves [
 	result := #unset.
 	updater updateTo: 'v1.2.0' thenDo: [ :error | result := error ].
 	self assert: result isNil.
-	self assert: updater log asArray equals: { 'v1.2.0'. #saved }
+	self
+		assert: updater log asArray
+		equals: { 'v1.2.0'. #baseline. #saved }
 ]

@@ -36,6 +36,12 @@ ChessCoachUpdaterStub >> currentTag [
 	^ current
 ]
 
+{ #category : 'private - io' }
+ChessCoachUpdaterStub >> loadBaseline [
+
+	log add: #baseline
+]
+
 { #category : 'accessing' }
 ChessCoachUpdaterStub >> log [
 

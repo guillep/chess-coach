@@ -1323,13 +1323,13 @@ CoachElement >> updateBoard [
 
 { #category : 'updating' }
 CoachElement >> updateCurrentZone [
-	"Rebuild the panel below the history and scroll to what matters: down to the moment being discussed, or up to the start of a list or report. The answer being typed is kept as a draft of its question, so that a refresh (a classification finishing, a progress update) doesn't empty the field."
+	"Rebuild the panel below the history and scroll to what matters: down to the moment being discussed, or up to the start of a list, a report or a finished moment. The answer being typed is kept as a draft of its question, so that a refresh (a classification finishing, a progress update) doesn't empty the field."
 
 	answerField ifNotNil: [ draft := answerField text asString ].
 	currentZone removeChildren.
 	answerField := nil.
 	noteField := nil.
-	mode = #moment
+	(mode = #moment and: [ self isActive: shownMoment ])
 		ifTrue: [ self scrollToNewest ]
 		ifFalse: [ self scrollToTop ].
 	busy ifNotNil: [ ^ currentZone addChild: (self paragraph: busy) ].

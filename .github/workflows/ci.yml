@@ -22,7 +22,7 @@ jobs:
           curl -fsSL https://get.pharo.org/130+vm | bash
           VM=pharo-vm/Pharo.app/Contents/MacOS/Pharo
           "$VM" --headless Pharo.image metacello install \
-            "tonel://$GITHUB_WORKSPACE/src" ChessCoach
+            "tonel://$GITHUB_WORKSPACE/src" BaselineOfChessCoach
           "$VM" --headless Pharo.image test --fail-on-failure "ChessCoach-Tests"
 
       - name: Build the app

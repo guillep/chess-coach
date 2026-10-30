@@ -19,7 +19,7 @@ curl -fsSL https://get.pharo.org/130+vm | bash
 
 VM="$WORK/pharo-vm/Pharo.app/Contents/MacOS/Pharo"
 "$VM" --headless Pharo.image metacello install \
-  "github://guillep/chess-coach:$REF/src" ChessCoach
+  "github://guillep/chess-coach:$REF/src" BaselineOfChessCoach
 
 # Metacello clones through Iceberg into pharo-local/iceberg; auto update needs them
 "$VM" --headless Pharo.image st --quit "$HERE/check-repositories.st"

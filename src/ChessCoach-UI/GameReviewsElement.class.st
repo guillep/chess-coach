@@ -168,14 +168,14 @@ GameReviewsElement >> newAnalysis [
 
 { #category : 'building' }
 GameReviewsElement >> newTimeBoxChoice [
-	"Toggle buttons for the time box of a new analysis, wrapping when narrow: none, or a number of minutes. A Toplo checkable group keeps exactly one checked."
+	"Toggle buttons for the time box of a new analysis, in one row: none, or a number of minutes. A Toplo checkable group keeps exactly one checked."
 
 	| row group |
 	row := ToElement new
 		       layout: BlFlowLayout horizontal;
 		       hMatchParent;
 		       vFitContent;
-		       addChild: ((ToLabel text: 'Time box:')
+		       addChild: ((ToLabel text: 'Time box (min):')
 				        margin: (BlInsets right: 8);
 				        yourself);
 		       yourself.
@@ -187,7 +187,7 @@ GameReviewsElement >> newTimeBoxChoice [
 				          labelText:
 					          (minutes
 						           ifNil: [ 'None' ]
-						           ifNotNil: [ minutes printString , ' min' ]);
+						           ifNotNil: [ minutes printString ]);
 				          yourself.
 			group register: button.
 			button newCheckAction: [

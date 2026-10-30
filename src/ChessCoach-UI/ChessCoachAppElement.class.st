@@ -395,18 +395,18 @@ ChessCoachAppElement >> newGameTable [
 
 	gameTable := ToTableElement new
 		             useScrollbar: true;
-		             width: 680;
+		             width: 630;
 		             vMatchParent;
 		             margin: (BlInsets right: 12);
 		             yourself.
 	gameTable columns: {
 			(self
 				 gameColumn: 'White'
-				 width: 150
+				 width: 135
 				 value: [ :entry | entry players first ]).
 			(self
 				 gameColumn: 'Black'
-				 width: 150
+				 width: 135
 				 value: [ :entry | entry players second ]).
 			(self
 				 gameColumn: 'Result'
@@ -431,9 +431,9 @@ ChessCoachAppElement >> newGameTable [
 				 cellBuilder: [ :cell :entry :holder |
 						 (self isReviewed: entry) ifTrue: [
 									 cell addChild:
-											 ((ToMaterialDesignIconProvider iconNamed:
-													   'outlined_school')
-												  extent: 16 @ 16;
+											 ((ChessCoachWidgets
+												   icon: 'outlined_school'
+												   extent: 16 @ 16)
 												  tooltipText: 'Reviewed with the coach';
 												  yourself) ] ];
 				 yourself) }.

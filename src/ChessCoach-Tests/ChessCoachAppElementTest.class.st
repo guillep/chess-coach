@@ -252,7 +252,7 @@ ChessCoachAppElementTest >> testLoadMoreButtonIsVisibleBelowTheList [
 	buttonBounds := app loadMoreButton bounds inSpace bounds.
 	self assert: buttonBounds height > 0.
 	self assert: buttonBounds bottom <= 700.
-	self assert: app gameTable width equals: 680.
+	self assert: app gameTable width equals: 630.
 	target := app space root findMouseEventTargetAt: buttonBounds center.
 	self assert: (target == app loadMoreButton or: [
 			 target allParentsInclude: app loadMoreButton ])

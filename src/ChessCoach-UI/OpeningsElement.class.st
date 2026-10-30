@@ -50,12 +50,7 @@ OpeningsElement >> build [
 				            help:
 					            'A saved tree keeps its numbers until you rebuild it, so it opens at once.'
 				            rows: { treesZone });
-		           addChild: self newGamesForm;
-		           addChild: self newDatabaseForm;
-		           addChild: (ChessCoachWidgets
-				            primaryButton: 'Build tree'
-				            icon: 'filled_arrowforward'
-				            do: [ self buildTree ]);
+		           addChild: self newForm;
 		           yourself.
 	self removeChildren.
 	self addChild: (ChessCoachWidgets
@@ -110,29 +105,22 @@ OpeningsElement >> newChoiceBar: someAssociations selected: aValue do: aBlock [
 ]
 
 { #category : 'building' }
-OpeningsElement >> newDatabaseForm [
+OpeningsElement >> newColumn: someElements [
 
-	ratingSelect := self newSelect: self ratingOptions.
-	^ ChessCoachWidgets
-		  section: 'New tree: database to compare with'
-		  help: 'Your scores are compared with these games.'
-		  rows: {
-				  (self
-					   newChoiceBar: {
-							   ('Lichess players' -> 'lichess').
-							   ('Masters' -> 'masters') }
-					   selected: databaseSource
-					   do: [ :each | databaseSource := each ]).
-				  (ToLabel text: 'Time control').
-				  (ChessCoachWidgets
-					   speedBar: databaseSpeed
-					   do: [ :each | databaseSpeed := each ]).
-				  (ToLabel text: 'Rating').
-				  ratingSelect }
+	| column |
+	column := ToElement new
+		          layout: (BlLinearLayout vertical cellSpacing: 8);
+		          hMatchParent;
+		          vFitContent;
+		          constraintsDo: [ :c | c linear weight: 1 ];
+		          yourself.
+	someElements do: [ :each | column addChild: each ].
+	^ column
 ]
 
 { #category : 'building' }
-OpeningsElement >> newGamesForm [
+OpeningsElement >> newForm [
+	"Every filter of a new tree, in two columns so that it fits one page: my games on the left, the database on the right"
 
 	nameField := ToTextField new
 		             hMatchParent;
@@ -143,24 +131,51 @@ OpeningsElement >> newGamesForm [
 			                ('Last week' -> 7).
 			                ('Last month' -> 30).
 			                ('Last year' -> 365) }.
+	ratingSelect := self newSelect: self ratingOptions.
 	^ ChessCoachWidgets
-		  section: 'New tree: your games'
+		  section: 'New tree'
 		  help:
-		  'The period counts back from each build, so Rebuild moves it forward.'
+		  'Choose your games, then the database to compare with. The period counts back from each build, so Rebuild moves it forward.'
 		  rows: {
-				  (ToLabel text: 'Name').
-				  nameField.
-				  (ToLabel text: 'Colour').
-				  (self
-					   newChoiceBar: {
-							   ('White' -> #white).
-							   ('Black' -> #black) }
-					   selected: color
-					   do: [ :each | color := each ]).
-				  (ToLabel text: 'Time control').
-				  (ChessCoachWidgets speedBar: speed do: [ :each | speed := each ]).
-				  (ToLabel text: 'Period').
-				  periodSelect }
+				  (ToElement new
+					   layout: (BlLinearLayout horizontal cellSpacing: 24);
+					   hMatchParent;
+					   vFitContent;
+					   addChild: (self newColumn: {
+									    (ToLabel text: 'Name').
+									    nameField.
+									    (ToLabel text: 'Colour').
+									    (self
+										     newChoiceBar: {
+												     ('White' -> #white).
+												     ('Black' -> #black) }
+										     selected: color
+										     do: [ :each | color := each ]).
+									    (ToLabel text: 'Time control').
+									    (ChessCoachWidgets
+										     speedBar: speed
+										     do: [ :each | speed := each ]).
+									    (ToLabel text: 'Period').
+									    periodSelect });
+					   addChild: (self newColumn: {
+									    (ToLabel text: 'Database').
+									    (self
+										     newChoiceBar: {
+												     ('Lichess players' -> 'lichess').
+												     ('Masters' -> 'masters') }
+										     selected: databaseSource
+										     do: [ :each | databaseSource := each ]).
+									    (ToLabel text: 'Database time control').
+									    (ChessCoachWidgets
+										     speedBar: databaseSpeed
+										     do: [ :each | databaseSpeed := each ]).
+									    (ToLabel text: 'Database rating').
+									    ratingSelect });
+					   yourself).
+				  (ChessCoachWidgets
+					   primaryButton: 'Build tree'
+					   icon: 'filled_arrowforward'
+					   do: [ self buildTree ]) }
 ]
 
 { #category : 'building' }

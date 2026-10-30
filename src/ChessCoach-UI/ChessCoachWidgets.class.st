@@ -23,6 +23,20 @@ ChessCoachWidgets class >> bigButton: aString icon: anIconName do: aBlock [
 ]
 
 { #category : 'building' }
+ChessCoachWidgets class >> centered: aBoard [
+	"aBoard, which keeps itself square, centred in the space it gets"
+
+	aBoard constraintsDo: [ :c |
+			c frame horizontal alignCenter.
+			c frame vertical alignCenter ].
+	^ ToElement new
+		  layout: BlFrameLayout new;
+		  matchParent;
+		  addChild: aBoard;
+		  yourself
+]
+
+{ #category : 'building' }
 ChessCoachWidgets class >> group: someElements [
 	"A bordered, padded box that keeps related rows together"
 

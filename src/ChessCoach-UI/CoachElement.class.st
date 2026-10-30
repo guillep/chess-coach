@@ -600,13 +600,13 @@ CoachElement >> button: aString icon: anIconName do: aBlock [
 
 { #category : 'private' }
 CoachElement >> clockTextBefore: aPly [
-	"' · 2:31 on your clock': the time I had left when I had to play the move at aPly (my clock after my previous move), or '' when the game has no clock times"
+	"' · 2:31 left': the time I had left when I had to play the move at aPly (my clock after my previous move), or '' when the game has no clock times"
 
 	| clock seconds |
 	aPly <= 2 ifTrue: [ ^ '' ].
 	clock := (game moves at: aPly - 2) timestamp ifNil: [ ^ '' ].
 	seconds := clock asSeconds.
-	^ ' · {1}:{2} on your clock' format: {
+	^ ' · {1}:{2} left' format: {
 			  (seconds // 60).
 			  (seconds \\ 60 printPaddedWith: $0 to: 2) }
 ]
@@ -821,7 +821,7 @@ CoachElement >> initialize [
 		addChild: history;
 		addChild: currentZone.
 	self
-		addChild: board;
+		addChild: (ChessCoachWidgets centered: board);
 		addChild: (ToElement new
 				 layout: BlFrameLayout new;
 				 width: 380;
@@ -1369,7 +1369,7 @@ CoachElement >> updateHeader [
 				 (review momentsPassing: self filter) size.
 				 (shownMoment ply + 1 // 2).
 				 move san.
-				 (', ' join: shownMoment kinds).
+				 (ChessCoachWidgets humanize: shownMoment kinds asArray first).
 				 (self clockTextBefore: shownMoment ply) })
 ]
 
@@ -1395,13 +1395,14 @@ CoachElement >> updateHistory [
 CoachElement >> updateLeftPane [
 	"The marking pass shows the game with its move list; the other modes show the coach's board"
 
-	| wanted |
+	| wanted pane |
 	wanted := mode = #marking
 		          ifTrue: [ replay ]
 		          ifFalse: [ board ].
-	self children first == wanted ifTrue: [ ^ self ].
-	self children first removeFromParent.
-	self addChildFirst: wanted.
+	pane := self children first.
+	pane children first == wanted ifTrue: [ ^ self ].
+	pane removeChildren.
+	pane addChild: wanted.
 	mode = #marking ifTrue: [ replay moveList requestFocus ]
 ]
 

@@ -136,7 +136,9 @@ OpeningTreeElement >> buildMoves [
 	panel addChild: (self tableRow:
 			 (#( 'Move' 'Games' 'You' 'DB' 'Time' ) collect: [ :each |
 					  ToLabel new
-						  text: each asRopedText bold;
+						  text: (each asRopedText
+								   bold;
+								   yourself);
 						  yourself ])).
 	self shownNode moves do: [ :each |
 			| database row |
@@ -160,8 +162,7 @@ OpeningTreeElement >> buildMoves [
 							         seconds rounded printString , ' s' ])) }.
 			(self isBelowDatabase: each) ifTrue: [
 					row addChild:
-						((ToMaterialDesignIconProvider iconNamed: 'outlined_warning')
-							 extent: 16 @ 16;
+						((ChessCoachWidgets icon: 'outlined_warning' extent: 16 @ 16)
 							 tooltipText: 'Scores at least 10 points below the database';
 							 yourself) ].
 			panel addChild: row ]
@@ -424,7 +425,7 @@ OpeningTreeElement >> session: aChessCoachSession tree: anOpeningTree runner: aB
 	backgroundRunner := aBlock.
 	gameBlock := [ :entry |  ].
 	builtBlock := [ ].
-	self layout: BlLinearLayout horizontal.
+	self layout: (BlLinearLayout horizontal cellSpacing: 12).
 	self matchParent.
 	board := ChessBoardElement new
 		         matchParent;
@@ -440,10 +441,10 @@ OpeningTreeElement >> session: aChessCoachSession tree: anOpeningTree runner: aB
 	tabs addItem: (self newTab: 'Whole tree' panel: treePanel).
 	tabs selecter selectIndex: 1.
 	self
-		addChild: board;
+		addChild: (ChessCoachWidgets centered: board);
 		addChild: (ToElement new
 				 layout: BlFrameLayout new;
-				 width: 460;
+				 width: 420;
 				 vMatchParent;
 				 addChild: tabs;
 				 yourself).
@@ -480,7 +481,7 @@ OpeningTreeElement >> tableRow: someElements [
 	| row |
 	row := ToElement new
 		       layout:
-			       (BlLinearLayout horizontal alignCenterLeft cellSpacing: 6);
+			       (BlLinearLayout horizontal alignCenterLeft cellSpacing: 4);
 		       hMatchParent;
 		       vFitContent;
 		       yourself.
@@ -488,8 +489,8 @@ OpeningTreeElement >> tableRow: someElements [
 			row addChild: (ToElement new
 					 layout: BlLinearLayout horizontal alignCenterLeft;
 					 width: (index = 1
-							  ifTrue: [ 96 ]
-							  ifFalse: [ 58 ]);
+							  ifTrue: [ 76 ]
+							  ifFalse: [ 54 ]);
 					 vFitContent;
 					 addChild: each;
 					 yourself) ].

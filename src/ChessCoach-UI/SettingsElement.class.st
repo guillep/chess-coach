@@ -126,14 +126,18 @@ SettingsElement >> build [
 		addChild: (widgets
 				 section: 'Moments'
 				 help:
-				 'How the coach finds the moments to review. Evaluation drops are moves that lost ground according to Stockfish; only moves are positions where a single move kept the balance; long thinks are moves that took at least 10 s and 3 times your average; opening choices compare your moves with the Lichess database. The moves you mark are always included. Changes apply to new analyses.'
+				 'How the coach finds the moments to review; the blue ones are on. Evaluation drops are moves that lost ground according to Stockfish; only moves are positions where a single move kept the balance; long thinks are moves that took at least 10 s and 3 times your average; opening choices compare your moves with the Lichess database. The moves you mark are always included. Changes apply to new analyses.'
 				 rows: {
-						 (self
-							  heuristicRow: 'Evaluation drops'
-							  key: 'findEvaluationJumps').
-						 (self heuristicRow: 'Only moves' key: 'findOnlyMoves').
-						 (self heuristicRow: 'Long thinks' key: 'findLongThinks').
-						 (self heuristicRow: 'Opening choices' key: 'findOpeningChoices') });
+						 (self note: 'Find moments from:').
+						 (self row: {
+								  (self
+									   heuristicRow: 'Evaluation drops'
+									   key: 'findEvaluationJumps').
+								  (self heuristicRow: 'Only moves' key: 'findOnlyMoves').
+								  (self heuristicRow: 'Long thinks' key: 'findLongThinks').
+								  (self
+									   heuristicRow: 'Opening choices'
+									   key: 'findOpeningChoices') }) });
 		addChild: (widgets
 				 section: 'Openings'
 				 help:

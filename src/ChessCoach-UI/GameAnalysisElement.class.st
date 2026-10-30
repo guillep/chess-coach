@@ -82,7 +82,7 @@ GameAnalysisElement >> initialize [
 			c horizontal matchParent.
 			c vertical fitContent ].
 	moveList whenMoveSelectedDo: [ :ply | self showPly: ply ].
-	self addChild: boardElement.
+	self addChild: (ChessCoachWidgets centered: boardElement).
 	self addChild: (ToElement new
 			 layout: BlFrameLayout new;
 			 width: 200;

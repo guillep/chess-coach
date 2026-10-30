@@ -116,17 +116,7 @@ OpeningsElement >> newForm [
 			                ('Last week' -> 7).
 			                ('Last month' -> 30).
 			                ('Last year' -> 365) }.
-	ratingSelect := self newSelect: {
-			                ('Any rating' -> #(  )).
-			                ('Under 1000' -> #( 0 )).
-			                ('1000–1199' -> #( 1000 )).
-			                ('1200–1399' -> #( 1200 )).
-			                ('1400–1599' -> #( 1400 )).
-			                ('1600–1799' -> #( 1600 )).
-			                ('1800–1999' -> #( 1800 )).
-			                ('2000–2199' -> #( 2000 )).
-			                ('2200–2499' -> #( 2200 )).
-			                ('2500 and up' -> #( 2500 )) }.
+	ratingSelect := self newSelect: self ratingOptions.
 	^ ChessCoachWidgets
 		  section: 'New tree'
 		  help:
@@ -206,12 +196,14 @@ OpeningsElement >> newRowOf: anOpeningTree [
 
 { #category : 'building' }
 OpeningsElement >> newSelect: someAssociations [
-	"A dropdown of label -> value associations with the first one selected"
+	"A dropdown of label -> value associations with the first one selected. Its list stops at the bottom of the window and scrolls."
 
 	| select |
 	select := ToSingleSelectElement new
 		          hMatchParent;
 		          yourself.
+	select manager maxHeightPolicy:
+		ToSelectPopupMatchParentMaxHeightPolicy new.
 	select popupListElement nodeBuilder: [ :node :assoc :holder |
 		node addChild: (ToLabel text: assoc key) ].
 	select dataViewBuilder: [ :view :assoc |
@@ -241,6 +233,29 @@ OpeningsElement >> newTree [
 		   ratings: (self valueOf: ratingSelect))
 		  period: (self valueOf: periodSelect);
 		  yourself
+]
+
+{ #category : 'private' }
+OpeningsElement >> ratingOptions [
+	"The explorer's rating groups, those closest to my Lichess rapid rating first. Without a rating, Any rating comes first."
+
+	| groups rating |
+	groups := {
+		          ('Under 1000' -> #( 0 )).
+		          ('1000–1199' -> #( 1000 )).
+		          ('1200–1399' -> #( 1200 )).
+		          ('1400–1599' -> #( 1400 )).
+		          ('1600–1799' -> #( 1600 )).
+		          ('1800–1999' -> #( 1800 )).
+		          ('2000–2199' -> #( 2000 )).
+		          ('2200–2499' -> #( 2200 )).
+		          ('2500 and up' -> #( 2500 )) }.
+	rating := session lichessRatingAt: 'rapid'.
+	rating ifNil: [ ^ { ('Any rating' -> #(  )) } , groups ].
+	^ (groups asSortedCollection: [ :a :b |
+			   (a value first + 100 - rating) abs
+			   <= (b value first + 100 - rating) abs ]) asArray
+	  , { ('Any rating' -> #(  )) }
 ]
 
 { #category : 'accessing' }

@@ -542,6 +542,22 @@ ChessCoachSession >> isLoggedIn [
 	^ importer isLoggedIn
 ]
 
+{ #category : 'opening trees' }
+ChessCoachSession >> lichessRatingAt: aSpeed [
+	"My Lichess rating in my newest game of that speed, or nil without one"
+
+	self username ifNil: [ ^ nil ].
+	(self gamesWithSpeed: aSpeed) do: [ :entry |
+			| metadata |
+			metadata := (self gameFor: entry) metadata.
+			#( 'White' 'Black' ) do: [ :color |
+					((metadata at: color ifAbsent: [ '' ]) sameAs: self username)
+						ifTrue: [
+								(metadata at: color , 'Elo' ifAbsent: [ nil ]) ifNotNil: [
+									:elo | elo isAllDigits ifTrue: [ ^ elo asInteger ] ] ] ] ].
+	^ nil
+]
+
 { #category : 'accessing' }
 ChessCoachSession >> lichessUsername: aStringOrNil [
 	"Lichess games are public, so a username is enough to download them; nil forgets it"

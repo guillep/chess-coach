@@ -420,6 +420,7 @@ OpeningTreeElement >> session: aChessCoachSession tree: anOpeningTree runner: aB
 	panel := self newPanel.
 	treePanel := self newPanel.
 	tabs := ToTabPaneElement new.
+	tabs horizontal: false.
 	tabs matchParent.
 	tabs showAddTabItemButton: false.
 	tabs addItem: (self newTab: 'This position' panel: panel).

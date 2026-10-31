@@ -122,7 +122,7 @@ ChessCoachAppElement >> applyAppTheme [
 					 ifTrue: [ ChessmateDarkTheme new ]
 					 ifFalse: [ ChessmateTheme new ]) ].
 	self background: (Color fromHexString: (dark
-				  ifTrue: [ '#12281b' ]
+				  ifTrue: [ '#234a35' ]
 				  ifFalse: [ '#f6ead2' ])).
 	tint := Color fromHexString: (dark
 			         ifTrue: [ '#f6ead2' ]

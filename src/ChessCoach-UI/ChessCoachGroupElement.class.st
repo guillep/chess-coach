@@ -29,7 +29,7 @@ ChessCoachGroupElement >> initialize [
 		        layout: (BlLinearLayout vertical cellSpacing: 8);
 		        hMatchParent;
 		        vFitContent;
-		        padding: (BlInsets all: 12);
+		        padding: (BlInsets left: 8 right: 8);
 		        yourself.
 	self bodyBuilder: [ :body | body addChild: rows ].
 	self switchToNextCheckStateOnClick: false.

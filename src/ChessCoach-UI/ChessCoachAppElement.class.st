@@ -738,9 +738,9 @@ ChessCoachAppElement >> newStatusLine [
 		  hMatchParent;
 		  vFitContent;
 		  padding: (BlInsets
-				   top: 2
+				   top: 6
 				   left: 8
-				   bottom: 2
+				   bottom: 6
 				   right: 8);
 		  addChild: statusLabel;
 		  addChild: analysisLabel;

@@ -33,7 +33,7 @@ HomeWidget >> filterRowsOn: aHomeElement [
 		  ('Color' -> #( nil 'white' 'black' ) -> 'color').
 		  ('Speed' -> #( nil 'bullet' 'blitz' 'rapid' 'classical' )
 		   -> 'speed').
-		  ('Source' -> #( nil 'lichess' 'chesscom' ) -> 'source').
+		  ('Source' -> #( nil 'lichess' 'chess.com' ) -> 'source').
 		  ('Last days' -> #( nil 7 30 90 365 ) -> 'days').
 		  ('Review' -> #( nil 'unreviewed' 'inProgress' 'reviewed' )
 		   -> 'review') } collect: [ :each |

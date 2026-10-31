@@ -45,7 +45,7 @@ HomeNumbersWidget >> rowsOn: aHomeElement [
 				lines add: games size printString , ' games' ].
 			each = 'reviewed' ifTrue: [
 					lines add: (games count: [ :entry |
-							 (states at: entry gameId ifAbsent: [ nil ]) = 'reviewed' ])
+							 states includesKey: entry gameId ])
 							printString , ' reviewed' ].
 			each = 'mistake' ifTrue: [
 					lines add: (records tagFrequencies

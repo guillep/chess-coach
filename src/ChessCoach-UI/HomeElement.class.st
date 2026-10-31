@@ -94,6 +94,12 @@ HomeElement >> cardOf: aWidget [
 	^ card
 ]
 
+{ #category : 'accessing' }
+HomeElement >> cards [
+
+	^ zone children asArray
+]
+
 { #category : 'actions' }
 HomeElement >> confirm: aString then: aBlock [
 
@@ -186,12 +192,14 @@ HomeElement >> initialize [
 		        vExact: 0;
 		        yourself.
 	toolbar := ToElement new
-		           layout:
-			           (BlLinearLayout horizontal alignCenterRight
-				            cellSpacing: 8);
+		           layout: BlFlowLayout horizontal alignCenterRight;
 		           hMatchParent;
 		           vFitContent;
-		           padding: (BlInsets top: 0 left: 0 bottom: 8 right: 24);
+		           padding: (BlInsets
+				            top: 0
+				            left: 0
+				            bottom: 8
+				            right: 24);
 		           yourself.
 	self addChild: (ChessCoachWidgets page: {
 				 (ChessCoachWidgets
@@ -289,11 +297,18 @@ HomeElement >> session: aChessCoachSession [
 	self update
 ]
 
+{ #category : 'accessing' }
+HomeElement >> titleField [
+
+	^ titleField
+]
+
 { #category : 'private' }
 HomeElement >> toolButton: aString do: aBlock [
 
 	^ ToButton new
 		  labelText: aString;
+		  margin: (BlInsets all: 3);
 		  clickAction: aBlock;
 		  yourself
 ]

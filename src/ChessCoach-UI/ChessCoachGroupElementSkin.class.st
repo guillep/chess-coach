@@ -17,15 +17,17 @@ ChessCoachGroupElementSkin >> checkedSkinEvent: anEvent [
 ]
 
 { #category : 'private' }
-ChessCoachGroupElementSkin >> collapseHeader: anAccordion [
-	"No arrow to turn"
+ChessCoachGroupElementSkin >> collapseHeader: aHeader [
+	"No arrow to turn, unless it is collapsible"
 
+	aHeader parent isCollapsible ifTrue: [ super collapseHeader: aHeader ]
 ]
 
 { #category : 'private' }
-ChessCoachGroupElementSkin >> expandHeader: anAccordion [
-	"No arrow to turn"
+ChessCoachGroupElementSkin >> expandHeader: aHeader [
+	"No arrow to turn, unless it is collapsible"
 
+	aHeader parent isCollapsible ifTrue: [ super expandHeader: aHeader ]
 ]
 
 { #category : 'event handling' }
@@ -38,6 +40,7 @@ ChessCoachGroupElementSkin >> installSkinEvent: anEvent [
 { #category : 'private' }
 ChessCoachGroupElementSkin >> removeArrowOf: aGroup [
 
+	aGroup isCollapsible ifTrue: [ ^ self ].
 	aGroup header icon: (BlElement new
 			 extent: 0 @ 0;
 			 yourself)

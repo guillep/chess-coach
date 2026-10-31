@@ -66,33 +66,33 @@ HomeElement >> barOf: aWidget in: aCard [
 
 { #category : 'building' }
 HomeElement >> cardOf: aWidget [
-	"The widget's title and rows, scrolling inside the card. While editing it has a bar to drag, its options unfold above the content, and a corner resizes it."
+	"A group with the widget's title, rows scrolling inside the card. While editing a bar lets me drag it, its options unfold above the content, and a corner resizes it."
 
-	| rows card column |
+	| rows card column group |
 	rows := aWidget rowsOn: self.
 	column := ToElement new
 		          layout: (BlLinearLayout vertical cellSpacing: 6);
 		          hMatchParent;
 		          vFitContent;
-		          padding: (BlInsets all: 12);
 		          yourself.
 	configured == aWidget ifTrue: [
-			titleField := ToTextField new
-				              hMatchParent;
-				              text: aWidget title;
-				              yourself.
-			column addChild: titleField.
-			(aWidget optionRowsOn: self) do: [ :each | column addChild: each ] ].
-	column addChild: (ChessCoachWidgets heading: aWidget title help: nil).
+		titleField := ToTextField new
+			              hMatchParent;
+			              text: aWidget title;
+			              yourself.
+		column addChild: titleField.
+		(aWidget optionRowsOn: self) do: [ :each | column addChild: each ] ].
 	rows do: [ :each | column addChild: each ].
+	group := ChessCoachGroupElement new.
+	group title: aWidget title help: nil.
+	group rows addChild: (ChessCoachWidgets scrollable: column).
+	group vMatchParent.
 	card := ToElement new
 		        layout: BlLinearLayout vertical;
-		        border: (BlBorder paint: (Color gray alpha: 0.35) width: 1);
-		        geometry: (BlRoundedRectangleGeometry cornerRadius: 6);
 		        yourself.
 	card userData at: #widget put: aWidget.
 	editing ifTrue: [ card addChild: (self barOf: aWidget in: card) ].
-	card addChild: (ChessCoachWidgets scrollable: column).
+	card addChild: group.
 	editing ifTrue: [ card addChild: (self cornerOf: aWidget in: card) ].
 	^ card
 ]

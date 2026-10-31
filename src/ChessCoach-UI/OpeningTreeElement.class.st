@@ -37,34 +37,21 @@ OpeningTreeElement class >> session: aChessCoachSession tree: anOpeningTree runn
 
 { #category : 'building' }
 OpeningTreeElement >> accordion: aTitle build: aBlock [
-	"A Toplo accordion, kept open or closed across positions. aBlock adds the rows of its body to panel, which points to the body meanwhile."
+	"A collapsible group, kept open or closed across positions. aBlock adds its rows to panel, which points to them meanwhile."
 
-	| accordion |
-	accordion := ToAccordionElement new
-		             id: aTitle asSymbol;
-		             yourself.
-	accordion headerBuilder: [ :header |
-		header addChild: (ToLabel text: aTitle) ].
-	accordion bodyBuilder: [ :body |
-			| page column |
-			page := panel.
-			column := ToElement new
-				          layout: (BlLinearLayout vertical cellSpacing: 6);
-				          hMatchParent;
-				          vFitContent;
-				          padding: (BlInsets all: 8);
-				          yourself.
-			panel := column.
-			aBlock ensure: [ panel := page ].
-			body addChild: column ].
-	(self collapsed includes: aTitle)
-		ifTrue: [ accordion collapse ]
-		ifFalse: [ accordion expand ].
-	accordion addEventHandlerOn: ToCheckableCheckEvent do: [ :event |
-			accordion isExpanded
-				ifTrue: [ self collapsed remove: aTitle ifAbsent: [ ] ]
-				ifFalse: [ self collapsed add: aTitle ] ].
-	panel addChild: accordion
+	| group page |
+	group := ChessCoachGroupElement new.
+	group title: aTitle help: nil.
+	group beCollapsible.
+	page := panel.
+	panel := group rows.
+	aBlock ensure: [ panel := page ].
+	(self collapsed includes: aTitle) ifTrue: [ group collapse ].
+	group addEventHandlerOn: ToCheckableCheckEvent do: [ :event |
+		group isExpanded
+			ifTrue: [ self collapsed remove: aTitle ifAbsent: [  ] ]
+			ifFalse: [ self collapsed add: aTitle ] ].
+	panel addChild: group
 ]
 
 { #category : 'actions' }

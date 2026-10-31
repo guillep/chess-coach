@@ -5,12 +5,21 @@ Class {
 	#name : 'ChessCoachGroupElement',
 	#superclass : 'ToAccordionElement',
 	#instVars : [
-		'rows'
+		'rows',
+		'collapsible'
 	],
 	#category : 'ChessCoach-UI-Widgets',
 	#package : 'ChessCoach-UI',
 	#tag : 'Widgets'
 }
+
+{ #category : 'accessing' }
+ChessCoachGroupElement >> beCollapsible [
+	"Behave as a real accordion: the header opens and closes me"
+
+	collapsible := true.
+	self switchToNextCheckStateOnClick: true
+]
 
 { #category : 'initialization' }
 ChessCoachGroupElement >> initialize [
@@ -25,6 +34,12 @@ ChessCoachGroupElement >> initialize [
 	self bodyBuilder: [ :body | body addChild: rows ].
 	self switchToNextCheckStateOnClick: false.
 	self expand
+]
+
+{ #category : 'testing' }
+ChessCoachGroupElement >> isCollapsible [
+
+	^ collapsible == true
 ]
 
 { #category : 'skin' }
@@ -42,7 +57,13 @@ ChessCoachGroupElement >> rows [
 
 { #category : 'accessing' }
 ChessCoachGroupElement >> title: aTitle help: aHelpStringOrNil [
+	"A title bar slightly darker than the body, on both themes, with a line below"
 
+	self clipChildren: true.
+	self header
+		background: (Color gray alpha: 0.14);
+		border: (BlBorder paint: (Color gray alpha: 0.25) width: 1);
+		padding: (BlInsets top: 6 left: 12 bottom: 6 right: 12).
 	self headerBuilder: [ :header |
 		header addChild: (ChessCoachWidgets heading: aTitle help: aHelpStringOrNil) ]
 ]

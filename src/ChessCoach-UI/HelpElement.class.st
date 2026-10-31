@@ -108,23 +108,12 @@ HelpElement >> update [
 
 	zone removeChildren.
 	self topics doWithIndex: [ :topic :index |
-		| accordion |
-		accordion := ToAccordionElement new
-			             id: topic key asSymbol;
-			             yourself.
-		accordion headerBuilder: [ :header |
-			header addChild: (ToLabel text: topic key) ].
-		accordion bodyBuilder: [ :body |
-			| column |
-			column := ToElement new
-				          layout: (BlLinearLayout vertical cellSpacing: 8);
-				          hMatchParent;
-				          vFitContent;
-				          padding: (BlInsets all: 8);
-				          yourself.
-			topic value do: [ :each |
-				column addChild: (ChessCoachWidgets paragraph: each) ].
-			body addChild: column ].
-		index = 1 ifTrue: [ accordion expand ].
-		zone addChild: accordion ]
+		| group |
+		group := ChessCoachGroupElement new.
+		group title: topic key help: nil.
+		group beCollapsible.
+		topic value do: [ :each |
+			group rows addChild: (ChessCoachWidgets paragraph: each) ].
+		index = 1 ifFalse: [ group collapse ].
+		zone addChild: group ]
 ]

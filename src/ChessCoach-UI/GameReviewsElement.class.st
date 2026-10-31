@@ -10,7 +10,6 @@ Class {
 		'game',
 		'reviewsZone',
 		'openBlock',
-		'timeBoxNote',
 		'infoZone',
 		'playThroughBlock',
 		'timeBoxMinutes',
@@ -108,7 +107,6 @@ GameReviewsElement >> initialize [
 		               hMatchParent;
 		               vFitContent;
 		               yourself.
-	timeBoxNote := ToLabel text: ''.
 	analyses := (ChessCoachWidgets
 		             section: 'Analyses with the coach'
 		             help:
@@ -125,7 +123,6 @@ GameReviewsElement >> initialize [
 				            icon: 'outlined_slideshow'
 				            do: [ playThroughBlock value ]);
 		           addChild: self newTimeBoxChoice;
-		           addChild: timeBoxNote;
 		           addChild: (ChessCoachWidgets
 				            bigButton: 'New analysis'
 				            icon: 'outlined_school'
@@ -159,9 +156,7 @@ GameReviewsElement >> linkTo: aUrl [
 GameReviewsElement >> newAnalysis [
 	"Start a review, limited to the chosen time box when there is one"
 
-	openBlock value: (session
-			 newReviewFor: entry
-			 timeBox: (session canTimeBox ifTrue: [ timeBoxMinutes ]))
+	openBlock value: (session newReviewFor: entry timeBox: timeBoxMinutes)
 ]
 
 { #category : 'building' }
@@ -208,10 +203,6 @@ GameReviewsElement >> session: aChessCoachSession entry: aGameIndexEntry [
 	session := aChessCoachSession.
 	entry := aGameIndexEntry.
 	game := session gameFor: aGameIndexEntry.
-	timeBoxButtons do: [ :each | each enabled: session canTimeBox ].
-	timeBoxNote text: (session canTimeBox
-			 ifTrue: [ '' ]
-			 ifFalse: [ 'The time box needs a few finished reviews first.' ]).
 	self updateInfo.
 	self updateReviews
 ]

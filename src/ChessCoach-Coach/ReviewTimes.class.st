@@ -32,11 +32,19 @@ ReviewTimes >> average: someNumbers [
 	  / someNumbers size
 ]
 
+{ #category : 'accessing' }
+ReviewTimes >> defaultSecondsPerMoment [
+	"A time box needs an estimate before any moment has been reviewed"
+
+	^ 120
+]
+
 { #category : 'statistics' }
 ReviewTimes >> expectedSecondsFor: someKinds [
-	"My average for the first kind of someKinds with at least 3 reviewed moments, or my overall average"
+	"My average for the first kind of someKinds with at least 3 reviewed moments, or my overall average, or a default before my first reviewed moment"
 
 	| byKind |
+	moments ifEmpty: [ ^ self defaultSecondsPerMoment ].
 	byKind := Dictionary new.
 	moments do: [ :each |
 			each key do: [ :kind |

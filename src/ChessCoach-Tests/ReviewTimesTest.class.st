@@ -47,6 +47,15 @@ ReviewTimesTest >> setUp [
 ]
 
 { #category : 'tests' }
+ReviewTimesTest >> testATimeBoxHasAnEstimateBeforeAnyReview [
+
+	self
+		assert: ((ReviewTimes new setFromReviewDictionaries: #(  ); yourself)
+				 expectedSecondsFor: #( #mistake ))
+		equals: 120
+]
+
+{ #category : 'tests' }
 ReviewTimesTest >> testAverages [
 
 	| times |

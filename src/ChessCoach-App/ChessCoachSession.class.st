@@ -182,13 +182,6 @@ ChessCoachSession >> canImport [
 	^ self username notNil or: [ self chessComUsername notNil ]
 ]
 
-{ #category : 'coach' }
-ChessCoachSession >> canTimeBox [
-	"Time-boxed analyses need my times on at least 10 reviewed moments"
-
-	^ self reviewTimes reviewedMomentCount >= 10
-]
-
 { #category : 'opening trees' }
 ChessCoachSession >> canUseDatabase [
 	"The explorer needs a Lichess login"

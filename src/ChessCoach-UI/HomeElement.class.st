@@ -12,7 +12,8 @@ Class {
 		'configured',
 		'confirming',
 		'toolbar',
-		'titleField'
+		'titleField',
+		'showGamesBlock'
 	],
 	#category : 'ChessCoach-UI-App',
 	#package : 'ChessCoach-UI',
@@ -239,6 +240,18 @@ HomeElement >> keepTitle [
 	titleField := nil
 ]
 
+{ #category : 'building' }
+HomeElement >> notificationRow: aNotification [
+
+	^ ChessCoachWidgets
+		  notificationRow: aNotification
+		  time: ''
+		  onDismiss: [ :row |
+				  session notifications dismiss: aNotification.
+				  self update ]
+		  onShow: [ showGamesBlock ifNotNil: [ :block | block value ] ]
+]
+
 { #category : 'layout' }
 HomeElement >> placeCards [
 	"Cards at their cells, with columns that scale; stacked in reading order in a narrow window, without changing what is saved. Right padding leaves room for the scrollbar."
@@ -378,4 +391,11 @@ HomeElement >> whenGameChosenDo: aBlock [
 	"aBlock receives the index entry of a game to open"
 
 	gameBlock := aBlock
+]
+
+{ #category : 'accessing' }
+HomeElement >> whenShowGamesDo: aBlock [
+	"aBlock opens the games, for a notification's Show"
+
+	showGamesBlock := aBlock
 ]

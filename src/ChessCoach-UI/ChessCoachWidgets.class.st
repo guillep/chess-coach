@@ -158,6 +158,46 @@ ChessCoachWidgets class >> logoIcon: aSize [
 ]
 
 { #category : 'building' }
+ChessCoachWidgets class >> notificationRow: aNotification time: aTimeString onDismiss: aDismissBlock onShow: aShowBlock [
+	"Title, time and text, a dismiss button, and Show for new games. aDismissBlock receives the row."
+
+	| row header |
+	row := ToElement new
+		       layout: (BlLinearLayout vertical cellSpacing: 4);
+		       hMatchParent;
+		       vFitContent;
+		       yourself.
+	header := ToElement new
+		          layout: (BlLinearLayout horizontal cellSpacing: 8);
+		          hMatchParent;
+		          vFitContent;
+		          addChild: (ToLabel new
+				           text: aNotification title asRopedText bold;
+				           hMatchParent;
+				           yourself);
+		          addChild: (ToLabel text: aTimeString);
+		          addChild: (ToButton new
+				           icon:
+					           ((ToMaterialDesignIconProvider iconNamed:
+							             'outlined_close')
+						            extent: 16 @ 16;
+						            yourself);
+				           tooltipText: 'Dismiss';
+				           clickAction: [ aDismissBlock value: row ];
+				           yourself);
+		          yourself.
+	row addChild: header.
+	aNotification text ifNotEmpty: [ :text |
+		row addChild: (self paragraph: text) ].
+	aNotification kind = #newGames ifTrue: [
+			row addChild: (ToButton new
+					 labelText: 'Show';
+					 clickAction: aShowBlock;
+					 yourself) ].
+	^ row
+]
+
+{ #category : 'building' }
 ChessCoachWidgets class >> page: someElements [
 	"A page's top-level column, with the same margins on every page. None at the bottom: the content reaches the status bar."
 

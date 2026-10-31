@@ -609,6 +609,7 @@ ChessCoachAppElement >> newNavigation [
 	pane tabGroup addTokenNamed: #'padding-content-V' withValue: 0.
 	pane tabGroup itemList addTokenNamed: #'padding-content-V' withValue: 6.
 	home := HomeElement new.
+	home whenShowGamesDo: [ self showPage: #Games ].
 	home whenGameChosenDo: [ :entry |
 			self showPage: #Games.
 			self selectGameId: entry gameId ].
@@ -646,48 +647,18 @@ ChessCoachAppElement >> newNavigation [
 
 { #category : 'notifications' }
 ChessCoachAppElement >> newNotificationRow: aNotification in: aPanel [
-	"Title, time and text, the notification's action (Show for new games) and a dismiss button that removes the row"
+	"A row of the notification center"
 
-	| row header |
-	row := ToElement new
-		       layout: (BlLinearLayout vertical cellSpacing: 4);
-		       hMatchParent;
-		       vFitContent;
-		       yourself.
-	header := ToElement new
-		          layout: (BlLinearLayout horizontal cellSpacing: 8);
-		          hMatchParent;
-		          vFitContent;
-		          addChild: (ToLabel new
-				           text: aNotification title asRopedText bold;
-				           hMatchParent;
-				           yourself);
-		          addChild:
-		          (ToLabel text: (self timeTextFor: aNotification time));
-		          addChild: (ToButton new
-				           icon:
-					           ((ToMaterialDesignIconProvider iconNamed:
-							             'outlined_close')
-						            extent: 16 @ 16;
-						            yourself);
-				           tooltipText: 'Dismiss';
-				           clickAction: [
-						           session notifications dismiss: aNotification.
-						           aPanel removeChild: row ];
-				           yourself);
-		          yourself.
-	row addChild: header.
-	aNotification text ifNotEmpty: [ :text |
-		row addChild: (ChessCoachWidgets paragraph: text) ].
-	aNotification kind = #newGames ifTrue: [
-			row addChild: (ToButton new
-					 labelText: 'Show';
-					 clickAction: [
-							 notificationsWindow currentWindow ifNotNil: [ :window |
-									 window close ].
-							 self showPage: #Games ];
-					 yourself) ].
-	^ row
+	^ ChessCoachWidgets
+		  notificationRow: aNotification
+		  time: (self timeTextFor: aNotification time)
+		  onDismiss: [ :row |
+				  session notifications dismiss: aNotification.
+				  aPanel removeChild: row ]
+		  onShow: [
+				  notificationsWindow currentWindow ifNotNil: [ :window |
+					  window close ].
+				  self showPage: #Games ]
 ]
 
 { #category : 'notifications' }

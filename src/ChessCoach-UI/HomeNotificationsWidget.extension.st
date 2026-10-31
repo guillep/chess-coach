@@ -40,7 +40,5 @@ HomeNotificationsWidget >> rowsOn: aHomeElement [
 					         each isRead ] ] ].
 	shown ifEmpty: [ ^ { (ToLabel text: 'No notifications') } ].
 	^ (shown first: (shown size min: self count)) collect: [ :each |
-			  ChessCoachWidgets paragraph: each title
-				  ,
-				  (each text ifEmpty: [ '' ] ifNotEmpty: [ :text | ': ' , text ]) ]
+		  aHomeElement notificationRow: each ]
 ]

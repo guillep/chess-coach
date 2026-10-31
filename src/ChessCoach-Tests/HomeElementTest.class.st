@@ -245,6 +245,27 @@ HomeElementTest >> testNarrowWindowStacksWithoutChangingCells [
 ]
 
 { #category : 'tests' }
+HomeElementTest >> testNotificationsCanBeDismissedAndShown [
+
+	| shown |
+	shown := false.
+	home whenShowGamesDo: [ shown := true ].
+	session notifications post: (ChessCoachNotification
+			 key: 'games'
+			 kind: #newGames
+			 title: '2 new games'
+			 text: '').
+	home update.
+	self pulse.
+	self click: 'Show'.
+	self assert: shown.
+	BlSpace simulateClickOn: ((self buttonsIn: home cards third) detect: [ :each |
+			 (self textOf: each) isEmpty ]).
+	self pulse.
+	self assert: session notifications visible isEmpty
+]
+
+{ #category : 'tests' }
 HomeElementTest >> testNotificationsHonourKindsUnreadAndCount [
 
 	| widget |

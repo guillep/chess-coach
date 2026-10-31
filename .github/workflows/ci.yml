@@ -18,18 +18,12 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Run the tests
-        run: |
-          mkdir test-image
-          cd test-image
-          curl -fsSL https://get.pharo.org/130+vm | bash
-          VM=pharo-vm/Pharo.app/Contents/MacOS/Pharo
-          "$VM" --headless Pharo.image metacello install \
-            "tonel://$GITHUB_WORKSPACE/src" BaselineOfChessCoach
-          "$VM" --headless Pharo.image test --fail-on-failure "ChessCoach-Tests"
-
       - name: Build the app
         run: packaging/build-app.sh "$GITHUB_SHA"
+
+      - name: Run the tests on the built image
+        working-directory: packaging/build/work
+        run: pharo-vm/Pharo.app/Contents/MacOS/Pharo --headless Pharo.image test --fail-on-failure "ChessCoach-Tests"
 
       - name: Archive the app
         run: ditto -c -k --keepParent "packaging/build/Chessmate.app" Chessmate.zip

@@ -740,16 +740,19 @@ ChessCoachAppElementTest >> testUnexpectedErrorIsShownAndLogged [
 ]
 
 { #category : 'tests' }
-ChessCoachAppElementTest >> testUpdateButtonAppearsWhenANewerVersionExists [
+ChessCoachAppElementTest >> testUpdateButtonIsEnabledWhenANewerVersionExists [
 
-	self assert: app updateButton visibility equals: BlVisibility gone.
+	self deny: app updateButton isEnabled.
 	session updater: (ChessCoachUpdaterStub new
 			 current: 'v1.1.1' tags: #( 'v1.2.0' ) failure: nil;
 			 yourself).
 	session checkForUpdate.
 	scripter pulse.
-	self assert: app updateButton visibility equals: BlVisibility visible.
+	self assert: app updateButton isEnabled.
 	self
 		assert: app updateButton labelText asString
-		equals: 'Update to v1.2.0'
+		equals: 'Update to v1.2.0'.
+	app updateApp.
+	scripter pulse.
+	self deny: app updateButton isAttachedToSceneGraph
 ]

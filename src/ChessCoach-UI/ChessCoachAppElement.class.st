@@ -1200,8 +1200,29 @@ ChessCoachAppElement >> updateAnalysisStatus [
 
 { #category : 'actions' }
 ChessCoachAppElement >> updateApp [
+	"Ask in the title bar before updating: the button makes way for the question"
 
-	self updateAppTo: session availableUpdate
+	| tag question bar |
+	tag := session availableUpdate.
+	bar := updateButton parent.
+	question := ToElement new
+		            layout:
+			            (BlLinearLayout horizontal alignCenterLeft
+				             cellSpacing: 8);
+		            fitContent;
+		            yourself.
+	question
+		addChild: (ToLabel text:
+					 'Install ' , tag , '? The window will close and reopen.');
+		addChild: (ChessCoachWidgets
+				 primaryButton: 'Update'
+				 icon: 'filled_arrowforward'
+				 do: [ self updateAppTo: tag ]);
+		addChild: (ToButton new
+				 labelText: 'Cancel';
+				 clickAction: [ bar replaceChild: question with: updateButton ];
+				 yourself).
+	bar replaceChild: updateButton with: question
 ]
 
 { #category : 'actions' }
@@ -1228,17 +1249,23 @@ ChessCoachAppElement >> updateAppTo: aRevision [
 
 { #category : 'notifications' }
 ChessCoachAppElement >> updateBell [
-	"Show the red dot while there are unread notifications, and the Update button while a newer version exists"
+	"Show the red dot while there are unread notifications. The Update button is always there, enabled while a newer version exists"
 
 	bellBadge visibility: (session notifications unreadCount > 0
 			 ifTrue: [ BlVisibility visible ]
 			 ifFalse: [ BlVisibility hidden ]).
 	session availableUpdate
-		ifNil: [ updateButton visibility: BlVisibility gone ]
+		ifNil: [
+				updateButton
+					labelText: 'Update';
+					tooltipText: 'You have the latest version';
+					enabled: false ]
 		ifNotNil: [ :tag |
 				updateButton
 					labelText: 'Update to ' , tag;
-					visibility: BlVisibility visible ]
+					tooltipText:
+						'Install ' , tag , '. The window closes and opens again.';
+					enabled: true ]
 ]
 
 { #category : 'notifications' }

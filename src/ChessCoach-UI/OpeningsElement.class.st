@@ -83,25 +83,11 @@ OpeningsElement >> initialize [
 
 { #category : 'building' }
 OpeningsElement >> newChoiceBar: someAssociations selected: aValue do: aBlock [
-	"Toggle buttons for label -> value associations, one checked, in one row"
 
-	| bar group |
-	bar := ToElement new
-		       layout: BlLinearLayout horizontal;
-		       fitContent;
-		       yourself.
-	group := ToCheckableGroup new.
-	someAssociations do: [ :each |
-			| button |
-			button := ToToggleButton new
-				          labelText: each key;
-				          yourself.
-			group register: button.
-			each value = aValue ifTrue: [ button check ].
-			button newCheckAction: [
-				button isChecked ifTrue: [ aBlock value: each value ] ].
-			bar addChild: button ].
-	^ bar
+	^ ChessCoachWidgets
+		  choiceBar: someAssociations
+		  selected: aValue
+		  do: aBlock
 ]
 
 { #category : 'building' }

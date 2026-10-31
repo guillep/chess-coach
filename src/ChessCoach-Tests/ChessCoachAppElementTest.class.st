@@ -747,7 +747,7 @@ ChessCoachAppElementTest >> testStatsFilterByTimeControl [
 	self assert: (app dashboard
 			 allChildrenBreadthFirstDetect: [ :each |
 					 (each isKindOf: ToToggleButton) and: [
-						 each isChecked and: [ each labelText asString = 'Rapid' ] ] ]
+						 each isChecked and: [ each labelText asString = '✓ Rapid' ] ] ]
 			 ifFound: [ :each | true ]
 			 ifNone: [ false ])
 ]

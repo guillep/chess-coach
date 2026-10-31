@@ -12,8 +12,7 @@ Class {
 		'openBlock',
 		'infoZone',
 		'playThroughBlock',
-		'timeBoxMinutes',
-		'timeBoxButtons'
+		'timeBoxMinutes'
 	],
 	#category : 'ChessCoach-UI-Coach',
 	#package : 'ChessCoach-UI',
@@ -161,34 +160,23 @@ GameReviewsElement >> newAnalysis [
 
 { #category : 'building' }
 GameReviewsElement >> newTimeBoxChoice [
-	"Toggle buttons for the time box of a new analysis, in one row: none, or a number of minutes. A Toplo checkable group keeps exactly one checked."
+	"The time box of a new analysis: none, or a number of minutes"
 
-	| row group |
-	row := ToElement new
-		       layout: BlFlowLayout horizontal;
-		       hMatchParent;
-		       vFitContent;
-		       addChild: ((ToLabel text: 'Time box (min):')
-				        margin: (BlInsets right: 8);
-				        yourself);
-		       yourself.
-	group := ToCheckableGroup new.
-	timeBoxButtons := OrderedCollection new.
-	#( nil 10 20 30 45 60 ) do: [ :minutes |
-			| button |
-			button := ToToggleButton new
-				          labelText:
-					          (minutes
-						           ifNil: [ 'None' ]
-						           ifNotNil: [ minutes printString ]);
-				          yourself.
-			group register: button.
-			button newCheckAction: [
-				button isChecked ifTrue: [ timeBoxMinutes := minutes ] ].
-			timeBoxButtons add: button.
-			row addChild: button ].
-	timeBoxButtons first check.
-	^ row
+	^ ToElement new
+		  layout: BlFlowLayout horizontal;
+		  hMatchParent;
+		  vFitContent;
+		  addChild: ((ToLabel text: 'Time box (min):')
+				   margin: (BlInsets right: 8);
+				   yourself);
+		  addChild: (ChessCoachWidgets
+				   choiceBar: (#( nil 10 20 30 45 60 ) collect: [ :minutes |
+						    (minutes
+							     ifNil: [ 'None' ]
+							     ifNotNil: [ minutes printString ]) -> minutes ])
+				   selected: nil
+				   do: [ :minutes | timeBoxMinutes := minutes ]);
+		  yourself
 ]
 
 { #category : 'accessing' }

@@ -32,7 +32,7 @@ MistakesDashboardElement >> barsOf: someValues [
 		       hMatchParent;
 		       vFitContent;
 		       addChild: (ToLabel new
-				        text: 'Time per moment (blocks of 10)';
+				        text: 'Time per moment';
 				        width: 200;
 				        yourself);
 		       yourself.
@@ -109,44 +109,73 @@ MistakesDashboardElement >> buildEmptyState [
 
 { #category : 'building' }
 MistakesDashboardElement >> buildPhases [
+	"One stacked bar per phase, one segment per category, on one scale; a legend below"
 
-	| byPhase |
+	| byPhase counts max categories |
 	byPhase := database tagFrequenciesByPhase.
-	#( 'opening' 'middlegame' 'endgame' ) do: [ :phase |
-			| frequencies |
-			frequencies := byPhase
-				               at: phase
-				               ifAbsent: [ OrderedDictionary new ].
-			content addChild:
-				(ToLabel text: phase capitalized , ': ' , (frequencies isEmpty
-						  ifTrue: [ '—' ]
-						  ifFalse: [
-								  ', ' join:
-									  ((frequencies associations first: (frequencies size min: 3))
-										   collect: [ :each |
-										   (self nameOf: each key) , ' ×' , each value printString ]) ])) ]
+	categories := #( 'perception' 'calculation' 'evaluation' 'decision' 'knowledge' ).
+	counts := #( 'opening' 'middlegame' 'endgame' ) collect: [ :phase |
+		          phase -> (self categoryCountsOf:
+			           (byPhase at: phase ifAbsent: [ OrderedDictionary new ])) ].
+	max := (counts collect: [ :each | (each value values inject: 0 into: [ :sum :count | sum + count ]) ]) max max: 1.
+	counts do: [ :each |
+		| row |
+		row := ToElement new
+			       layout: (BlLinearLayout horizontal alignCenterLeft cellSpacing: 8);
+			       hMatchParent;
+			       vFitContent;
+			       addChild: (ToLabel new
+					        text: each key capitalized;
+					        width: 200;
+					        yourself);
+			       yourself.
+		row addChild: (ToElement new
+				 layout: BlLinearLayout horizontal;
+				 fitContent;
+				 addChildren: ((categories select: [ :category |
+							   (each value at: category ifAbsent: [ 0 ]) > 0 ]) collect: [ :category |
+						  | count |
+						  count := each value at: category.
+						  ToElement new
+							  extent: (count / max * 600) rounded @ 14;
+							  background: (self colorOfCategory: category);
+							  tooltipString: category capitalized , ': ' , count printString;
+							  yourself ]);
+				 yourself).
+		row addChild: (ToLabel text: (each value values inject: 0 into: [ :sum :count | sum + count ]) printString).
+		content addChild: row ].
+	content addChild: (ToElement new
+			 layout: (BlFlowLayout horizontal);
+			 hMatchParent;
+			 vFitContent;
+			 addChildren: (categories flatCollect: [ :category |
+						  {
+							  (BlElement new
+								   extent: 12 @ 12;
+								   margin: (BlInsets top: 4 left: 8 bottom: 0 right: 4);
+								   background: (self colorOfCategory: category);
+								   yourself).
+							  (ToLabel text: category capitalized) } ]);
+			 yourself)
 ]
 
 { #category : 'building' }
 MistakesDashboardElement >> buildTimes [
+	"How long a review takes, said in sentences above each chart"
 
-	| kinds |
-	kinds := [ :associations |
-		         ', ' join: (associations asArray
-				          sort: [ :a :b | a key < b key ];
-				          collect: [ :each |
-						          (ChessCoachWidgets humanize: each key) , ' '
-						          , (self duration: each value) ]) ].
 	content addChild: (ChessCoachWidgets paragraph:
-			 'Per reviewed moment: ' , (self duration: times secondsPerMoment)
-			 , ' (' , (kinds value: times secondsPerMomentKind associations)
-			 , ')').
-	content addChild: (ChessCoachWidgets paragraph: 'Per question: '
-			 , (kinds value: times secondsPerQuestionKind associations)).
-	content addChild: (ToLabel text:
-			 'Marking pass: ' , (self duration: times markingSecondsPerGame)
-			 , ' per game, ' , (self duration: times markingSecondsPerPly)
-			 , ' per move').
+			 'You spend about ' , (self duration: times secondsPerMoment)
+			 , ' on each moment you review.').
+	content addChild: (ChessCoachWidgets paragraph:
+			 'Marking the interesting moves of a game takes about '
+			 , (self duration: times markingSecondsPerGame) , ' (' 
+			 , (self duration: times markingSecondsPerPly) , ' per move).').
+	content addChild: (ToLabel text: 'Which moments take you longest').
+	self durationBars: times secondsPerMomentKind associations.
+	content addChild: (ToLabel text: 'Which questions take you longest').
+	self durationBars: times secondsPerQuestionKind associations.
+	content addChild: (ChessCoachWidgets paragraph:
+			 'Are you getting faster? Each bar is the average of 10 reviewed moments, oldest on the left. Shorter bars mean less time per moment.').
 	content addChild: (self barsOf: (times secondsPerMomentInBlocksOf: 10))
 ]
 
@@ -183,6 +212,19 @@ MistakesDashboardElement >> buildTrend [
 			content addChild: row ]
 ]
 
+{ #category : 'building' }
+MistakesDashboardElement >> categoryCountsOf: someFrequencies [
+	"Category -> mistakes, for tag id -> count"
+
+	| counts |
+	counts := Dictionary new.
+	someFrequencies keysAndValuesDo: [ :tag :count |
+		| category |
+		category := (taxonomy tagAt: tag) category.
+		counts at: category put: (counts at: category ifAbsent: [ 0 ]) + count ].
+	^ counts
+]
+
 { #category : 'actions' }
 MistakesDashboardElement >> chooseSpeed: aSpeedOrNil [
 	"Called from a speed toggle's check action. The page, toggles included, is rebuilt in a later task, not while the toggle runs its action."
@@ -193,17 +235,21 @@ MistakesDashboardElement >> chooseSpeed: aSpeedOrNil [
 		(BlTaskAction new action: [ speedBlock value: aSpeedOrNil ])
 ]
 
-{ #category : 'private' }
-MistakesDashboardElement >> colorOfTag: aTagId [
+{ #category : 'building' }
+MistakesDashboardElement >> colorOfCategory: aCategory [
 	"The category colours, from the icon's palette, readable on both themes"
 
-	| category |
-	category := (taxonomy tagAt: aTagId) category.
-	category = 'perception' ifTrue: [ ^ Color fromHexString: '#4f9a6a' ].
-	category = 'calculation' ifTrue: [ ^ Color fromHexString: '#e0a458' ].
-	category = 'evaluation' ifTrue: [ ^ Color fromHexString: '#a3b85c' ].
-	category = 'decision' ifTrue: [ ^ Color fromHexString: '#b5652b' ].
+	aCategory = 'perception' ifTrue: [ ^ Color fromHexString: '#4f9a6a' ].
+	aCategory = 'calculation' ifTrue: [ ^ Color fromHexString: '#e0a458' ].
+	aCategory = 'evaluation' ifTrue: [ ^ Color fromHexString: '#a3b85c' ].
+	aCategory = 'decision' ifTrue: [ ^ Color fromHexString: '#b5652b' ].
 	^ Color fromHexString: '#a08a6c'
+]
+
+{ #category : 'private' }
+MistakesDashboardElement >> colorOfTag: aTagId [
+
+	^ self colorOfCategory: (taxonomy tagAt: aTagId) category
 ]
 
 { #category : 'accessing' }
@@ -241,6 +287,31 @@ MistakesDashboardElement >> duration: seconds [
 	seconds < 60 ifTrue: [ ^ seconds rounded printString , ' s' ].
 	^ (seconds // 60) printString , ' min '
 	  , (seconds \\ 60) rounded printString , ' s'
+]
+
+{ #category : 'building' }
+MistakesDashboardElement >> durationBars: someAssociations [
+	"name -> seconds as bars on one scale, longest first"
+
+	| sorted max |
+	sorted := someAssociations asArray sort: [ :a :b | a value > b value ].
+	sorted ifEmpty: [ ^ self ].
+	max := sorted first value max: 1.
+	sorted do: [ :each |
+		content addChild: (ToElement new
+				 layout: (BlLinearLayout horizontal alignCenterLeft cellSpacing: 8);
+				 hMatchParent;
+				 vFitContent;
+				 addChild: (ToLabel new
+						  text: (ChessCoachWidgets humanize: each key);
+						  width: 200;
+						  yourself);
+				 addChild: (BlElement new
+						  extent: (each value / max * 400) rounded @ 14;
+						  background: (Color gray alpha: 0.6);
+						  yourself);
+				 addChild: (ToLabel text: (self duration: each value));
+				 yourself) ]
 ]
 
 { #category : 'initialization' }
@@ -306,7 +377,7 @@ MistakesDashboardElement >> rebuild [
 	self
 		section: 'By phase'
 		help:
-		'The three most frequent mistake types in the opening (first 12 moves), the middlegame and the endgame (6 or fewer pieces).'
+		'Your mistakes in the opening (first 12 moves), the middlegame and the endgame (6 or fewer pieces), by category. Hover a segment for its count.'
 		build: [ self buildPhases ].
 	self
 		section: 'Trend'
@@ -317,7 +388,7 @@ MistakesDashboardElement >> rebuild [
 			self
 				section: 'Time'
 				help:
-				'Averages over every reviewed moment, of every time control: per moment kind, per question, and for the marking pass. The last line shows how the time per moment changes, block by block.'
+				'Averages over every review, of every time control.'
 				build: [ self buildTimes ] ].
 	selectedTag ifNotNil: [ self buildDetail ]
 ]

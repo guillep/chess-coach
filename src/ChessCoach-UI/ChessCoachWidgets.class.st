@@ -37,6 +37,38 @@ ChessCoachWidgets class >> centered: aBoard [
 ]
 
 { #category : 'building' }
+ChessCoachWidgets class >> choiceBar: someAssociations selected: aValue do: aBlock [
+	"One toggle per label -> value association, in one row, exactly one checked. The chosen one has the toggle's colour and a tick, as everywhere in the app."
+
+	| bar group buttons mark |
+	bar := ToElement new
+		       layout: BlFlowLayout horizontal;
+		       fitContent;
+		       yourself.
+	group := ToCheckableGroup new.
+	buttons := someAssociations collect: [ :each |
+		           | button |
+		           button := ToToggleButton new.
+		           group register: button.
+		           bar addChild: button.
+		           each -> button ].
+	mark := [
+	        buttons do: [ :each |
+		        each value labelText: (each value isChecked
+				         ifTrue: [ '✓ ' , each key key ]
+				         ifFalse: [ each key key ]) ] ].
+	buttons do: [ :each |
+		each key value = aValue ifTrue: [ each value check ] ].
+	mark value.
+	buttons do: [ :each |
+		each value newCheckAction: [
+			each value isChecked ifTrue: [
+				mark value.
+				aBlock value: each key value ] ] ].
+	^ bar
+]
+
+{ #category : 'building' }
 ChessCoachWidgets class >> credits [
 	"Done with Pharo, Bloc and love, by me"
 
@@ -431,25 +463,9 @@ ChessCoachWidgets class >> separator [
 
 { #category : 'building' }
 ChessCoachWidgets class >> speedBar: aSpeedOrNil do: aBlock [
-	"Toggle buttons for the time controls in one row, aSpeedOrNil checked (nil is All). A Toplo checkable group keeps exactly one checked; checking one gives its speed to aBlock."
+	"The time controls, aSpeedOrNil chosen (nil is All); aBlock receives the chosen speed"
 
-	| bar group |
-	bar := ToElement new
-		       layout: BlLinearLayout horizontal;
-		       fitContent;
-		       yourself.
-	group := ToCheckableGroup new.
-	self speeds do: [ :each |
-			| button |
-			button := ToToggleButton new
-				          labelText: each key;
-				          yourself.
-			group register: button.
-			each value = aSpeedOrNil ifTrue: [ button check ].
-			button newCheckAction: [
-				button isChecked ifTrue: [ aBlock value: each value ] ].
-			bar addChild: button ].
-	^ bar
+	^ self choiceBar: self speeds selected: aSpeedOrNil do: aBlock
 ]
 
 { #category : 'accessing' }

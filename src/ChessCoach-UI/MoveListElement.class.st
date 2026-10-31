@@ -56,12 +56,18 @@ MoveListElement >> buildUI [
 			c horizontal matchParent.
 			c vertical fitContent ].
 	toggleButton := ToToggleButton new
-		                labelText: 'Compact';
+		                labelText: (layoutMode = #compact
+				                 ifTrue: [ '✓ Compact' ]
+				                 ifFalse: [ 'Compact' ]);
 		                tooltipString: 'Show the moves as running text';
 		                margin: (BlInsets all: 4);
 		                yourself.
 	toggleButton checked: layoutMode = #compact.
-	toggleButton newCheckAction: [ self toggleLayout ].
+	toggleButton newCheckAction: [
+		toggleButton labelText: (toggleButton isChecked
+				 ifTrue: [ '✓ Compact' ]
+				 ifFalse: [ 'Compact' ]).
+		self toggleLayout ].
 	header addChild: toggleButton.
 	self addChild: header.
 	compactContainer := BlElement new.

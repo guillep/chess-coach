@@ -86,8 +86,6 @@ ReviewTimesTest >> testDashboardShowsTheTimeSection [
 					  MistakeRecord fromDictionary: each ]))
 		times: (ReviewTimes fromReviewDictionaries: { dictionary }).
 	self assert: (dashboard texts includes: 'Time').
-	self assert: (dashboard texts includes:
-			 'Marking pass: 30 s per game, 15 s per move').
-	self assert: (dashboard texts anySatisfy: [ :each |
-			 each beginsWith: 'Per reviewed moment: 55 s (mistake 1 min 30 s' ])
+	self assert: (dashboard texts includes: 'Which moments take you longest').
+	self assert: (dashboard texts includes: '1 min 30 s')
 ]

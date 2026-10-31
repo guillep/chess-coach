@@ -7,12 +7,151 @@ Class {
 	#instVars : [
 		'session',
 		'gameBlock',
-		'zone'
+		'zone',
+		'editing',
+		'configured',
+		'confirming',
+		'toolbar',
+		'titleField'
 	],
 	#category : 'ChessCoach-UI-App',
 	#package : 'ChessCoach-UI',
 	#tag : 'App'
 }
+
+{ #category : 'actions' }
+HomeElement >> addWidgetOf: aClass [
+
+	self grid widgets add: (aClass atCell: (0 @ 1000 extent: 6 @ 4)).
+	self grid compact.
+	self update
+]
+
+{ #category : 'building' }
+HomeElement >> barOf: aWidget in: aCard [
+	"Drag it to move the card"
+
+	| bar start |
+	bar := ToElement new
+		       id: #bar;
+		       layout:
+			       (BlLinearLayout horizontal alignCenterRight cellSpacing: 4);
+		       hMatchParent;
+		       vFitContent;
+		       padding: (BlInsets all: 4);
+		       background: (Color gray alpha: 0.15);
+		       yourself.
+	bar addChild: (self toolButton: 'Configure' do: [
+				 self keepTitle.
+				 configured := configured == aWidget
+					               ifTrue: [ nil ]
+					               ifFalse: [ aWidget ].
+				 self update ]).
+	bar addChild:
+		(self toolButton: 'Remove' do: [ self remove: aWidget ]).
+	bar addEventHandlerOn: BlDragStartEvent do: [ :event |
+			event consume.
+			start := event position ].
+	bar addEventHandlerOn: BlDragEvent do: [ :event |
+			aCard position: aCard position + (event position - start).
+			start := event position ].
+	bar
+		addEventHandlerOn: BlDragEndEvent
+		do: [ :event | self drop: aWidget at: aCard position ].
+	^ bar
+]
+
+{ #category : 'building' }
+HomeElement >> cardOf: aWidget [
+	"The widget's title and rows, scrolling inside the card. While editing it has a bar to drag, its options unfold above the content, and a corner resizes it."
+
+	| rows card column |
+	rows := aWidget rowsOn: self.
+	column := ToElement new
+		          layout: (BlLinearLayout vertical cellSpacing: 6);
+		          hMatchParent;
+		          vFitContent;
+		          padding: (BlInsets all: 12);
+		          yourself.
+	configured == aWidget ifTrue: [
+			titleField := ToTextField new
+				              hMatchParent;
+				              text: aWidget title;
+				              yourself.
+			column addChild: titleField.
+			(aWidget optionRowsOn: self) do: [ :each | column addChild: each ] ].
+	column addChild: (ChessCoachWidgets heading: aWidget title help: nil).
+	rows do: [ :each | column addChild: each ].
+	card := ToElement new
+		        layout: BlLinearLayout vertical;
+		        border: (BlBorder paint: Color gray width: 1);
+		        geometry: (BlRoundedRectangleGeometry cornerRadius: 6);
+		        yourself.
+	card userData at: #widget put: aWidget.
+	editing ifTrue: [ card addChild: (self barOf: aWidget in: card) ].
+	card addChild: (ChessCoachWidgets scrollable: column).
+	editing ifTrue: [ card addChild: (self cornerOf: aWidget in: card) ].
+	^ card
+]
+
+{ #category : 'actions' }
+HomeElement >> confirm: aString then: aBlock [
+
+	confirming := aString -> aBlock.
+	self update
+]
+
+{ #category : 'building' }
+HomeElement >> cornerOf: aWidget in: aCard [
+	"Drag it to resize the card"
+
+	| corner start |
+	corner := ToElement new
+		          id: #corner;
+		          extent: 14 @ 14;
+		          background: (Color gray alpha: 0.5);
+		          constraintsDo: [ :c |
+				          c ignoreByLayout.
+				          c ignored horizontal alignRight.
+				          c ignored vertical alignBottom ];
+		          yourself.
+	corner addEventHandlerOn: BlDragStartEvent do: [ :event |
+			event consume.
+			start := event position ].
+	corner addEventHandlerOn: BlDragEvent do: [ :event |
+			aCard size: aCard extent + (event position - start).
+			start := event position ].
+	corner
+		addEventHandlerOn: BlDragEndEvent
+		do: [ :event | self resize: aWidget to: aCard extent ].
+	^ corner
+]
+
+{ #category : 'actions' }
+HomeElement >> drop: aWidget at: aPoint [
+	"Snap to the nearest cell"
+
+	| column |
+	column := zone width - 16 / 12.
+	self grid
+		place: aWidget
+		at: ((aPoint x / column) rounded @ (aPoint y / 40) rounded extent:
+				 aWidget cell extent).
+	self placeCards
+]
+
+{ #category : 'actions' }
+HomeElement >> finishSaving: aBoolean [
+	"Done saves; Cancel goes back to what the file has"
+
+	self keepTitle.
+	aBoolean
+		ifTrue: [ session homeConfiguration save ]
+		ifFalse: [ session homeConfiguration reload ].
+	editing := false.
+	configured := nil.
+	self update
+]
 
 { #category : 'building' }
 HomeElement >> gameButton: anEntry [
@@ -27,26 +166,120 @@ HomeElement >> gameButton: anEntry [
 		  yourself
 ]
 
+{ #category : 'accessing' }
+HomeElement >> grid [
+
+	^ session homeConfiguration grid
+]
+
 { #category : 'initialization' }
 HomeElement >> initialize [
 
 	super initialize.
 	gameBlock := [ :entry |  ].
+	editing := false.
 	self layout: BlFrameLayout new.
 	self matchParent.
 	zone := ToElement new
-		        layout: (BlLinearLayout vertical cellSpacing: 12);
+		        layout: BlBasicLayout new;
 		        hMatchParent;
-		        vFitContent;
-		        padding: (BlInsets right: 16);
+		        vExact: 0;
 		        yourself.
-	self addChild: (ChessCoachWidgets
-			 page: 'Home'
-			 subtitle: 'Pour a mate. Here is what is going on.'
-			 body: (ChessCoachWidgets scrollable: zone)).
+	toolbar := ToElement new
+		           layout:
+			           (BlLinearLayout horizontal alignCenterRight
+				            cellSpacing: 8);
+		           hMatchParent;
+		           vFitContent;
+		           padding: (BlInsets top: 0 left: 0 bottom: 8 right: 24);
+		           yourself.
+	self addChild: (ChessCoachWidgets page: {
+				 (ChessCoachWidgets
+					  pageTitle: 'Home'
+					  subtitle: 'Pour a mate. Here is what is going on.').
+				 toolbar.
+				 (ChessCoachWidgets scrollable: zone) }).
+	zone
+		addEventHandlerOn: BlElementExtentChangedEvent
+		do: [ :event | self placeCards ].
 	self
 		addEventHandlerOn: BlElementAddedToSceneGraphEvent
 		do: [ :event | session ifNotNil: [ self update ] ]
+]
+
+{ #category : 'layout' }
+HomeElement >> isStacked [
+
+	^ zone width < 700
+]
+
+{ #category : 'actions' }
+HomeElement >> keepTitle [
+	"The title being edited; an empty one goes back to the default"
+
+	(configured notNil and: [ titleField notNil ]) ifTrue: [
+			configured
+				option: 'title'
+				put: (titleField text asString ifEmpty: [ nil ]) ].
+	titleField := nil
+]
+
+{ #category : 'layout' }
+HomeElement >> placeCards [
+	"Cards at their cells, with columns that scale; stacked in reading order in a narrow window, without changing what is saved. Right padding leaves room for the scrollbar."
+
+	| column bottom |
+	session ifNil: [ ^ self ].
+	column := zone width - 16 / 12.
+	bottom := 0.
+	zone children do: [ :card |
+			| cell rectangle |
+			cell := (card userData at: #widget) cell.
+			rectangle := self isStacked
+				             ifTrue: [
+				             0 @ bottom extent:
+					             zone width - 16 @ (cell height * 40 - 8) ]
+				             ifFalse: [
+						             cell left * column @ (cell top * 40) extent:
+							             cell width * column - 8 @ (cell height * 40 - 8) ].
+			card position: rectangle origin.
+			card extent: rectangle extent.
+			bottom := bottom max: rectangle bottom + 8 ].
+	zone height = bottom ifFalse: [ zone vExact: bottom ]
+]
+
+{ #category : 'actions' }
+HomeElement >> remove: aWidget [
+
+	| removal |
+	removal := [
+		           self grid widgets remove: aWidget.
+		           self grid compact ].
+	aWidget options
+		ifEmpty: [
+				removal value.
+				self update ]
+		ifNotEmpty: [
+		self confirm: 'Remove ' , aWidget title , '?' then: removal ]
+]
+
+{ #category : 'actions' }
+HomeElement >> resize: aWidget to: aPoint [
+	"Snap to cells, not below the type's minimum"
+
+	| column minimum |
+	column := zone width - 16 / 12.
+	minimum := aWidget class minimumExtent.
+	self grid place: aWidget at: (aWidget cell origin extent:
+			 ((aPoint x / column) rounded max: minimum x)
+			 @ ((aPoint y / 40) rounded max: minimum y)).
+	self placeCards
+]
+
+{ #category : 'accessing' }
+HomeElement >> session [
+
+	^ session
 ]
 
 { #category : 'accessing' }
@@ -56,48 +289,58 @@ HomeElement >> session: aChessCoachSession [
 	self update
 ]
 
+{ #category : 'private' }
+HomeElement >> toolButton: aString do: aBlock [
+
+	^ ToButton new
+		  labelText: aString;
+		  clickAction: aBlock;
+		  yourself
+]
+
 { #category : 'updating' }
 HomeElement >> update [
-	"The suggestion, the numbers, the latest games and the notifications"
+	"The toolbar and one card per widget"
 
-	| games records notifications |
+	self updateToolbar.
 	zone removeChildren.
-	games := session games.
-	records := session mistakeDatabase.
-	session suggestedGame ifNotNil: [ :entry |
-			zone addChild: (ChessCoachWidgets
-					 section: 'Do you want to review this game?'
-					 help:
-					 'Your latest lost game without a review, or the latest game without one.'
-					 rows: { (self gameButton: entry) }) ].
-	zone addChild:
-		(ChessCoachWidgets section: 'Your numbers' help: nil rows: {
-				 (ToLabel text: ('{1} games · {2} reviewed' format: {
-							   games size.
-							   session reviewedGameIds size })).
-				 (ToLabel text: (records tagFrequencies
-						   ifEmpty: [ 'No mistakes tagged yet' ]
-						   ifNotEmpty: [ :frequencies |
-								   'Most frequent mistake: '
-								   ,
-								   (MistakeTaxonomy default tagAt: frequencies keys first)
-									   name ])) }).
-	zone addChild: (ChessCoachWidgets
-			 section: 'Latest games'
-			 help: nil
-			 rows: ((games first: (games size min: 5)) collect: [ :each |
-					  self gameButton: each ])).
-	notifications := session notifications visible.
-	notifications ifNotEmpty: [
-			zone addChild: (ChessCoachWidgets
-					 section: 'Notifications'
-					 help: nil
-					 rows: (notifications collect: [ :each |
-								  ChessCoachWidgets paragraph: each title
-									  ,
-									  (each text
-										   ifEmpty: [ '' ]
-										   ifNotEmpty: [ :text | ': ' , text ]) ])) ]
+	self grid widgets do: [ :each | zone addChild: (self cardOf: each) ].
+	self placeCards
+]
+
+{ #category : 'updating' }
+HomeElement >> updateToolbar [
+
+	toolbar removeChildren.
+	confirming ifNotNil: [
+			toolbar addChild: (ToLabel text: confirming key).
+			toolbar addChild: (self toolButton: 'Yes' do: [
+						 | action |
+						 action := confirming value.
+						 confirming := nil.
+						 action value.
+						 self update ]).
+			toolbar addChild: (self toolButton: 'No' do: [
+						 confirming := nil.
+						 self update ]).
+			^ self ].
+	editing ifFalse: [
+			toolbar addChild: (self toolButton: 'Customize' do: [
+						 editing := true.
+						 self update ]).
+			^ self ].
+	HomeWidget subclasses do: [ :class |
+			toolbar addChild: (self
+					 toolButton: '+ ' , (class new defaultTitle truncateTo: 14)
+					 do: [ self addWidgetOf: class ]) ].
+	toolbar addChild: (self toolButton: 'Reset' do: [
+				 self
+					 confirm: 'Reset to the default Home?'
+					 then: [ session homeConfiguration resetToDefault ] ]).
+	toolbar addChild:
+		(self toolButton: 'Cancel' do: [ self finishSaving: false ]).
+	toolbar addChild:
+		(self toolButton: 'Done' do: [ self finishSaving: true ])
 ]
 
 { #category : 'accessing' }

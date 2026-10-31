@@ -16,7 +16,8 @@ Class {
 		'notifications',
 		'scheduler',
 		'updater',
-		'availableUpdate'
+		'availableUpdate',
+		'homeConfiguration'
 	],
 	#category : 'ChessCoach-App',
 	#package : 'ChessCoach-App'
@@ -377,7 +378,7 @@ ChessCoachSession >> entriesOf: anOpeningTree at: aKey [
 ]
 
 { #category : 'home' }
-ChessCoachSession >> entry: anEntry passes: aGameFilter reviewed: someGameIds [
+ChessCoachSession >> entry: anEntry passes: aGameFilter reviewed: someStates [
 	"Cheap criteria first: result and color need the parsed game"
 
 	| game colors |
@@ -387,7 +388,7 @@ ChessCoachSession >> entry: anEntry passes: aGameFilter reviewed: someGameIds [
 			anEntry date < (Date today subtractDays: days) yyyymmdd ifTrue: [
 				^ false ] ].
 	(aGameFilter at: 'review') ifNotNil: [ :review |
-			(someGameIds includes: anEntry gameId) = (review = 'reviewed')
+			(someStates at: anEntry gameId ifAbsent: [ 'unreviewed' ]) = review
 				ifFalse: [ ^ false ] ].
 	((aGameFilter at: 'color') isNil and: [
 		 (aGameFilter at: 'result') isNil ]) ifTrue: [ ^ true ].
@@ -520,10 +521,10 @@ ChessCoachSession >> gamesMatching: anOpeningTree [
 ChessCoachSession >> gamesPassing: aGameFilter [
 	"The stored games aGameFilter accepts, newest first"
 
-	| reviewed |
-	reviewed := self reviewedGameIds.
+	| states |
+	states := self reviewStates.
 	^ (self gamesWithSpeed: (aGameFilter at: 'speed')) select: [ :entry |
-		  self entry: entry passes: aGameFilter reviewed: reviewed ]
+		  self entry: entry passes: aGameFilter reviewed: states ]
 ]
 
 { #category : 'games' }
@@ -541,6 +542,24 @@ ChessCoachSession >> gamesWithSpeed: aSpeedOrNil [
 	backfilled ifTrue: [ importer indexManager saveIndexToDisk ].
 	aSpeedOrNil ifNil: [ ^ games ].
 	^ games select: [ :entry | entry speed = aSpeedOrNil ]
+]
+
+{ #category : 'home' }
+ChessCoachSession >> homeConfiguration [
+	"The Home's widgets, in home.json next to the games"
+
+	^ homeConfiguration ifNil: [
+			  homeConfiguration := HomeConfiguration
+				                       onFile:
+				                       importer fileStore baseDirectory
+				                       / 'home.json'
+				                       report: [ :text |
+						                       self notifications post:
+							                       (ChessCoachNotification
+								                        key: 'home-' , text
+								                        kind: #home
+								                        title: 'Home'
+								                        text: text) ] ]
 ]
 
 { #category : 'notifications' }
@@ -604,6 +623,19 @@ ChessCoachSession >> isFirstRun [
 ChessCoachSession >> isLoggedIn [
 
 	^ importer isLoggedIn
+]
+
+{ #category : 'home' }
+ChessCoachSession >> isUnfinishedReview: aString [
+	"While marking, or with planned moments left; without a plan, every moment counts. Older files have neither field."
+
+	| dictionary planned |
+	dictionary := STONJSON fromString: aString.
+	(dictionary at: 'marking' ifAbsent: [ false ]) ifTrue: [ ^ true ].
+	planned := dictionary at: 'planned' ifAbsent: [ nil ].
+	^ (dictionary at: 'moments' ifAbsent: [ #(  ) ]) anySatisfy: [ :each |
+			  (planned isNil or: [ planned includes: (each at: 'ply') ]) and: [
+				  (CoachMomentReview fromDictionary: each) isReviewed not ] ]
 ]
 
 { #category : 'opening trees' }
@@ -957,6 +989,23 @@ ChessCoachSession >> reviewFilesOf: aGameId [
 		  aGameId , '.review-*.json'
 ]
 
+{ #category : 'home' }
+ChessCoachSession >> reviewStates [
+	"Game id to 'reviewed' or 'inProgress'; games without a review are absent. A review is in progress while it is being marked or has moments left, and one in progress outweighs finished ones."
+
+	| states directory |
+	states := Dictionary new.
+	directory := importer fileStore baseDirectory / 'games'.
+	directory exists ifFalse: [ ^ states ].
+	(directory filesMatching: '*.review-*.json') do: [ :file |
+			| id |
+			id := file basename copyUpToSubstring: '.review-'.
+			(self isUnfinishedReview: file contents)
+				ifTrue: [ states at: id put: 'inProgress' ]
+				ifFalse: [ states at: id ifAbsentPut: [ 'reviewed' ] ] ].
+	^ states
+]
+
 { #category : 'coach' }
 ChessCoachSession >> reviewTimes [
 	"How long my reviews take, from every saved review"
@@ -1097,6 +1146,31 @@ ChessCoachSession >> suggestedGame [
 				  colors size = 1 and: [
 					  (self pointsIn: game as: colors first) = 0 ] ]
 		  ifNone: [ pending first ]
+]
+
+{ #category : 'home' }
+ChessCoachSession >> suggestedGames: aGameFilter [
+	"Recent games to review: those in progress, then lost ones, then the rest. Finished reviews only when aGameFilter asks for them."
+
+	| states recent candidates lost |
+	states := self reviewStates.
+	recent := self gamesPassing: aGameFilter.
+	recent := recent first: (recent size min: 30).
+	candidates := (aGameFilter at: 'review') = 'reviewed'
+		              ifTrue: [ recent ]
+		              ifFalse: [
+				              recent reject: [ :each |
+					              (states at: each gameId ifAbsent: [ nil ])
+					              = 'reviewed' ] ].
+	lost := candidates select: [ :entry |
+			        | game colors |
+			        game := self gameFor: entry.
+			        colors := self myColorsIn: game.
+			        colors size = 1 and: [
+				        (self pointsIn: game as: colors first) = 0 ] ].
+	^ ((candidates select: [ :each |
+		    (states at: each gameId ifAbsent: [ nil ]) = 'inProgress' ])
+	   , lost , candidates) asOrderedCollection removeDuplicates asArray
 ]
 
 { #category : 'updates' }

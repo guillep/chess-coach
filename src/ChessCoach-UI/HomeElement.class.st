@@ -143,7 +143,7 @@ HomeElement >> drop: aWidget at: aPoint [
 	column := zone width - 16 / 12.
 	self grid
 		place: aWidget
-		at: ((aPoint x / column) rounded @ (aPoint y / 40) rounded extent:
+		at: ((aPoint x / column) rounded @ (aPoint y / self rowHeight) rounded extent:
 				 aWidget cell extent).
 	self placeCards
 ]
@@ -213,6 +213,9 @@ HomeElement >> initialize [
 		addEventHandlerOn: BlElementExtentChangedEvent
 		do: [ :event | self placeCards ].
 	self
+		addEventHandlerOn: BlElementExtentChangedEvent
+		do: [ :event | self placeCards ].
+	self
 		addEventHandlerOn: BlElementAddedToSceneGraphEvent
 		do: [ :event | session ifNotNil: [ self update ] ]
 ]
@@ -238,9 +241,10 @@ HomeElement >> keepTitle [
 HomeElement >> placeCards [
 	"Cards at their cells, with columns that scale; stacked in reading order in a narrow window, without changing what is saved. Right padding leaves room for the scrollbar."
 
-	| column bottom |
+	| column row bottom |
 	session ifNil: [ ^ self ].
 	column := zone width - 16 / 12.
+	row := self rowHeight.
 	bottom := 0.
 	zone children do: [ :card |
 			| cell rectangle |
@@ -248,10 +252,10 @@ HomeElement >> placeCards [
 			rectangle := self isStacked
 				             ifTrue: [
 				             0 @ bottom extent:
-					             zone width - 16 @ (cell height * 40 - 8) ]
+					             zone width - 16 @ (cell height * row - 8) ]
 				             ifFalse: [
-						             cell left * column @ (cell top * 40) extent:
-							             cell width * column - 8 @ (cell height * 40 - 8) ].
+						             cell left * column @ (cell top * row) extent:
+							             cell width * column - 8 @ (cell height * row - 8) ].
 			card position: rectangle origin.
 			card extent: rectangle extent.
 			bottom := bottom max: rectangle bottom + 8 ].
@@ -282,8 +286,15 @@ HomeElement >> resize: aWidget to: aPoint [
 	minimum := aWidget class minimumExtent.
 	self grid place: aWidget at: (aWidget cell origin extent:
 			 ((aPoint x / column) rounded max: minimum x)
-			 @ ((aPoint y / 40) rounded max: minimum y)).
+			 @ ((aPoint y / self rowHeight) rounded max: minimum y)).
 	self placeCards
+]
+
+{ #category : 'layout' }
+HomeElement >> rowHeight [
+	"Rows scale with the window as columns do: the visible height holds 18 of them, and text sets a minimum"
+
+	^ self height / 18 max: 32
 ]
 
 { #category : 'accessing' }

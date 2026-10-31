@@ -87,6 +87,31 @@ HomeElementTest >> testDefaultHomeShowsItsFourCards [
 ]
 
 { #category : 'tests' }
+HomeElementTest >> testDraggingABarMovesTheCard [
+
+	| widget bar |
+	self click: 'Customize'.
+	widget := self widgets last.
+	bar := home cards last childWithId: #bar.
+	BlSpace simulateDragOn: bar by: 0 @ -300.
+	self pulse.
+	self assert: widget cell top < 7
+]
+
+{ #category : 'tests' }
+HomeElementTest >> testDraggingTheCornerResizesTheCard [
+
+	| widget corner |
+	self click: 'Customize'.
+	widget := self widgets last.
+	corner := home cards last childWithId: #corner.
+	BlSpace simulateDragOn: corner by: -300 @ -120.
+	self pulse.
+	self assert: widget cell width < 12.
+	self assert: widget cell height < 6
+]
+
+{ #category : 'tests' }
 HomeElementTest >> testDroppingAndResizingSnapToCells [
 
 	| widget |

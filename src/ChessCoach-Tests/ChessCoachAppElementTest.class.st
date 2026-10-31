@@ -11,6 +11,26 @@ Class {
 	#package : 'ChessCoach-Tests'
 }
 
+{ #category : 'support' }
+ChessCoachAppElementTest >> choose: aString in: aSelect [
+	"Press on the dropdown, which opens it, release, and click the option showing aString"
+
+	| option |
+	BlSpace simulateMouseDownOn: aSelect.
+	3 timesRepeat: [
+		scripter pulse.
+		(Delay forMilliseconds: 50) wait ].
+	BlSpace simulateMouseUpOn: aSelect.
+	scripter pulse.
+	option := nil.
+	aSelect popupListElement allChildrenBreadthFirstDo: [ :each |
+		(each isKindOf: ToLabel) ifTrue: [
+			each text asString = aString ifTrue: [ option := each ] ] ].
+	self assert: option notNil description: 'option listed'.
+	BlSpace simulateClickOn: option.
+	scripter pulse
+]
+
 { #category : 'helpers' }
 ChessCoachAppElementTest >> click: anElement [
 	"Show the page that holds anElement (Settings or Games) when it isn't shown, then click it"
@@ -104,6 +124,24 @@ ChessCoachAppElementTest >> testArrowKeysMoveTheGameSelection [
 	scripter keyClick: KeyboardKey up.
 	scripter syncContinue.
 	self assert: app selectedEntry equals: app games first
+]
+
+{ #category : 'tests' }
+ChessCoachAppElementTest >> testClickingTheDropdownsFiltersTheGames [
+
+	| games |
+	session login.
+	session loadMoreGames.
+	app showPage: #Games.
+	scripter pulse.
+	games := app games.
+	session saveReview: (session newReviewFor: games first).
+	scripter pulse.
+	self choose: 'In progress' in: app reviewSelect.
+	self assert: app games size equals: 1.
+	(Delay forMilliseconds: 600) wait.
+	self choose: 'All reviews' in: app reviewSelect.
+	self assert: app games size equals: games size
 ]
 
 { #category : 'tests' }
@@ -706,6 +744,16 @@ ChessCoachAppElementTest >> testTheGameTableKeepsItsColumnsWhenFirstShownFromAno
 	lefts := statsApp gameTable header cellContainers collect: [ :each |
 		         each bounds inSpace left ].
 	self assert: lefts asSet size equals: lefts size
+]
+
+{ #category : 'tests' }
+ChessCoachAppElementTest >> testTimeControlDropdownSaysWhatItFilters [
+
+	app showPage: #Games.
+	scripter pulse.
+	self
+		assert: app speedSelect selectedDataItem key
+		equals: 'All time controls'
 ]
 
 { #category : 'tests' }

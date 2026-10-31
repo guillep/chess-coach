@@ -226,7 +226,7 @@ ChessCoachAppElement >> filterBySpeed: aSpeedOrNil [
 	"Show only the games of one time control (all when nil), as choosing it does"
 
 	speedSelect selecter selectIndex:
-		(self speeds findFirst: [ :each | each value = aSpeedOrNil ])
+		(self speedChoices findFirst: [ :each | each value = aSpeedOrNil ])
 ]
 
 { #category : 'initialization' }
@@ -548,7 +548,7 @@ ChessCoachAppElement >> newGamesPage [
 	"A bar with the time control and review filters, Refresh and Load more; below it the game table and the selected game"
 
 	| bar body |
-	speedSelect := self newFilterSelect: self speeds.
+	speedSelect := self newFilterSelect: self speedChoices.
 	reviewSelect := self newFilterSelect: self reviewChoices.
 	refreshButton := ToButton new
 		                 labelText: 'Refresh';
@@ -921,6 +921,12 @@ ChessCoachAppElement >> reviewChoices [
 ]
 
 { #category : 'accessing' }
+ChessCoachAppElement >> reviewSelect [
+
+	^ reviewSelect
+]
+
+{ #category : 'accessing' }
 ChessCoachAppElement >> reviewStateOf: aGameIndexEntry [
 
 	^ (reviewStates ifNil: [ Dictionary new ])
@@ -1130,6 +1136,14 @@ ChessCoachAppElement >> showWizard [
 	^ wizard
 ]
 
+{ #category : 'accessing' }
+ChessCoachAppElement >> speedChoices [
+	"As the speeds, with an All that says what it is about"
+
+	^ self speeds collect: [ :each |
+		  (each value ifNil: [ 'All time controls' ] ifNotNil: [ each key ]) -> each value ]
+]
+
 { #category : 'private' }
 ChessCoachAppElement >> speedNameOf: aGameIndexEntry [
 
@@ -1146,6 +1160,12 @@ ChessCoachAppElement >> speedRankOf: aGameIndexEntry [
 
 	^ #( 'ultraBullet' 'bullet' 'blitz' 'rapid' 'classical' 'correspondence' )
 		  indexOf: aGameIndexEntry speed
+]
+
+{ #category : 'accessing' }
+ChessCoachAppElement >> speedSelect [
+
+	^ speedSelect
 ]
 
 { #category : 'private' }

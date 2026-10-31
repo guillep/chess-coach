@@ -109,9 +109,9 @@ HomeElement >> confirm: aString then: aBlock [
 
 { #category : 'building' }
 HomeElement >> cornerOf: aWidget in: aCard [
-	"Drag it to resize the card"
+	"Drag it to resize the card: the size follows the mouse from where the drag started, whether or not a layout has run"
 
-	| corner start |
+	| corner start startExtent target |
 	corner := ToElement new
 		          id: #corner;
 		          extent: 14 @ 14;
@@ -123,13 +123,15 @@ HomeElement >> cornerOf: aWidget in: aCard [
 		          yourself.
 	corner addEventHandlerOn: BlDragStartEvent do: [ :event |
 			event consume.
-			start := event position ].
+			start := event position.
+			startExtent := aCard extent.
+			target := startExtent ].
 	corner addEventHandlerOn: BlDragEvent do: [ :event |
-			aCard size: aCard extent + (event position - start).
-			start := event position ].
+			target := startExtent + (event position - start).
+			aCard extent: target ].
 	corner
 		addEventHandlerOn: BlDragEndEvent
-		do: [ :event | self resize: aWidget to: aCard extent ].
+		do: [ :event | self resize: aWidget to: target ].
 	^ corner
 ]
 

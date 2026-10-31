@@ -195,12 +195,7 @@ SettingsElement >> build [
 			 page: 'Settings'
 			 subtitle:
 			 'Accounts, the board, the engine and the coach model. Every change is saved at once.'
-			 body: (ToElement new
-					   layout: BlLinearLayout horizontal;
-					   matchParent;
-					   addChild: (self newIndexOn: content);
-					   addChild: (widgets scrollable: content);
-					   yourself)).
+			 body: (self newTabsOn: content)).
 	self updateAccounts.
 	self updateNumbers.
 	self updateAppTheme.
@@ -324,7 +319,7 @@ SettingsElement >> inBackground: aBlock then: aUIBlock showingErrorsIn: aStatusL
 { #category : 'accessing' }
 SettingsElement >> indexButtons [
 
-	^ indexElement children asArray allButLast
+	^ indexElement items asArray
 ]
 
 { #category : 'initialization' }
@@ -425,30 +420,37 @@ SettingsElement >> loginOrLogout [
 ]
 
 { #category : 'building' }
-SettingsElement >> newIndexOn: aContent [
-	"A column with one button per section of aContent, by its title; the chosen section is the only one shown. Run setup again stays at the end of the column."
+SettingsElement >> newTabsOn: aContent [
+	"One tab per section of aContent, on top, the content scrolling below. Run setup again goes to the first section."
 
-	| index setup |
+	| pane setup |
 	setup := aContent children first.
 	aContent removeChild: setup.
 	sections := aContent children asArray.
-	index := ToElement new
-		         id: #settingsIndex;
-		         layout: (BlLinearLayout vertical cellSpacing: 4);
-		         width: 180;
-		         vMatchParent;
-		         padding: (BlInsets right: 12);
-		         yourself.
+	aContent removeChildren.
+	sections first addChild: setup.
+	pane := ToTabPaneElement new.
+	pane horizontal: false.
+	pane matchParent.
+	pane showAddTabItemButton: false.
 	self class sectionTitles with: sections do: [ :title :section |
-		index addChild: (ToButton new
+		| scrollable |
+		scrollable := ChessCoachWidgets scrollable: (ToElement new
+				               layout: BlLinearLayout vertical;
+				               hMatchParent;
+				               vFitContent;
+				               padding: (BlInsets top: 12 left: 0 bottom: 0 right: 16);
+				               addChild: section;
+				               yourself).
+		pane addItem: (ToTabButton new
+				 id: title asSymbol;
 				 labelText: title;
-				 hMatchParent;
-				 clickAction: [ self show: section among: sections ];
+				 removable: false;
+				 paneBuilder: [ :page :button :holder | page addChild: scrollable ];
 				 yourself) ].
-	index addChild: setup.
-	self show: sections first among: sections.
-	indexElement := index.
-	^ index
+	pane selecter selectIndex: 1.
+	indexElement := pane.
+	^ pane
 ]
 
 { #category : 'building' }
@@ -630,27 +632,17 @@ SettingsElement >> session: aChessCoachSession section: aSection [
 ]
 
 { #category : 'actions' }
-SettingsElement >> show: aSection among: someSections [
-
-	someSections do: [ :each |
-		each visibility: (each == aSection
-				 ifTrue: [ BlVisibility visible ]
-				 ifFalse: [ BlVisibility gone ]) ]
-]
-
-{ #category : 'actions' }
 SettingsElement >> showSection: aTitle [
-	"As clicking it in the index does"
+	"As clicking its tab does"
 
-	self
-		show: (sections at: (self class sectionTitles indexOf: aTitle))
-		among: sections
+	indexElement selecter selectIndex:
+		(self class sectionTitles indexOf: aTitle)
 ]
 
 { #category : 'accessing' }
 SettingsElement >> shownSections [
 
-	^ sections select: [ :each | each isVisible ]
+	^ sections select: [ :each | each isAttachedToSceneGraph ]
 ]
 
 { #category : 'building' }

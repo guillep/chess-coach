@@ -538,20 +538,6 @@ ChessCoachAppElementTest >> testSelectingARowOpensTheGameView [
 ]
 
 { #category : 'tests' }
-ChessCoachAppElementTest >> testSettingsIndexShowsOneSection [
-
-	| settings shown |
-	app showPage: #Settings.
-	scripter pulse.
-	settings := app settingsElement.
-	settings showSection: 'About'.
-	scripter pulse.
-	shown := settings shownSections.
-	self assert: shown size equals: 1.
-	self assert: settings indexButtons size equals: 9
-]
-
-{ #category : 'tests' }
 ChessCoachAppElementTest >> testSettingsPage [
 
 	| settings chessCom |
@@ -624,6 +610,10 @@ ChessCoachAppElementTest >> testSettingsPage [
 ChessCoachAppElementTest >> testSettingsShowTheAttribution [
 
 	| texts |
+	app showPage: #Settings.
+	scripter pulse.
+	app settingsElement showSection: 'About'.
+	scripter pulse.
 	texts := OrderedCollection new.
 	app settingsElement allChildrenBreadthFirstDo: [ :each |
 		(each isKindOf: ToLabel) ifTrue: [ texts add: each text asString ].
@@ -636,6 +626,20 @@ ChessCoachAppElementTest >> testSettingsShowTheAttribution [
 	self assert: (texts anySatisfy: [ :each |
 			 each includesSubstring: 'MIT License' ]).
 	self assert: (texts includes: 'https://github.com/guillep/chess-coach')
+]
+
+{ #category : 'tests' }
+ChessCoachAppElementTest >> testSettingsTabsShowOneSection [
+
+	| settings shown |
+	app showPage: #Settings.
+	scripter pulse.
+	settings := app settingsElement.
+	settings showSection: 'About'.
+	scripter pulse.
+	shown := settings shownSections.
+	self assert: shown size equals: 1.
+	self assert: settings indexButtons size equals: 9
 ]
 
 { #category : 'tests' }

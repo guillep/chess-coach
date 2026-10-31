@@ -395,15 +395,11 @@ ChessCoachAppElement >> newBrand [
 
 	^ ToElement new
 		  layout:
-			  (BlLinearLayout horizontal alignCenterLeft cellSpacing: 16);
+			  (BlLinearLayout horizontal alignCenterLeft cellSpacing: 50);
 		  hMatchParent;
 		  vFitContent;
-		  addChild: (ToElement new
-				   layout: BlLinearLayout horizontal alignCenter;
-				   width: 104;
-				   vFitContent;
-				   addChild: (ChessCoachWidgets logo: 52);
-				   yourself);
+		  margin: (BlInsets left: -54);
+		  addChild: (ChessCoachWidgets logo: 52);
 		  addChild: (ToLabel new
 				   text: ('Chessmate' asRopedText
 						    fontSize: 24;

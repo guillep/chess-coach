@@ -316,9 +316,9 @@ ChessCoachAppElement >> initialize [
 						  right: 12);
 				 addChild: self newBell;
 				 yourself);
-		addChild: ChessCoachWidgets separator;
+		addChild: self newBarLine;
 		addChild: navigation;
-		addChild: ChessCoachWidgets separator;
+		addChild: self newBarLine;
 		addChild: self newStatusLine
 ]
 
@@ -358,6 +358,15 @@ ChessCoachAppElement >> loginButton [
 ChessCoachAppElement >> navigation [
 
 	^ navigation
+]
+
+{ #category : 'initialization' }
+ChessCoachAppElement >> newBarLine [
+	"A separator that touches what it separates: the bars and the tabs have no gap between them."
+
+	^ ChessCoachWidgets separator
+		  margin: BlInsets empty;
+		  yourself
 ]
 
 { #category : 'initialization' }

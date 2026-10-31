@@ -329,6 +329,24 @@ HomeElementTest >> testResetAsksAndGoesBackToTheDefault [
 ]
 
 { #category : 'tests' }
+HomeElementTest >> testResizingADroppedCardNeverOverlaps [
+
+	| cells |
+	self click: 'Customize'.
+	BlSpace
+		simulateDragOn: (home cards last childWithId: #corner)
+		by: -300 @ 40.
+	self pulse.
+	BlSpace
+		simulateDragOn: (home cards second childWithId: #corner)
+		by: 0 @ 120.
+	self pulse.
+	cells := self widgets collect: [ :each | each cell ].
+	cells do: [ :a |
+		cells do: [ :b | a == b ifFalse: [ self deny: (a intersects: b) ] ] ]
+]
+
+{ #category : 'tests' }
 HomeElementTest >> testResultsPartitionTheGames [
 
 	| counts |

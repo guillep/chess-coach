@@ -28,14 +28,21 @@ HomeGrid >> compact [
 
 { #category : 'private' }
 HomeGrid >> compactKeeping: aWidgetOrNil [
-	"Lift each widget as high as it fits above the ones already settled. aWidgetOrNil settles first, so the others flow around it."
+	"Lift each widget in reading order as high as it fits above the settled ones. aWidgetOrNil goes first among those on its row, so it wins ties, but never jumps over a widget above it."
 
-	| settled |
+	| settled ordered |
 	settled := OrderedCollection new.
+	ordered := self inReadingOrderWithout: aWidgetOrNil.
 	aWidgetOrNil ifNotNil: [ :widget |
-			self lift: widget among: settled.
-			settled add: widget ].
-	(self inReadingOrderWithout: aWidgetOrNil) do: [ :each |
+			| index |
+			index := ordered findFirst: [ :each |
+				         each cell top >= widget cell top ].
+			ordered := index = 0
+				           ifTrue: [ ordered , { widget } ]
+				           ifFalse: [
+						           (ordered first: index - 1) , { widget }
+						           , (ordered allButFirst: index - 1) ] ].
+	ordered do: [ :each |
 			self lift: each among: settled.
 			settled add: each ]
 ]
@@ -51,17 +58,15 @@ HomeGrid >> inReadingOrderWithout: aWidget [
 
 { #category : 'private' }
 HomeGrid >> lift: aWidget among: someWidgets [
+	"The highest free row: below its own row too, so an overlap read from a file gets repaired"
 
-	| top |
-	top := (0 to: aWidget cell top)
-		       detect: [ :row |
-				       | candidate |
-				       candidate := aWidget cell left @ row extent:
-					                    aWidget cell extent.
-				       someWidgets noneSatisfy: [ :each |
-					       each cell intersects: candidate ] ]
-		       ifNone: [ aWidget cell top ].
-	aWidget cell: (aWidget cell left @ top extent: aWidget cell extent)
+	| row candidate |
+	row := 0.
+	[
+		candidate := aWidget cell left @ row extent: aWidget cell extent.
+		someWidgets anySatisfy: [ :each | each cell intersects: candidate ] ]
+		whileTrue: [ row := row + 1 ].
+	aWidget cell: candidate
 ]
 
 { #category : 'layout' }

@@ -29,9 +29,9 @@ HomeElement >> addWidgetOf: aClass [
 
 { #category : 'building' }
 HomeElement >> barOf: aWidget in: aCard [
-	"Drag it to move the card"
+	"Drag it to move the card: the position follows the mouse from where the drag started, whether or not a layout has run"
 
-	| bar start |
+	| bar start startPosition target |
 	bar := ToElement new
 		       id: #bar;
 		       layout:
@@ -51,13 +51,15 @@ HomeElement >> barOf: aWidget in: aCard [
 		(self toolButton: 'Remove' do: [ self remove: aWidget ]).
 	bar addEventHandlerOn: BlDragStartEvent do: [ :event |
 			event consume.
-			start := event position ].
+			start := event position.
+			startPosition := aCard position.
+			target := startPosition ].
 	bar addEventHandlerOn: BlDragEvent do: [ :event |
-			aCard position: aCard position + (event position - start).
-			start := event position ].
+			target := startPosition + (event position - start).
+			aCard position: target ].
 	bar
 		addEventHandlerOn: BlDragEndEvent
-		do: [ :event | self drop: aWidget at: aCard position ].
+		do: [ :event | self drop: aWidget at: target ].
 	^ bar
 ]
 

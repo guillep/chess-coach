@@ -22,6 +22,16 @@ ChessBoardElementTest >> testAnArrowFollowsADrag [
 ]
 
 { #category : 'tests' }
+ChessBoardElementTest >> testCoordinatesAreLightOnDarkSquares [
+
+	| board squares |
+	board := ChessBoardElement new.
+	squares := board instVarNamed: 'squares'.
+	self assert: (board coordinateColorOn: squares first) equals: (Color black alpha: 0.6).
+	self assert: (board coordinateColorOn: squares second) equals: (Color white alpha: 0.8)
+]
+
+{ #category : 'tests' }
 ChessBoardElementTest >> testMoveListTakesGameAndAnnounces [
 
 	| list selectedPly |

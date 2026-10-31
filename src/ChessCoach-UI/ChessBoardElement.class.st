@@ -136,6 +136,17 @@ ChessBoardElement >> chessPosition: aChessPosition [
 ]
 
 { #category : 'drawing' }
+ChessBoardElement >> coordinateColorOn: aSquareElement [
+	"Light on dark squares, so it reads on every board theme"
+
+	| index |
+	index := squares indexOf: aSquareElement.
+	^ (index - 1 // 8 + (index - 1 \\ 8)) odd
+		  ifTrue: [ Color white alpha: 0.8 ]
+		  ifFalse: [ Color black alpha: 0.6 ]
+]
+
+{ #category : 'drawing' }
 ChessBoardElement >> coordinateLabel: aString in: aSquareElement alignedTop: aBoolean [
 	"A small label in a corner of the square: top-left for ranks, bottom-right for files"
 
@@ -143,7 +154,7 @@ ChessBoardElement >> coordinateLabel: aString in: aSquareElement alignedTop: aBo
 	label := BlTextElement new
 		         text: (aString asRopedText
 				          fontSize: 11;
-				          foreground: (Color black alpha: 0.6);
+				          foreground: (self coordinateColorOn: aSquareElement);
 				          yourself);
 		         padding: (BlInsets all: 2);
 		         preventMeAndChildrenMouseEvents;

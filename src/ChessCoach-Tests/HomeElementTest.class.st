@@ -267,6 +267,7 @@ HomeElementTest >> testNotificationsCanBeDismissedAndShown [
 
 { #category : 'tests' }
 HomeElementTest >> testNotificationsHonourKindsUnreadAndCount [
+	"Rows come with a separator between them"
 
 	| widget |
 	#( #newGames #update #error ) doWithIndex: [ :kind :index |
@@ -276,12 +277,12 @@ HomeElementTest >> testNotificationsHonourKindsUnreadAndCount [
 					 title: kind asString
 					 text: '') ].
 	widget := HomeNotificationsWidget atCell: (0 @ 0 extent: 6 @ 4).
-	self assert: (widget rowsOn: home) size equals: 3.
+	self assert: (widget rowsOn: home) size equals: 5.
 	widget option: 'count' put: 2.
-	self assert: (widget rowsOn: home) size equals: 2.
+	self assert: (widget rowsOn: home) size equals: 3.
 	widget option: 'count' put: nil.
 	widget option: 'hiddenKinds' put: #( 'error' ).
-	self assert: (widget rowsOn: home) size equals: 2.
+	self assert: (widget rowsOn: home) size equals: 3.
 	session notifications markAllRead.
 	widget option: 'unreadOnly' put: true.
 	self

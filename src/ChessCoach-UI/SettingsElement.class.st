@@ -32,6 +32,28 @@ Class {
 	#tag : 'App'
 }
 
+{ #category : 'accessing' }
+SettingsElement class >> repositoryUrl [
+
+	^ 'https://github.com/guillep/chess-coach'
+]
+
+{ #category : 'building' }
+SettingsElement >> aboutSection [
+	"Version, credits, copyright, license and a link to the repository"
+
+	^ ChessCoachWidgets section: 'About' help: nil rows: {
+			  (ToLabel text: 'Chessmate ' , session appVersion).
+			  (ToLabel text: 'Built with Pharo and Bloc with Love by GuilleP').
+			  (ToLabel text: 'Copyright © 2026 Guille Polito').
+			  (ToLabel text: 'Released under the MIT License').
+			  (ToButton new
+				   id: #repository;
+				   labelText: self class repositoryUrl;
+				   clickAction: [ WebBrowser openOn: self class repositoryUrl ];
+				   yourself) }
+]
+
 { #category : 'building' }
 SettingsElement >> appThemeRow [
 	"One button per app theme; the chosen one is shown in brackets"
@@ -159,6 +181,7 @@ SettingsElement >> build [
 							               beMultiLine;
 							               hMatchParent;
 							               yourself) }).
+	content addChild: self aboutSection.
 	self addChild: (widgets
 			 page: 'Settings'
 			 subtitle:

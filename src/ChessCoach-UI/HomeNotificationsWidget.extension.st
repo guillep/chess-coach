@@ -32,13 +32,16 @@ HomeNotificationsWidget >> optionRowsOn: aHomeElement [
 { #category : '*ChessCoach-UI' }
 HomeNotificationsWidget >> rowsOn: aHomeElement [
 
-	| shown hidden |
+	| shown hidden rows |
 	hidden := self option: 'hiddenKinds' ifAbsent: [ #(  ) ].
 	shown := aHomeElement session notifications visible reject: [ :each |
 			         (hidden includes: each kind asString) or: [
 				         (self option: 'unreadOnly' ifAbsent: [ false ]) and: [
 					         each isRead ] ] ].
 	shown ifEmpty: [ ^ { (ToLabel text: 'No notifications') } ].
-	^ (shown first: (shown size min: self count)) collect: [ :each |
-		  aHomeElement notificationRow: each ]
+	rows := OrderedCollection new.
+	(shown first: (shown size min: self count))
+		do: [ :each | rows add: (aHomeElement notificationRow: each) ]
+		separatedBy: [ rows add: ChessCoachWidgets separator ].
+	^ rows asArray
 ]

@@ -591,6 +591,24 @@ ChessCoachAppElementTest >> testSettingsPage [
 ]
 
 { #category : 'tests' }
+ChessCoachAppElementTest >> testSettingsShowTheAttribution [
+
+	| texts |
+	texts := OrderedCollection new.
+	app settingsElement allChildrenBreadthFirstDo: [ :each |
+		(each isKindOf: ToLabel) ifTrue: [ texts add: each text asString ].
+		(each isKindOf: ToButton) ifTrue: [
+			each label ifNotNil: [ :label | texts add: label text asString ] ] ].
+	self assert: (texts anySatisfy: [ :each |
+			 each includesSubstring: 'Built with Pharo and Bloc with Love by GuilleP' ]).
+	self assert: (texts anySatisfy: [ :each |
+			 each includesSubstring: 'Copyright © 2026 Guille Polito' ]).
+	self assert: (texts anySatisfy: [ :each |
+			 each includesSubstring: 'MIT License' ]).
+	self assert: (texts includes: 'https://github.com/guillep/chess-coach')
+]
+
+{ #category : 'tests' }
 ChessCoachAppElementTest >> testSetupWizard [
 
 	| wizard |

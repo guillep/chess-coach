@@ -154,9 +154,7 @@ CoachElement >> buildList [
 			review moments do: [ :each |
 					currentZone addChild: (self
 							 button:
-								 (self describeMoment: each) , ((review isPlanned: each)
-									  ifTrue: [ '' ]
-									  ifFalse: [ ' · left out' ])
+								 (self describeMoment: each)
 							 icon: (self stateIconNameOf: each)
 							 do: [ self showMoment: each ]) ].
 			self leftOutText ifNotNil: [ :text |
@@ -355,7 +353,7 @@ CoachElement >> buildReportTime [
 							  (self minutes: times secondsPerMoment) })) ].
 	review timeBox ifNotNil: [ :minutes |
 			currentZone addChild:
-				(self paragraph: ('Time box: {1} min planned, {2} used' format: {
+				(self paragraph: ('Time box: {1} min, {2} used' format: {
 							  minutes.
 							  (self minutes: review totalSeconds) })) ]
 ]
@@ -533,14 +531,13 @@ CoachElement >> buildTextAnswer [
 
 { #category : 'building' }
 CoachElement >> buildTimeBox [
-	"'≈ 18 of 20 min planned · 7 min so far', and a warning past the limit"
+	"'7 min of 20 min', and a warning past the limit"
 
 	review timeBox ifNil: [ ^ self ].
 	currentZone addChild:
-		(self paragraph: ('≈ {1} of {2} min planned · {3} so far' format: {
-					  review plannedMinutes rounded.
-					  review timeBox.
-					  (self minutes: review totalSeconds) })).
+		(self paragraph: ('{1} of {2} min' format: {
+					  (self minutes: review totalSeconds).
+					  review timeBox })).
 	review isOverTime ifTrue: [
 		currentZone addChild: (self paragraph: 'Time box reached.') ]
 ]
@@ -816,7 +813,7 @@ CoachElement >> leftOutText [
 	| count |
 	count := review leftOutMoments size.
 	count = 0 ifTrue: [ ^ nil ].
-	^ '{1} left out: they did not fit in the {2} minute time box. The most important moments and your marks go first.' format: {
+	^ '{1} left: the {2} minute time box ran out.' format: {
 			  (count = 1 ifTrue: [ '1 moment' ] ifFalse: [ count printString , ' moments' ]).
 			  review timeBox }
 ]
@@ -1173,15 +1170,18 @@ CoachElement >> shownMoment [
 
 { #category : 'private' }
 CoachElement >> startNextAfter: aPly [
+	"The time box cuts the review when a moment would start past it"
 
-	(review nextMomentAfter: aPly)
+	| moment |
+	moment := review isOverTime ifFalse: [ review nextMomentAfter: aPly ].
+	moment
 		ifNil: [
-				walking := false.
-				mode := #summary ]
-		ifNotNil: [ :moment |
-				review start: moment.
-				shownMoment := moment.
-				mode := #moment ].
+			walking := false.
+			mode := #summary ]
+		ifNotNil: [
+			review start: moment.
+			shownMoment := moment.
+			mode := #moment ].
 	self refresh
 ]
 

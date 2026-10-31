@@ -293,14 +293,6 @@ HomeElementTest >> testReviewStates [
 ]
 
 { #category : 'tests' }
-HomeElementTest >> testReviewWithPlannedMomentsDoneIsFinished [
-
-	root / 'games' / 'g25.review-1.json' writeStreamDo: [ :stream |
-		stream nextPutAll: '{"marking":false,"planned":[],"moments":[]}' ].
-	self assert: (session reviewStates at: 'g25') equals: 'reviewed'
-]
-
-{ #category : 'tests' }
 HomeElementTest >> testSuggestionsPutGamesInProgressFirstAndLeaveFinishedOut [
 
 	| games |

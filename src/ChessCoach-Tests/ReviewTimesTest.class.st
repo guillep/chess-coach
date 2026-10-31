@@ -47,15 +47,6 @@ ReviewTimesTest >> setUp [
 ]
 
 { #category : 'tests' }
-ReviewTimesTest >> testATimeBoxHasAnEstimateBeforeAnyReview [
-
-	self
-		assert: ((ReviewTimes new setFromReviewDictionaries: #(  ); yourself)
-				 expectedSecondsFor: #( #mistake ))
-		equals: 120
-]
-
-{ #category : 'tests' }
 ReviewTimesTest >> testAverages [
 
 	| times |
@@ -80,11 +71,7 @@ ReviewTimesTest >> testAverages [
 	self
 		assert: ((times secondsPerMomentInBlocksOf: 3) collect: [ :each |
 				 each rounded ])
-		equals: #( 43 90 ).
-	self assert: (times expectedSecondsFor: #( #mistake )) equals: 55.
-	times := ReviewTimes fromReviewDictionaries:
-		         ((1 to: 3) collect: [ :each | self reviewDictionary ]).
-	self assert: (times expectedSecondsFor: #( #mistake )) equals: 90
+		equals: #( 43 90 )
 ]
 
 { #category : 'tests' }

@@ -458,7 +458,7 @@ ChessCoachSession >> finishMarking: aCoachReview of: aGameIndexEntry onProgress:
 
 { #category : 'coach' }
 ChessCoachSession >> finishMarking: aCoachReview of: aGameIndexEntry onProgress: aBlock onStep: aStepBlock [
-	"End the marking pass: merge my marks with the heuristic moments, and plan the moments that fit the time box if there is one. aBlock receives (plies done, total) while the game is analysed; aStepBlock receives a description of each later step. Answer the sentences explaining heuristics that could not run. Slow when the game is not analysed yet: call it off the UI thread."
+	"End the marking pass: merge my marks with the heuristic moments. aBlock receives (plies done, total) while the game is analysed; aStepBlock receives a description of each later step. Answer the sentences explaining heuristics that could not run. Slow when the game is not analysed yet: call it off the UI thread."
 
 	| problems analysis moments |
 	problems := OrderedCollection new.
@@ -471,7 +471,6 @@ ChessCoachSession >> finishMarking: aCoachReview of: aGameIndexEntry onProgress:
 		           marks: aCoachReview marks
 		           problems: problems.
 	aCoachReview finishMarkingWith: analysis moments: moments.
-	aCoachReview planWith: self reviewTimes.
 	^ problems
 ]
 
@@ -620,15 +619,13 @@ ChessCoachSession >> isLoggedIn [
 
 { #category : 'home' }
 ChessCoachSession >> isUnfinishedReview: aString [
-	"While marking, or with planned moments left. Without a plan, every moment counts. Older files have neither field."
+	"While marking, or with moments left. Older files have no marking field."
 
-	| dictionary planned |
+	| dictionary |
 	dictionary := STONJSON fromString: aString.
 	(dictionary at: 'marking' ifAbsent: [ false ]) ifTrue: [ ^ true ].
-	planned := dictionary at: 'planned' ifAbsent: [ nil ].
 	^ (dictionary at: 'moments' ifAbsent: [ #(  ) ]) anySatisfy: [ :each |
-			  (planned isNil or: [ planned includes: (each at: 'ply') ]) and: [
-				  (CoachMomentReview fromDictionary: each) isReviewed not ] ]
+		  (CoachMomentReview fromDictionary: each) isReviewed not ]
 ]
 
 { #category : 'opening trees' }

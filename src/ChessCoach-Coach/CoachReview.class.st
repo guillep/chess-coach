@@ -27,8 +27,6 @@ Class {
 		'changedBlock',
 		'momentClosedBlock',
 		'timeBox',
-		'planned',
-		'plannedSeconds',
 		'classifierUnavailable',
 		'pausedAt',
 		'pausedTime'
@@ -39,9 +37,9 @@ Class {
 
 { #category : 'constants' }
 CoachReview class >> formatVersion [
-	"The version of the review file format. A file without one is version 0."
+	"2 dropped the planned moments of the time box; older files still load"
 
-	^ 1
+	^ 2
 ]
 
 { #category : 'instance creation' }
@@ -121,8 +119,6 @@ CoachReview >> asJSON [
 			   put: (plySeconds associations asArray collect: [ :each |
 						    Array with: each key with: each value ]);
 			   at: 'timeBox' put: timeBox;
-			   at: 'planned' put: (planned ifNotNil: [ planned asArray sort ]);
-			   at: 'plannedSeconds' put: plannedSeconds;
 			   at: 'moments'
 			   put: (reviews collect: [ :each | each asDictionary ]) asArray;
 			   at: 'mistakes' put: (self isMarking
@@ -366,13 +362,6 @@ CoachReview >> isOverTime [
 	^ timeBox notNil and: [ self totalSeconds > (timeBox * 60) ]
 ]
 
-{ #category : 'time box' }
-CoachReview >> isPlanned: aMomentReview [
-	"Whether the time box leaves room for aMomentReview (always, without a time box)"
-
-	^ planned isNil or: [ planned includes: aMomentReview ply ]
-]
-
 { #category : 'testing' }
 CoachReview >> isSuccess: aMomentReview [
 	"Nothing to tag as a mistake: a found only move, or, with the engine, a move that lost less than 5 win-% points (the best move, or one as good)"
@@ -405,9 +394,10 @@ CoachReview >> leaveMoment [
 
 { #category : 'moments' }
 CoachReview >> leftOutMoments [
-	"The moments the time box has no room for"
+	"The moments the time box cut off"
 
-	^ reviews reject: [ :each | self isPlanned: each ]
+	self isOverTime ifFalse: [ ^ #(  ) ].
+	^ reviews reject: [ :each | each isReviewed ]
 ]
 
 { #category : 'marking' }
@@ -484,12 +474,10 @@ CoachReview >> moments [
 
 { #category : 'moments' }
 CoachReview >> nextMomentAfter: aPly [
-	"The first planned moment after aPly not reviewed yet, or nil when none is left"
+	"The first moment after aPly not reviewed yet, or nil when none is left"
 
 	^ reviews
-		  detect: [ :each |
-			  each ply > aPly and: [
-				  each isReviewed not and: [ self isPlanned: each ] ] ]
+		  detect: [ :each | each ply > aPly and: [ each isReviewed not ] ]
 		  ifNone: [ nil ]
 ]
 
@@ -545,35 +533,6 @@ CoachReview >> phaseOf: aFEN ply: aPly [
 	pieces <= 6 ifTrue: [ ^ 'endgame' ].
 	aPly <= 24 ifTrue: [ ^ 'opening' ].
 	^ 'middlegame'
-]
-
-{ #category : 'time box' }
-CoachReview >> planWith: aReviewTimes [
-	"Choose the moments that fit the time box: the time already spent marking is taken out, my marks go first, then the most important moments, each costing my average time for its kind"
-
-	| budget ordered |
-	timeBox ifNil: [ ^ self ].
-	budget := timeBox * 60 - self markingSeconds.
-	ordered := (reviews select: [ :each | each isMarked ]) asArray
-	           ,
-		           ((reviews reject: [ :each | each isMarked ]) asArray
-			            sort: [ :a :b | a score > b score ]).
-	planned := Set new.
-	plannedSeconds := 0.
-	ordered do: [ :moment |
-			| cost |
-			cost := aReviewTimes expectedSecondsFor: moment kinds.
-			(moment isMarked or: [ plannedSeconds + cost <= budget ]) ifTrue: [
-					planned add: moment ply.
-					plannedSeconds := plannedSeconds + cost ] ].
-	self changed
-]
-
-{ #category : 'time box' }
-CoachReview >> plannedMinutes [
-	"The expected time of the planned moments plus the marking pass, in minutes"
-
-	^ (plannedSeconds ifNil: [ 0 ]) + self markingSeconds / 60
 ]
 
 { #category : 'timing' }
@@ -654,9 +613,6 @@ CoachReview >> restoreFromJSON: aString analysis: aBlock [
 	(dictionary at: 'plySeconds' ifAbsent: [ #(  ) ]) do: [ :pair |
 		plySeconds at: pair first put: pair second ].
 	timeBox := dictionary at: 'timeBox' ifAbsent: [ nil ].
-	planned := (dictionary at: 'planned' ifAbsent: [ nil ]) ifNotNil: [
-		           :plies | plies asSet ].
-	plannedSeconds := dictionary at: 'plannedSeconds' ifAbsent: [ nil ].
 	reviews := ((dictionary at: 'moments') collect: [ :each |
 		            CoachMomentReview fromDictionary: each ])
 		           asOrderedCollection.

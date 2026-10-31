@@ -14,7 +14,8 @@ Class {
 		'labels',
 		'score',
 		'winDrop',
-		'seconds'
+		'seconds',
+		'notes'
 	],
 	#category : 'ChessCoach-Coach',
 	#package : 'ChessCoach-Coach'
@@ -42,6 +43,7 @@ CoachMomentReview class >> fromDictionary: aDictionary [
 		score: (aDictionary at: 'score' ifAbsent: [ 0 ]);
 		winDrop: (aDictionary at: 'winDrop' ifAbsent: [ 0 ]);
 		addSeconds: (aDictionary at: 'seconds' ifAbsent: [ 0 ]).
+	review notes: (aDictionary at: 'notes' ifAbsent: [ #(  ) ]).
 	^ review
 ]
 
@@ -104,6 +106,7 @@ CoachMomentReview >> asDictionary [
 		  at: 'score' put: score;
 		  at: 'winDrop' put: winDrop;
 		  at: 'seconds' put: seconds;
+		  at: 'notes' put: self notes asArray;
 		  yourself
 ]
 
@@ -226,6 +229,19 @@ CoachMomentReview >> labels [
 CoachMomentReview >> labels: someMistakeLabels [
 
 	labels := someMistakeLabels asOrderedCollection
+]
+
+{ #category : 'accessing' }
+CoachMomentReview >> notes [
+	"Why the moment was chosen, from the detection"
+
+	^ notes ifNil: [ #(  ) ]
+]
+
+{ #category : 'accessing' }
+CoachMomentReview >> notes: someStrings [
+
+	notes := someStrings
 ]
 
 { #category : 'accessing' }

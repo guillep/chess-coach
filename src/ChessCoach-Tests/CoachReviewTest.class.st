@@ -331,6 +331,22 @@ CoachReviewTest >> testMistakeRecordsAndJSON [
 ]
 
 { #category : 'tests' }
+CoachReviewTest >> testOpeningMomentKeepsWhyItWasChosenAndAsksAboutIt [
+
+	| moment restored questions |
+	moment := CoachMomentReview ply: 1 color: #white kinds: #( #openingChoice ).
+	moment notes: #( 'You played e4 (40%); better scoring: d4 (55%)' ).
+	restored := CoachMomentReview fromDictionary: moment asDictionary.
+	self assert: restored notes first equals: moment notes first.
+	self assert: (CoachMomentReview fromDictionary: (moment asDictionary
+				  removeKey: 'notes';
+				  yourself)) notes isEmpty.
+	questions := self newReview questionsAboutMoveOf: moment.
+	self assert: (questions first text includesSubstring: 'better scoring').
+	self assert: questions second kind equals: #candidates
+]
+
+{ #category : 'tests' }
 CoachReviewTest >> testPausedTimeIsNotCounted [
 
 	| time start review |

@@ -18,7 +18,8 @@ Class {
 		'builtBlock',
 		'engineLines',
 		'treePanel',
-		'tabs'
+		'tabs',
+		'collapsed'
 	],
 	#category : 'ChessCoach-UI-Openings',
 	#package : 'ChessCoach-UI',
@@ -32,6 +33,28 @@ OpeningTreeElement class >> session: aChessCoachSession tree: anOpeningTree runn
 		  session: aChessCoachSession
 		  tree: anOpeningTree
 		  runner: aBlock
+]
+
+{ #category : 'building' }
+OpeningTreeElement >> accordion: aTitle build: aBlock [
+	"A group with a header that opens and closes it; aBlock adds its rows while it is open"
+
+	| page box open |
+	open := (self collapsed includes: aTitle) not.
+	page := panel.
+	box := ChessCoachWidgets group: { (ToButton new
+			        id: aTitle asSymbol;
+			        labelText: (open ifTrue: [ '▾ ' ] ifFalse: [ '▸ ' ]) , aTitle;
+			        clickAction: [
+				        open
+					        ifTrue: [ self collapsed add: aTitle ]
+					        ifFalse: [ self collapsed remove: aTitle ].
+				        self refresh ];
+			        yourself) }.
+	panel := box.
+	open ifTrue: [ aBlock ensure: [ panel := page ] ].
+	panel := page.
+	panel addChild: box
 ]
 
 { #category : 'actions' }
@@ -233,6 +256,13 @@ OpeningTreeElement >> buildWeakSpots [
 		'Opponent replies faced at least 3 times, where you score below 40%.'
 ]
 
+{ #category : 'accessing' }
+OpeningTreeElement >> collapsed [
+	"The titles of the closed panels: Games starts closed"
+
+	^ collapsed ifNil: [ collapsed := Set with: 'Games' ]
+]
+
 { #category : 'actions' }
 OpeningTreeElement >> goTo: anOpeningNode [
 	"Show a position: go back to it when it is on the path, otherwise extend the path. Its games are looked up, Stockfish is asked for its top moves, and its database data is fetched above the threshold in the settings."
@@ -387,19 +417,9 @@ OpeningTreeElement >> refresh [
 		help:
 		'Moves played here, with my score after each one and the database''s score for my colour. A warning marks a move scoring at least 10 points below the database. A move without a button is where a line reached a single game.'
 		build: [ self buildMoves ].
-	self
-		section: 'Engine top moves'
-		help: 'Stockfish''s best moves here. Scores are from White''s side.'
-		build: [ self buildEngine ].
-	self
-		section: 'Database top moves'
-		help:
-		'The five moves most played in the database from this position.'
-		build: [ self buildDatabase ].
-	self
-		section: 'Games'
-		help: 'Your games that reached this position.'
-		build: [ self buildGames ]
+	self accordion: 'Engine top moves' build: [ self buildEngine ].
+	self accordion: 'Database top moves' build: [ self buildDatabase ].
+	self accordion: 'Games' build: [ self buildGames ]
 ]
 
 { #category : 'building' }

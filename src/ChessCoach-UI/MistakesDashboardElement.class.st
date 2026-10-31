@@ -22,6 +22,29 @@ Class {
 }
 
 { #category : 'building' }
+MistakesDashboardElement >> barsOf: someValues [
+	"A small bar per value, taller when larger"
+
+	| row max |
+	max := someValues max max: 1.
+	row := ToElement new
+		       layout: (BlLinearLayout horizontal alignBottomLeft cellSpacing: 3);
+		       hMatchParent;
+		       vFitContent;
+		       addChild: (ToLabel new
+				        text: 'Time per moment (blocks of 10)';
+				        width: 200;
+				        yourself);
+		       yourself.
+	someValues do: [ :each |
+		row addChild: (BlElement new
+				 extent: 14 @ ((each / max * 18) rounded + 2);
+				 background: (Color gray alpha: 0.6);
+				 yourself) ].
+	^ row
+]
+
+{ #category : 'building' }
 MistakesDashboardElement >> buildBars [
 	"The 8 most frequent tags as bars proportional to the most frequent one, coloured by category; a click shows the tag's mistakes"
 
@@ -124,8 +147,7 @@ MistakesDashboardElement >> buildTimes [
 			 'Marking pass: ' , (self duration: times markingSecondsPerGame)
 			 , ' per game, ' , (self duration: times markingSecondsPerPly)
 			 , ' per move').
-	content addChild: (ToLabel text: 'Time per moment (blocks of 10)  '
-			 , (self sparkline: (times secondsPerMomentInBlocksOf: 10)))
+	content addChild: (self barsOf: (times secondsPerMomentInBlocksOf: 10))
 ]
 
 { #category : 'building' }
@@ -321,17 +343,6 @@ MistakesDashboardElement >> selectTag: aTagId [
 	selectedTag := aTagId.
 	detail removeChildren.
 	self buildDetail
-]
-
-{ #category : 'private' }
-MistakesDashboardElement >> sparkline: someCounts [
-	"One digit per value, 0 to 9, relative to the largest one"
-
-	| max |
-	max := someCounts max max: 1.
-	^ ' ' join:
-		  (someCounts collect: [ :each |
-			   (each / max * 9) rounded printString ])
 ]
 
 { #category : 'accessing' }

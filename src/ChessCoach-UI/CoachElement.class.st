@@ -28,7 +28,10 @@ Class {
 		'replay',
 		'draft',
 		'draftQuestion',
-		'panelScroller'
+		'panelScroller',
+		'boardPane',
+		'panelPane',
+		'panel'
 	],
 	#category : 'ChessCoach-UI-Coach',
 	#package : 'ChessCoach-UI',
@@ -163,13 +166,16 @@ CoachElement >> buildList [
 				(self paragraph: ('Marking {1} · moments {2}' format: {
 							  (self minutes: review markingSeconds).
 							  (self minutes: review reviewingSeconds) })) ].
-	currentZone addChild: (self row: {
-				 (self
-					  button: 'Continue review'
-					  icon: 'outlined_playarrow'
-					  do: [ self continueReview ]).
-				 (self button: 'Summary' do: [ self showSummary ]).
-				 (self button: 'Back' do: [ exitBlock value ]) })
+	currentZone addChild:
+		(self row: (((review nextMomentAfter: 0) notNil and: [ review isOverTime not ])
+				  ifTrue: [
+					  { (self
+						   button: 'Continue review'
+						   icon: 'outlined_playarrow'
+						   do: [ self continueReview ]) } ]
+				  ifFalse: [ #(  ) ]) , {
+					 (self button: 'Summary' do: [ self showSummary ]).
+					 (self button: 'Back' do: [ exitBlock value ]) })
 ]
 
 { #category : 'building' }
@@ -366,6 +372,10 @@ CoachElement >> buildReveal [
 	reveal := review revealOf: shownMoment.
 	before := self positionBefore: shownMoment.
 	after := game positionAfterPly: shownMoment ply.
+	shownMoment notes ifNotEmpty: [ :notes |
+		self section: 'Why this moment' build: [
+			notes do: [ :each |
+				currentZone addChild: (self paragraph: each) ] ] ].
 	self section: 'The engine''s view' build: [
 			review hasEngine
 				ifTrue: [
@@ -677,6 +687,16 @@ CoachElement >> doneMarking [
 						self refresh ] ]
 ]
 
+{ #category : 'layout' }
+CoachElement >> fitPanes [
+	"A square for the board, keeping at least 380 for the panel"
+
+	| side |
+	side := (self height min: self width - 380) max: 200.
+	boardPane width: side.
+	panel width: (self width - side - 20 max: 360)
+]
+
 { #category : 'accessing' }
 CoachElement >> header [
 
@@ -723,9 +743,9 @@ CoachElement >> inUIDo: aBlock [
 
 { #category : 'initialization' }
 CoachElement >> initialize [
-	"The panel has a fixed width so that its multi-line labels wrap, inside a scrollable column with a scrollbar. Report a problem and Close are small buttons on the first row, on the right; Close pauses the review and closes its page. Review time counts only while the coach is shown."
+	"The board takes the height it can and the panel all the width left; the panel has an exact width so that its multi-line labels wrap. Review time counts only while the coach is shown."
 
-	| panel |
+	
 	super initialize.
 	markedMoves := OrderedCollection new.
 	walking := false.
@@ -765,38 +785,22 @@ CoachElement >> initialize [
 		         padding: (BlInsets all: 10);
 		         yourself.
 	panel
-		addChild: (ToElement new
-				 layout: (BlLinearLayout horizontal cellSpacing: 4);
-				 hMatchParent;
-				 vFitContent;
-				 addChild: (BlElement new
-						  constraintsDo: [ :c |
-								  c horizontal matchParent.
-								  c vertical exact: 1 ];
-						  yourself);
-				 addChild: (self
-						  iconButton: 'outlined_bugreport'
-						  tooltip:
-						  'Report a problem: save the game, its analysis and this review for a bug report'
-						  do: [ self reportProblem ]);
-				 addChild: (self
-						  iconButton: 'outlined_close'
-						  tooltip:
-						  'Close the coach; the review is saved and continues next time'
-						  do: [ self pause ]);
-				 yourself);
 		addChild: header;
 		addChild: history;
 		addChild: currentZone.
+	boardPane := ChessCoachWidgets centered: board.
+	panelPane := ToElement new
+		             layout: BlFrameLayout new;
+		             matchParent;
+		             addChild: (ChessCoachWidgets scrollable: panel);
+		             yourself.
 	self
-		addChild: (ChessCoachWidgets centered: board);
-		addChild: (ToElement new
-				 layout: BlFrameLayout new;
-				 width: 380;
-				 vMatchParent;
-				 addChild: (ChessCoachWidgets scrollable: panel);
-				 yourself).
-	panelScroller := panel parent
+		addChild: boardPane;
+		addChild: panelPane.
+	panelScroller := panel parent.
+	self
+		addEventHandlerOn: BlElementExtentChangedEvent
+		do: [ :event | self fitPanes ]
 ]
 
 { #category : 'private' }
@@ -1232,6 +1236,23 @@ CoachElement >> submitText [
 	self
 		runInBackground: [ review classifyPending ]
 		then: [ self refresh ]
+]
+
+{ #category : 'building' }
+CoachElement >> titleActions [
+	"For the title of the page: report a problem and close, which pauses the review"
+
+	^ {
+		  (self
+			   iconButton: 'outlined_bugreport'
+			   tooltip:
+			   'Report a problem: save the game, its analysis and this review for a bug report'
+			   do: [ self reportProblem ]).
+		  (self
+			   iconButton: 'outlined_close'
+			   tooltip:
+			   'Close the coach; the review is saved and continues next time'
+			   do: [ self pause ]) }
 ]
 
 { #category : 'actions' }

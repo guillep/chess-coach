@@ -63,6 +63,7 @@ ChessCoachAppElement class >> openOn: aChessCoachSession [
 		addEventHandlerOn: BlSpaceClosedEvent
 		do: [ :event | aChessCoachSession shutDown ].
 	space show.
+	space maximize.
 	app startBackgroundAnalysis.
 	aChessCoachSession startScheduledChecks.
 	^ app
@@ -177,6 +178,18 @@ ChessCoachAppElement >> bell [
 ChessCoachAppElement >> bellBadge [
 
 	^ bellBadge
+]
+
+{ #category : 'navigation' }
+ChessCoachAppElement >> closeButtonDo: aBlock [
+
+	^ ToButton new
+		  icon: ((ToMaterialDesignIconProvider iconNamed: 'outlined_close')
+				   extent: 18 @ 18;
+				   yourself);
+		  tooltipString: 'Close this page';
+		  clickAction: aBlock;
+		  yourself
 ]
 
 { #category : 'navigation' }
@@ -720,6 +733,12 @@ ChessCoachAppElement >> newStatusLine [
 		  addChild: statusLabel;
 		  addChild: analysisLabel;
 		  addChild: dependencyLabel;
+		  addChild: (BlElement new
+				   constraintsDo: [ :c |
+					   c horizontal matchParent.
+					   c vertical exact: 1 ];
+				   yourself);
+		  addChild: ChessCoachWidgets credits;
 		  yourself
 ]
 
@@ -768,6 +787,7 @@ ChessCoachAppElement >> openOpeningTree: anOpeningTree [
 				                   page: anOpeningTree name
 				                   subtitle:
 				                   'Your games compared with the database.'
+				                   actions: { (self closeButtonDo: [ self closeTab: openingTreeTab ]) }
 				                   body: element).
 	element start.
 	^ element
@@ -793,6 +813,7 @@ ChessCoachAppElement >> openReview: aCoachReview of: aGameIndexEntry [
 				             aGameIndexEntry players first , ' – '
 				             , aGameIndexEntry players second
 				             subtitle: 'Review with the coach'
+				             actions: coach titleActions
 				             body: coach).
 	^ coach
 ]
@@ -850,6 +871,7 @@ ChessCoachAppElement >> playThrough: aGameIndexEntry [
 		                  page: (ChessCoachWidgets
 				                   page: title
 				                   subtitle: aGameIndexEntry date
+				                   actions: { (self closeButtonDo: [ self closeTab: playThroughTab ]) }
 				                   body: playThrough).
 	^ playThrough
 ]

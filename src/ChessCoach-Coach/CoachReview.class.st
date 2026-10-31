@@ -37,9 +37,9 @@ Class {
 
 { #category : 'constants' }
 CoachReview class >> formatVersion [
-	"2 dropped the planned moments of the time box; older files still load"
+	"2 dropped the planned moments of the time box, 3 added why each moment was chosen; older files still load"
 
-	^ 2
+	^ 3
 ]
 
 { #category : 'instance creation' }
@@ -296,6 +296,7 @@ CoachReview >> finishMarkingWith: aGameAnalysis moments: someChessMoments [
 				kinds: (review kinds asSet
 						 addAll: moment kinds;
 						 yourself) asArray;
+				notes: (moment notes reject: [ :each | each isNil ]) asArray;
 				score: (prioritizer scoreOf: moment);
 				winDrop: (self winDropAt: moment ply for: moment color) ].
 	reviews := (reviews asArray sort: [ :a :b | a ply < b ply ])
@@ -568,6 +569,22 @@ CoachReview >> questionsAboutMoveOf: aMoment [
 				  (CoachQuestion
 					   kind: #why
 					   text: 'Why did you play ' , played , '?').
+				  (CoachQuestion
+					   kind: #expectedReply
+					   text:
+					   'After ' , played
+					   , ', what did you expect your opponent to play?') } ].
+	((aMoment kinds includes: #openingChoice) and: [ aMoment notes notEmpty ])
+		ifTrue: [
+			^ {
+				  (CoachQuestion
+					   kind: #why
+					   text:
+					   aMoment notes first , '. Why did you play ' , played , '?').
+				  (CoachQuestion
+					   kind: #candidates
+					   text:
+					   'Which other moves did you consider here? Mark them on the board.').
 				  (CoachQuestion
 					   kind: #expectedReply
 					   text:

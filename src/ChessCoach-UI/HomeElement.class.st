@@ -188,6 +188,7 @@ HomeElement >> initialize [
 
 	super initialize.
 	gameBlock := [ :entry |  ].
+	showGamesBlock := [  ].
 	editing := false.
 	self layout: BlFrameLayout new.
 	self matchParent.
@@ -249,7 +250,7 @@ HomeElement >> notificationRow: aNotification [
 		  onDismiss: [ :row |
 				  session notifications dismiss: aNotification.
 				  self update ]
-		  onShow: [ showGamesBlock ifNotNil: [ :block | block value ] ]
+		  onShow: [ showGamesBlock value ]
 ]
 
 { #category : 'layout' }

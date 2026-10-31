@@ -41,21 +41,32 @@ SettingsElement class >> repositoryUrl [
 ]
 
 { #category : 'accessing' }
-SettingsElement class >> sectionTitles [
-	"In the order build adds them"
+SettingsElement class >> sectionSizes [
+	"How many of the sections build adds go in each tab, in order: accounts and games; appearance and board; analysis, moments, openings and coach; about"
 
-	^ #( 'Accounts' 'Games' 'Appearance' 'Board' 'Analysis' 'Moments' 'Openings' 'Coach' 'About' )
+	^ #( 2 2 4 1 )
+]
+
+{ #category : 'accessing' }
+SettingsElement class >> sectionTitles [
+	"The tabs"
+
+	^ #( 'Accounts' 'Appearance' 'Analysis' 'About' )
 ]
 
 { #category : 'building' }
 SettingsElement >> aboutSection [
-	"Version, credits, copyright, license and a link to the repository"
+	"Version, credits with links, copyright, license and the repository"
 
 	^ ChessCoachWidgets section: 'About' help: nil rows: {
 			  (ToLabel text: 'Chessmate ' , session appVersion).
-			  (ToLabel text: 'Built with Pharo and Bloc with Love by GuilleP').
+			  ChessCoachWidgets credits.
 			  (ToLabel text: 'Copyright © 2026 Guille Polito').
 			  (ToLabel text: 'Released under the MIT License').
+			  (self row: {
+					   ChessCoachWidgets pharoLogo.
+					   (ChessCoachWidgets link: 'Pharo' to: 'https://pharo.org').
+					   (ChessCoachWidgets link: 'Bloc' to: 'https://github.com/pharo-graphics/Bloc') }).
 			  (ToButton new
 				   id: #repository;
 				   labelText: self class repositoryUrl;
@@ -421,13 +432,24 @@ SettingsElement >> loginOrLogout [
 
 { #category : 'building' }
 SettingsElement >> newTabsOn: aContent [
-	"One tab per section of aContent, on top, the content scrolling below. Run setup again goes to the first section."
+	"One tab per group of sections of aContent, on top, each scrolling. Run setup again goes to the first."
 
-	| pane setup |
+	| pane setup remaining |
 	setup := aContent children first.
 	aContent removeChild: setup.
-	sections := aContent children asArray.
+	remaining := aContent children asArray.
 	aContent removeChildren.
+	sections := self class sectionSizes collect: [ :size |
+		            | column |
+		            column := ToElement new
+			                      layout: (BlLinearLayout vertical cellSpacing: 12);
+			                      hMatchParent;
+			                      vFitContent;
+			                      padding: (BlInsets top: 12 left: 0 bottom: 0 right: 16);
+			                      yourself.
+		            (remaining first: size) do: [ :each | column addChild: each ].
+		            remaining := remaining allButFirst: size.
+		            column ].
 	sections first addChild: setup.
 	pane := ToTabPaneElement new.
 	pane horizontal: false.
@@ -435,13 +457,7 @@ SettingsElement >> newTabsOn: aContent [
 	pane showAddTabItemButton: false.
 	self class sectionTitles with: sections do: [ :title :section |
 		| scrollable |
-		scrollable := ChessCoachWidgets scrollable: (ToElement new
-				               layout: BlLinearLayout vertical;
-				               hMatchParent;
-				               vFitContent;
-				               padding: (BlInsets top: 12 left: 0 bottom: 0 right: 16);
-				               addChild: section;
-				               yourself).
+		scrollable := ChessCoachWidgets scrollable: section.
 		pane addItem: (ToTabButton new
 				 id: title asSymbol;
 				 labelText: title;

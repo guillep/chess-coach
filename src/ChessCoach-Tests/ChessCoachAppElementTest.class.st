@@ -562,12 +562,12 @@ ChessCoachAppElementTest >> testSettingsPage [
 	settings showSection: 'Analysis'.
 	scripter pulse.
 	self assert: (settings texts includes: 'Depth: 18').
-	settings showSection: 'Games'.
+	settings showSection: 'Accounts'.
 	scripter pulse.
 	self click: (settings buttonLabeled: '+').
 	self assert: session settings gamesPerLoad equals: 30.
 	self assert: (settings texts includes: 'Games per Load more: 30').
-	settings showSection: 'Board'.
+	settings showSection: 'Appearance'.
 	scripter pulse.
 	self click: (settings buttonLabeled: 'Livius').
 	self assert: session settings pieceSet equals: 'Livius'.
@@ -592,7 +592,7 @@ ChessCoachAppElementTest >> testSettingsPage [
 	scripter pulse.
 	self click: (settings buttonLabeled: 'Test').
 	self assert: (settings texts includes: 'OK: Stockfish stub').
-	settings showSection: 'Coach'.
+	settings showSection: 'Analysis'.
 	scripter pulse.
 	self click: (settings buttonLabeled: 'Load models').
 	self assert: (settings texts includes: '2 models installed').
@@ -600,7 +600,7 @@ ChessCoachAppElementTest >> testSettingsPage [
 	self assert: session settings ollamaModel equals: 'llama3.1:8b'.
 	self assert:
 		(settings texts includes: 'Validated only with qwen2.5:7b-instruct').
-	settings showSection: 'Moments'.
+	settings showSection: 'Analysis'.
 	scripter pulse.
 	self click: (settings buttonLabeled: 'Long thinks').
 	self deny: (session settings at: 'findLongThinks')
@@ -620,7 +620,7 @@ ChessCoachAppElementTest >> testSettingsShowTheAttribution [
 		(each isKindOf: ToButton) ifTrue: [
 			each label ifNotNil: [ :label | texts add: label text asString ] ] ].
 	self assert: (texts anySatisfy: [ :each |
-			 each includesSubstring: 'Built with Pharo and Bloc with Love by GuilleP' ]).
+			 each includesSubstring: 'Done with Pharo' ]).
 	self assert: (texts anySatisfy: [ :each |
 			 each includesSubstring: 'Copyright © 2026 Guille Polito' ]).
 	self assert: (texts anySatisfy: [ :each |
@@ -639,7 +639,7 @@ ChessCoachAppElementTest >> testSettingsTabsShowOneSection [
 	scripter pulse.
 	shown := settings shownSections.
 	self assert: shown size equals: 1.
-	self assert: settings indexButtons size equals: 9
+	self assert: settings indexButtons size equals: 4
 ]
 
 { #category : 'tests' }
@@ -669,6 +669,28 @@ ChessCoachAppElementTest >> testSetupWizard [
 	self assert: app navigation isAttachedToSceneGraph.
 	self assert: app games size equals: 20.
 	self deny: session isFirstRun
+]
+
+{ #category : 'tests' }
+ChessCoachAppElementTest >> testShowInTheHomeNotificationOpensGames [
+
+	| show |
+	session notifications post: (ChessCoachNotification
+			 key: 'games'
+			 kind: #newGames
+			 title: '2 new games'
+			 text: '').
+	app showPage: #Home.
+	scripter pulse.
+	app home update.
+	scripter pulse.
+	app home allChildrenBreadthFirstDo: [ :each |
+		(each isKindOf: ToButton) ifTrue: [
+			(each label notNil and: [ each label text asString = 'Show' ])
+				ifTrue: [ show := each ] ] ].
+	BlSpace simulateClickOn: show.
+	scripter pulse.
+	self assert: app navigation selecter selectedIndexes asArray equals: #( 3 )
 ]
 
 { #category : 'tests' }

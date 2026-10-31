@@ -37,6 +37,20 @@ ChessCoachWidgets class >> centered: aBoard [
 ]
 
 { #category : 'building' }
+ChessCoachWidgets class >> credits [
+	"Done with Pharo, Bloc and love, by me"
+
+	^ ToElement new
+		  layout: (BlLinearLayout horizontal alignCenterLeft cellSpacing: 4);
+		  fitContent;
+		  addChild: (ToLabel text: 'Done with Pharo');
+		  addChild: self pharoLogo;
+		  addChild: (ToLabel text: ', Bloc and love ❤ by');
+		  addChild: (self link: 'Guille' to: 'https://github.com/guillep');
+		  yourself
+]
+
+{ #category : 'building' }
 ChessCoachWidgets class >> group: someElements [
 	"A bordered, padded box that keeps related rows together"
 
@@ -115,6 +129,22 @@ ChessCoachWidgets class >> iconColor: aColor [
 	"The tint of the icons outside buttons, which Toplo's skins don't reach"
 
 	iconColor := aColor
+]
+
+{ #category : 'building' }
+ChessCoachWidgets class >> link: aString to: anUrl [
+	"A label that opens anUrl; a label, not a button, so it fits the status bar"
+
+	| label |
+	label := ToLabel new
+		         text: (aString asRopedText
+				          foreground: (Color fromHexString: '#c98a4b');
+				          yourself);
+		         yourself.
+	label
+		addEventHandlerOn: BlClickEvent
+		do: [ :event | WebBrowser openOn: anUrl ].
+	^ label
 ]
 
 { #category : 'building' }
@@ -216,6 +246,22 @@ ChessCoachWidgets class >> page: someElements [
 ]
 
 { #category : 'building' }
+ChessCoachWidgets class >> page: aTitle subtitle: aSubtitle actions: someElements body: anElement [
+	"A page with buttons at the top right of its title, for closable pages"
+
+	| title |
+	title := self pageTitle: aTitle subtitle: aSubtitle.
+	^ self page: {
+			  (ToElement new
+				   layout: (BlLinearLayout horizontal cellSpacing: 4);
+				   hMatchParent;
+				   vFitContent;
+				   addChildren: { title } , someElements;
+				   yourself).
+			  anElement }
+]
+
+{ #category : 'building' }
 ChessCoachWidgets class >> page: aTitle subtitle: aSubtitle body: anElement [
 	"Every page: the same margins, its title on top (it doesn't scroll) and anElement filling the rest"
 
@@ -280,6 +326,14 @@ ChessCoachWidgets class >> paragraphTextOf: anElement [
 		ifFalse: [ ^ nil ].
 	^ ' ' join:
 		  (anElement children asArray collect: [ :each | each text asString ])
+]
+
+{ #category : 'building' }
+ChessCoachWidgets class >> pharoLogo [
+
+	^ (((Smalltalk ui icons iconNamed: #pharo) scaledToSize: 16 @ 16)
+		   asElement)
+		  yourself
 ]
 
 { #category : 'building' }

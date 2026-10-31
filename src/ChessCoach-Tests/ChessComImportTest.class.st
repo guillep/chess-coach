@@ -118,17 +118,11 @@ ChessComImportTest >> testAppFiltersTheListBySpeed [
 	scripter pulse.
 	ids := [ app games collect: [ :each | each gameId ] ].
 	self assert: ids value size equals: 3.
-	scripter testClick onChildFromBlock: [ :root |
-		app speedButtonFor: 'blitz' ].
-	scripter
-		syncContinue;
-		pulse.
+	app filterBySpeed: 'blitz'.
+	scripter pulse.
 	self assert: ids value equals: #( 'chesscom-101' ).
-	scripter testClick onChildFromBlock: [ :root |
-		app speedButtonFor: nil ].
-	scripter
-		syncContinue;
-		pulse.
+	app filterBySpeed: nil.
+	scripter pulse.
 	self assert: ids value size equals: 3
 ]
 

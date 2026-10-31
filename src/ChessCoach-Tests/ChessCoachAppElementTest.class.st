@@ -172,6 +172,33 @@ ChessCoachAppElementTest >> testEveryPageTitleIsAtTheSamePlace [
 ]
 
 { #category : 'tests' }
+ChessCoachAppElementTest >> testGamesFilterByReviewState [
+
+	| games |
+	session login.
+	session loadMoreGames.
+	scripter pulse.
+	games := app games.
+	session saveReview: (session newReviewFor: games first).
+	scripter pulse.
+	self assert: (app isReviewed: games first).
+	self assert: (app reviewStateOf: games first) equals: 'inProgress'.
+	self deny: (app isReviewed: games second).
+	app filterByReview: 'unreviewed'.
+	scripter pulse.
+	self assert: app games size equals: games size - 1.
+	app filterByReview: 'inProgress'.
+	scripter pulse.
+	self assert: app games size equals: 1.
+	app filterByReview: 'reviewed'.
+	scripter pulse.
+	self assert: app games isEmpty.
+	app filterByReview: nil.
+	scripter pulse.
+	self assert: app games size equals: games size
+]
+
+{ #category : 'tests' }
 ChessCoachAppElementTest >> testGamesListedWhileOnStatsShowLater [
 	"As at startup with reviews: the list is filled while the app is on Stats, then the Games page is opened"
 
@@ -425,32 +452,6 @@ ChessCoachAppElementTest >> testOpeningsDropdownListsItsOptions [
 ]
 
 { #category : 'tests' }
-ChessCoachAppElementTest >> testReviewedGamesHaveAnIconAndCanBeLeftOut [
-
-	| games reviewedId |
-	session login.
-	session loadMoreGames.
-	scripter pulse.
-	games := app games.
-	reviewedId := games first gameId.
-	session saveReview: (session newReviewFor: games first).
-	scripter pulse.
-	self assert: (app isReviewed: games first).
-	self deny: (app isReviewed: games second).
-	self click: app notReviewedButton.
-	self assert: app notReviewedButton isChecked.
-	self assert: app games size equals: games size - 1.
-	self deny:
-		(app games anySatisfy: [ :each | each gameId = reviewedId ]).
-	(Delay forMilliseconds: 600) wait.
-	self click: app notReviewedButton.
-	self
-		deny: app notReviewedButton isChecked
-		description: 'unchecked by the second click'.
-	self assert: app games size equals: games size
-]
-
-{ #category : 'tests' }
 ChessCoachAppElementTest >> testRowsShowTheAnalysisState [
 
 	| queue first |
@@ -604,26 +605,6 @@ ChessCoachAppElementTest >> testSortingKeepsTheShownGameSelected [
 		description: 'reviewed games first'.
 	self assert:
 		(app games at: app gameList selectionModel firstIndex) == reviewed
-]
-
-{ #category : 'tests' }
-ChessCoachAppElementTest >> testSpeedFiltersAreToggleButtonsOnOneRow [
-
-	| buttons |
-	buttons := #( nil 'bullet' 'blitz' 'rapid' 'classical' 'correspondence' )
-		           collect: [ :each | app speedButtonFor: each ].
-	self assert:
-		(buttons allSatisfy: [ :each | each isKindOf: ToToggleButton ]).
-	self assert: buttons first isChecked.
-	self assert:
-		(buttons allButFirst noneSatisfy: [ :each | each isChecked ]).
-	self
-		assert:
-		(buttons collect: [ :each | each bounds inSpace top ]) asSet size
-		equals: 1.
-	app filterBySpeed: 'rapid'.
-	self assert: (app speedButtonFor: 'rapid') isChecked.
-	self deny: buttons first isChecked
 ]
 
 { #category : 'tests' }

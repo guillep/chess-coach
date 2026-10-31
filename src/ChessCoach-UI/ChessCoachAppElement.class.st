@@ -17,8 +17,6 @@ Class {
 		'backgroundRunner',
 		'coach',
 		'dashboard',
-		'speedFilter',
-		'speedButtons',
 		'navigation',
 		'gamesPage',
 		'settingsElement',
@@ -30,14 +28,15 @@ Class {
 		'bell',
 		'bellBadge',
 		'notificationsWindow',
-		'reviewedIds',
-		'notReviewedButton',
 		'gameTable',
 		'shownGameId',
 		'openings',
 		'openingTreeTab',
 		'updateButton',
-		'home'
+		'home',
+		'speedSelect',
+		'reviewSelect',
+		'reviewStates'
 	],
 	#category : 'ChessCoach-UI-App',
 	#package : 'ChessCoach-UI',
@@ -215,10 +214,19 @@ ChessCoachAppElement >> exitCoach [
 ]
 
 { #category : 'actions' }
-ChessCoachAppElement >> filterBySpeed: aSpeedOrNil [
-	"Show only the games of one time control (all when nil), as checking its button does"
+ChessCoachAppElement >> filterByReview: aStateOrNil [
+	"Show only the games in that review state (all when nil), as choosing it does"
 
-	(speedButtons at: aSpeedOrNil) check
+	reviewSelect selecter selectIndex:
+		(self reviewChoices findFirst: [ :each | each value = aStateOrNil ])
+]
+
+{ #category : 'actions' }
+ChessCoachAppElement >> filterBySpeed: aSpeedOrNil [
+	"Show only the games of one time control (all when nil), as choosing it does"
+
+	speedSelect selecter selectIndex:
+		(self speeds findFirst: [ :each | each value = aSpeedOrNil ])
 ]
 
 { #category : 'initialization' }
@@ -232,6 +240,17 @@ ChessCoachAppElement >> gameColumn: aTitle width: aNumber value: aBlock [
 		  dataIndex: aBlock;
 		  sorterBlock: aBlock;
 		  yourself
+]
+
+{ #category : 'accessing' }
+ChessCoachAppElement >> gameFilter [
+	"What the two dropdowns chose"
+
+	| filter |
+	filter := GameFilter new.
+	filter at: 'speed' put: speedSelect selectedDataItem value.
+	filter at: 'review' put: reviewSelect selectedDataItem value.
+	^ filter
 ]
 
 { #category : 'accessing' }
@@ -322,10 +341,11 @@ ChessCoachAppElement >> initialize [
 		addChild: self newStatusLine
 ]
 
-{ #category : 'private' }
+{ #category : 'accessing' }
 ChessCoachAppElement >> isReviewed: aGameIndexEntry [
+	"Whether it has a review, finished or not"
 
-	^ (reviewedIds ifNil: [ #(  ) ]) includes: aGameIndexEntry gameId
+	^ (self reviewStateOf: aGameIndexEntry) ~= 'unreviewed'
 ]
 
 { #category : 'updating' }
@@ -439,6 +459,26 @@ ChessCoachAppElement >> newDashboard [
 ]
 
 { #category : 'initialization' }
+ChessCoachAppElement >> newFilterSelect: someAssociations [
+	"A dropdown of label -> value, the first selected, that reloads the table"
+
+	| select |
+	select := ToSingleSelectElement new
+		          width: 150;
+		          yourself.
+	select popupListElement nodeBuilder: [ :node :assoc :holder |
+		node addChild: (ToLabel text: assoc key) ].
+	select dataViewBuilder: [ :view :assoc |
+		view addChild: (ToLabel text: assoc key) ].
+	select popupDataAccessor addAll: someAssociations.
+	select selecter selectIndex: 1.
+	select
+		addEventHandlerOn: ToSelectChangedEvent
+		do: [ :event | session ifNotNil: [ self updateFromSession ] ].
+	^ select
+]
+
+{ #category : 'initialization' }
 ChessCoachAppElement >> newGameTable [
 	"A Toplo table of the games: one column per field, sorted by clicking the arrow in its header, and a coach icon on reviewed games.
 	After each header layout, column widths lost while the page was hidden are restored, in a task so the layout isn't changed while it runs (see restoreGameColumnWidths)"
@@ -475,16 +515,19 @@ ChessCoachAppElement >> newGameTable [
 				 width: 40;
 				 dataIndex: [ :entry | entry ];
 				 sorterBlock: [ :entry |
-						 (self isReviewed: entry)
-							 ifTrue: [ 1 ]
-							 ifFalse: [ 0 ] ];
+						 #( 'unreviewed' 'inProgress' 'reviewed' ) indexOf:
+							 (self reviewStateOf: entry) ];
 				 cellBuilder: [ :cell :entry :holder |
 						 (self isReviewed: entry) ifTrue: [
 									 cell addChild:
 											 ((ChessCoachWidgets
-												   icon: 'outlined_school'
+												   icon: ((self reviewStateOf: entry) = 'reviewed'
+														    ifTrue: [ 'outlined_school' ]
+														    ifFalse: [ 'outlined_timelapse' ])
 												   extent: 16 @ 16)
-												  tooltipText: 'Reviewed with the coach';
+												  tooltipText: ((self reviewStateOf: entry) = 'reviewed'
+														   ifTrue: [ 'Reviewed with the coach' ]
+														   ifFalse: [ 'Review in progress' ]);
 												  yourself) ] ];
 				 yourself) }.
 	gameTable header
@@ -502,16 +545,11 @@ ChessCoachAppElement >> newGameTable [
 
 { #category : 'initialization' }
 ChessCoachAppElement >> newGamesPage [
-	"A bar with the speed filters, the Not reviewed filter, Refresh and Load more; below it the game table and the selected game"
+	"A bar with the time control and review filters, Refresh and Load more; below it the game table and the selected game"
 
 	| bar body |
-	notReviewedButton := ToToggleButton new
-		                     labelText: 'Not reviewed';
-		                     tooltipString:
-			                     'Only the games you have not reviewed with the coach yet';
-		                     yourself.
-	notReviewedButton newCheckAction: [
-		session ifNotNil: [ self updateFromSession ] ].
+	speedSelect := self newFilterSelect: self speeds.
+	reviewSelect := self newFilterSelect: self reviewChoices.
 	refreshButton := ToButton new
 		                 labelText: 'Refresh';
 		                 tooltipString:
@@ -531,8 +569,8 @@ ChessCoachAppElement >> newGamesPage [
 		       hMatchParent;
 		       vFitContent;
 		       padding: (BlInsets bottom: 8);
-		       addChild: self newSpeedBar;
-		       addChild: notReviewedButton;
+		       addChild: speedSelect;
+		       addChild: reviewSelect;
 		       addChild: refreshButton;
 		       addChild: loadMoreButton;
 		       yourself.
@@ -693,32 +731,6 @@ ChessCoachAppElement >> newPageButton: aString icon: anIconName page: anElement 
 ]
 
 { #category : 'initialization' }
-ChessCoachAppElement >> newSpeedBar [
-	"Toggle buttons that filter the game list by time control, in one row. A Toplo checkable group keeps exactly one checked; checking one filters the list."
-
-	| bar group |
-	bar := ToElement new
-		       layout: BlLinearLayout horizontal;
-		       hFitContent;
-		       vFitContent;
-		       yourself.
-	group := ToCheckableGroup new.
-	speedButtons := Dictionary new.
-	self speeds do: [ :each |
-			| button |
-			button := ToToggleButton new
-				          labelText: each key;
-				          yourself.
-			group register: button.
-			button newCheckAction: [
-				button isChecked ifTrue: [ self speedFilterChecked: each value ] ].
-			speedButtons at: each value put: button.
-			bar addChild: button ].
-	(speedButtons at: nil) check.
-	^ bar
-]
-
-{ #category : 'initialization' }
 ChessCoachAppElement >> newStatusLine [
 	"Background work, errors, the analysis queue and missing dependencies, shared by every page"
 
@@ -738,12 +750,6 @@ ChessCoachAppElement >> newStatusLine [
 		  addChild: analysisLabel;
 		  addChild: dependencyLabel;
 		  yourself
-]
-
-{ #category : 'accessing' }
-ChessCoachAppElement >> notReviewedButton [
-
-	^ notReviewedButton
 ]
 
 { #category : 'accessing' }
@@ -902,6 +908,24 @@ ChessCoachAppElement >> restoreGameColumnWidths [
 		with: gameTable columns
 		do: [ :container :column | container updateWidthWith: column width ].
 	gameTable list recordCellsWidth
+]
+
+{ #category : 'accessing' }
+ChessCoachAppElement >> reviewChoices [
+
+	^ {
+		  ('All reviews' -> nil).
+		  ('Not reviewed' -> 'unreviewed').
+		  ('In progress' -> 'inProgress').
+		  ('Reviewed' -> 'reviewed') }
+]
+
+{ #category : 'accessing' }
+ChessCoachAppElement >> reviewStateOf: aGameIndexEntry [
+
+	^ (reviewStates ifNil: [ Dictionary new ])
+		  at: aGameIndexEntry gameId
+		  ifAbsent: [ 'unreviewed' ]
 ]
 
 { #category : 'private' }
@@ -1106,19 +1130,6 @@ ChessCoachAppElement >> showWizard [
 	^ wizard
 ]
 
-{ #category : 'accessing' }
-ChessCoachAppElement >> speedButtonFor: aSpeedOrNil [
-
-	^ speedButtons at: aSpeedOrNil
-]
-
-{ #category : 'actions' }
-ChessCoachAppElement >> speedFilterChecked: aSpeedOrNil [
-
-	speedFilter := aSpeedOrNil.
-	session ifNotNil: [ self updateFromSession ]
-]
-
 { #category : 'private' }
 ChessCoachAppElement >> speedNameOf: aGameIndexEntry [
 
@@ -1296,17 +1307,15 @@ ChessCoachAppElement >> updateDashboard [
 
 { #category : 'updating' }
 ChessCoachAppElement >> updateFromSession [
-	"Reload the table, keeping the selected game selected when it is still listed. With Not reviewed checked, reviewed games are left out"
+	"Reload the table, keeping the selected game selected when it is still listed. The dropdowns choose the games"
 
 	| selectedId listed index |
 	refreshButton enabled: session canImport.
 	loadMoreButton enabled: session canImport.
 	self updateDashboard.
 	selectedId := self selectedEntry ifNotNil: [ :entry | entry gameId ].
-	reviewedIds := session reviewedGameIds.
-	listed := (session gamesWithSpeed: speedFilter) asArray.
-	notReviewedButton isChecked ifTrue: [
-		listed := listed reject: [ :each | self isReviewed: each ] ].
+	reviewStates := session reviewStates.
+	listed := (session gamesPassing: self gameFilter) asArray.
 	index := listed findFirst: [ :each | each gameId = selectedId ].
 	selectedIndex := index = 0
 		                 ifTrue: [ nil ]

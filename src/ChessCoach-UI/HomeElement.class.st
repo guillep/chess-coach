@@ -84,7 +84,7 @@ HomeElement >> cardOf: aWidget [
 	rows do: [ :each | column addChild: each ].
 	card := ToElement new
 		        layout: BlLinearLayout vertical;
-		        border: (BlBorder paint: Color gray width: 1);
+		        border: (BlBorder paint: (Color gray alpha: 0.35) width: 1);
 		        geometry: (BlRoundedRectangleGeometry cornerRadius: 6);
 		        yourself.
 	card userData at: #widget put: aWidget.
@@ -115,7 +115,7 @@ HomeElement >> cornerOf: aWidget in: aCard [
 	corner := ToElement new
 		          id: #corner;
 		          extent: 14 @ 14;
-		          background: (Color gray alpha: 0.5);
+		          background: (Color gray alpha: 0.35);
 		          constraintsDo: [ :c |
 				          c ignoreByLayout.
 				          c ignored horizontal alignRight.

@@ -301,6 +301,16 @@ CoachElementTest >> testTheListShowsTheFinalPosition [
 		equals: (review game positionAfterPly: review game moves size) fen
 ]
 
+{ #category : 'tests' }
+CoachElementTest >> testTheTimeBoxCutsBeforeTheNextMoment [
+
+	review timeBox: -1.
+	coach startNextAfter: 0.
+	scripter pulse.
+	self assert: coach mode equals: #summary.
+	self assert: review currentMoment isNil
+]
+
 { #category : 'helpers' }
 CoachElementTest >> zoneTexts [
 	"The texts of the labels, paragraphs and buttons in the current question zone. A long paragraph is a flow of labels, one per word."

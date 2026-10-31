@@ -935,6 +935,25 @@ ChessCoachSession >> pointsIn: aGame as: aColor [
 	^ 0.5
 ]
 
+{ #category : 'home' }
+ChessCoachSession >> ratingAt: aSpeedOrNil [
+	"My rating in my newest game of that speed with one, on Lichess or Chess.com, or nil"
+
+	| names |
+	names := {
+		         self username.
+		         self chessComUsername } reject: [ :each | each isNil ].
+	(self gamesWithSpeed: aSpeedOrNil) do: [ :entry |
+			| metadata |
+			metadata := (self gameFor: entry) metadata.
+			#( 'White' 'Black' ) do: [ :color |
+					(names anySatisfy: [ :name |
+						 (metadata at: color ifAbsent: [ '' ]) sameAs: name ]) ifTrue: [
+							(metadata at: color , 'Elo' ifAbsent: [ nil ]) ifNotNil: [ :elo |
+								elo isAllDigits ifTrue: [ ^ elo asInteger ] ] ] ] ].
+	^ nil
+]
+
 { #category : 'private' }
 ChessCoachSession >> rebuiltMistakeDatabase [
 	"The reviews are the source of truth: collect the mistakes saved in every games/<id>.review-<n>.json. A moment reviewed in several reviews of a game counts once, from the most recent one."

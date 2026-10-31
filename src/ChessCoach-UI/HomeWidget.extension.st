@@ -31,7 +31,7 @@ HomeWidget >> filterRowsOn: aHomeElement [
 	^ {
 		  ('Result' -> #( nil 'won' 'lost' 'draw' ) -> 'result').
 		  ('Color' -> #( nil 'white' 'black' ) -> 'color').
-		  ('Speed' -> #( nil 'bullet' 'blitz' 'rapid' 'classical' )
+		  ('Speed' -> (ChessCoachWidgets speeds collect: [ :speed | speed value ])
 		   -> 'speed').
 		  ('Source' -> #( nil 'lichess' 'chess.com' ) -> 'source').
 		  ('Last days' -> #( nil 7 30 90 365 ) -> 'days').

@@ -167,6 +167,20 @@ HomeElementTest >> testEveryUnreviewedMomentKeepsAReviewOpen [
 ]
 
 { #category : 'tests' }
+HomeElementTest >> testFilterByColor [
+
+	| filter |
+	session lichessUsername: 'alice'.
+	filter := GameFilter new.
+	filter at: 'color' put: 'white'.
+	self
+		assert: (session gamesPassing: filter) size
+		equals: session games size.
+	filter at: 'color' put: 'black'.
+	self assert: (session gamesPassing: filter) isEmpty
+]
+
+{ #category : 'tests' }
 HomeElementTest >> testFilterCriteria [
 
 	| filter |
@@ -269,6 +283,24 @@ HomeElementTest >> testNumbersShowWhatWasChosen [
 	self assert: (texts first beginsWith: 'Winrate: ').
 	self assert: (texts second beginsWith: 'Winning streak: ')
 		| (texts second beginsWith: 'Rating')
+]
+
+{ #category : 'tests' }
+HomeElementTest >> testRatingComesFromMyNewestGameWithOne [
+
+	| game |
+	session lichessUsername: 'alice'.
+	self assert: (session ratingAt: nil) isNil.
+	game := LichessAPIClientStub gameNumber: 26.
+	game at: 'pgn' put: '[White "alice"]
+[Black "Stockfish"]
+[WhiteElo "1500"]
+[Result "1-0"]
+
+1. e4 e5 1-0'.
+	api addNewestGame: game.
+	session refresh.
+	self assert: (session ratingAt: nil) equals: 1500
 ]
 
 { #category : 'tests' }

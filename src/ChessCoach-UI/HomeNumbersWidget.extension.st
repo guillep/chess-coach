@@ -63,7 +63,7 @@ HomeNumbersWidget >> rowsOn: aHomeElement [
 			each = 'rating' ifTrue: [
 					| speed |
 					speed := (self filter at: 'speed') ifNil: [ 'blitz' ].
-					(session lichessRatingAt: speed) ifNotNil: [ :rating |
+					(session ratingAt: speed) ifNotNil: [ :rating |
 						lines add: 'Rating (' , speed , '): ' , rating printString ] ].
 			each = 'streak' ifTrue: [
 				lines add: 'Winning streak: ' , streak printString ] ].

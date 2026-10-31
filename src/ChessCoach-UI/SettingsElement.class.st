@@ -76,14 +76,12 @@ SettingsElement >> aboutSection [
 
 { #category : 'building' }
 SettingsElement >> appThemeRow [
-	"One button per app theme; the chosen one is shown in brackets"
+	"One toggle per app theme"
 
 	^ self row: (#( 'Light' 'Dark' ) collect: [ :name |
-				   appThemeButtons at: name put: (ToButton new
-						    clickAction: [
-								    session settings at: 'appTheme' put: name.
-								    self updateAppTheme ];
-						    yourself) ])
+			   appThemeButtons at: name put: (self newChoiceDo: [
+					    session settings at: 'appTheme' put: name.
+					    self updateAppTheme ]) ])
 ]
 
 { #category : 'accessing' }
@@ -168,7 +166,7 @@ SettingsElement >> build [
 		addChild: (widgets
 				 section: 'Moments'
 				 help:
-				 'How the coach finds the moments to review; the blue ones are on. Evaluation drops are moves that lost ground according to Stockfish; only moves are positions where a single move kept the balance; long thinks are moves that took at least 10 s and 3 times your average; opening choices compare your moves with the Lichess database. The moves you mark are always included. Changes apply to new analyses.'
+				 'How the coach finds the moments to review; the ones with a tick are on. Evaluation drops are moves that lost ground according to Stockfish; only moves are positions where a single move kept the balance; long thinks are moves that took at least 10 s and 3 times your average; opening choices compare your moves with the Lichess database. The moves you mark are always included. Changes apply to new analyses.'
 				 rows: {
 						 (self note: 'Find moments from:').
 						 (self row: {
@@ -300,13 +298,17 @@ SettingsElement >> heading: aString [
 SettingsElement >> heuristicRow: aLabel key: aKey [
 	"A toggle that turns one way of finding moments on or off, saved at once"
 
-	| toggle |
-	toggle := ToToggleButton new
-		          labelText: aLabel;
-		          yourself.
+	| toggle show |
+	toggle := ToToggleButton new.
+	show := [
+	        toggle labelText: (toggle isChecked
+			         ifTrue: [ '✓ ' , aLabel ]
+			         ifFalse: [ aLabel ]) ].
 	(session settings at: aKey) ifTrue: [ toggle check ].
+	show value.
 	toggle newCheckAction: [
-		session settings at: aKey put: toggle isChecked ].
+		session settings at: aKey put: toggle isChecked.
+		show value ].
 	^ toggle
 ]
 
@@ -430,6 +432,25 @@ SettingsElement >> loginOrLogout [
 		showingErrorsIn: lichessStatus
 ]
 
+{ #category : 'updating' }
+SettingsElement >> mark: aButton named: aName chosen: aChosenName [
+	"Chosen choices have both the toggle's colour and a tick"
+
+	aButton labelText: (self chosen: aName is: aChosenName).
+	aButton checked: aName = aChosenName
+]
+
+{ #category : 'building' }
+SettingsElement >> newChoiceDo: aBlock [
+	"A toggle for one of several choices: a click runs aBlock, which marks the chosen one. The click, not a check action: Toplo also runs those when marking changes the state. In a task, after the toggle has handled the click itself."
+
+	| button |
+	button := ToToggleButton new.
+	button addEventHandlerOn: BlClickEvent do: [ :event |
+		self enqueueTask: (BlTaskAction new action: aBlock) ].
+	^ button
+]
+
 { #category : 'building' }
 SettingsElement >> newTabsOn: aContent [
 	"One tab per group of sections of aContent, on top, each scrolling. Run setup again goes to the first."
@@ -537,11 +558,9 @@ SettingsElement >> pieceSetRow [
 		             yourself.
 	ChessPieceSet byName keysDo: [ :name |
 			| button |
-			button := ToButton new
-				          clickAction: [
-						          session settings at: 'pieceSet' put: name.
-						          self updatePieceSet ];
-				          yourself.
+			button := self newChoiceDo: [
+				          session settings at: 'pieceSet' put: name.
+				          self updatePieceSet ].
 			pieceSetButtons at: name put: button.
 			pieceSets addChild: button ].
 	themes := ToElement new
@@ -551,11 +570,9 @@ SettingsElement >> pieceSetRow [
 		          yourself.
 	ChessBoardElement themes keysDo: [ :name |
 			| button |
-			button := ToButton new
-				          clickAction: [
-						          session settings at: 'boardTheme' put: name.
-						          self updatePieceSet ];
-				          yourself.
+			button := self newChoiceDo: [
+				          session settings at: 'boardTheme' put: name.
+				          self updatePieceSet ].
 			themeButtons at: name put: button.
 			themes addChild: button ].
 	^ self row: {
@@ -752,24 +769,24 @@ SettingsElement >> updateAccounts [
 SettingsElement >> updateAppTheme [
 
 	appThemeButtons keysAndValuesDo: [ :name :button |
-		button labelText: (self chosen: name is: session settings appTheme) ]
+		self mark: button named: name chosen: session settings appTheme ]
 ]
 
 { #category : 'updating' }
 SettingsElement >> updateModels: someModelNames [
-	"One button per installed model; the chosen one has a check mark"
+	"One toggle per installed model; the chosen one is checked and has a tick"
 
 	| chosen |
 	chosen := session settings ollamaModel.
 	modelsZone removeChildren.
 	modelsZone addChild: (ToLabel text: 'Model:').
 	someModelNames do: [ :name |
-			modelsZone addChild: (ToButton new
-					 labelText: (self chosen: name is: chosen);
-					 clickAction: [
-							 session settings at: 'ollamaModel' put: name.
-							 self updateModels: someModelNames ];
-					 yourself) ].
+			| button |
+			button := self newChoiceDo: [
+					          session settings at: 'ollamaModel' put: name.
+					          self updateModels: someModelNames ].
+			self mark: button named: name chosen: chosen.
+			modelsZone addChild: button ].
 	chosen = 'qwen2.5:7b-instruct' ifFalse: [
 			modelsZone addChild:
 				(ToLabel text: 'Validated only with qwen2.5:7b-instruct') ]
@@ -792,10 +809,9 @@ SettingsElement >> updatePieceSet [
 	"Check the chosen piece set and colour theme, and show them on the preview board"
 
 	pieceSetButtons keysAndValuesDo: [ :name :button |
-		button labelText: (self chosen: name is: session settings pieceSet) ].
+		self mark: button named: name chosen: session settings pieceSet ].
 	themeButtons keysAndValuesDo: [ :name :button |
-		button labelText:
-			(self chosen: name is: session settings boardTheme) ].
+		self mark: button named: name chosen: session settings boardTheme ].
 	previewBoard
 		pieceSet: (ChessPieceSet named: session settings pieceSet);
 		theme: session settings boardTheme

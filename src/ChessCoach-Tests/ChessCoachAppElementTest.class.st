@@ -12,6 +12,14 @@ Class {
 }
 
 { #category : 'support' }
+ChessCoachAppElementTest >> choose: aButton [
+	"Click a toggle whose text changes once chosen, so it can't be looked up again"
+
+	BlSpace simulateClickOn: aButton.
+	scripter pulse
+]
+
+{ #category : 'support' }
 ChessCoachAppElementTest >> choose: aString in: aSelect [
 	"Press on the dropdown, which opens it, release, and click the option showing aString"
 
@@ -596,13 +604,13 @@ ChessCoachAppElementTest >> testSettingsPage [
 	scripter pulse.
 	self click: (settings buttonLabeled: 'Load models').
 	self assert: (settings texts includes: '2 models installed').
-	self click: (settings buttonLabeled: 'llama3.1:8b').
+	self choose: (settings buttonLabeled: 'llama3.1:8b').
 	self assert: session settings ollamaModel equals: 'llama3.1:8b'.
 	self assert:
 		(settings texts includes: 'Validated only with qwen2.5:7b-instruct').
 	settings showSection: 'Analysis'.
 	scripter pulse.
-	self click: (settings buttonLabeled: 'Long thinks').
+	self click: (settings buttonLabeled: '✓ Long thinks').
 	self deny: (session settings at: 'findLongThinks')
 ]
 

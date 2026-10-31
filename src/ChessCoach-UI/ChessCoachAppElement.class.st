@@ -291,7 +291,7 @@ ChessCoachAppElement >> inUIDo: aBlock [
 
 { #category : 'initialization' }
 ChessCoachAppElement >> initialize [
-	"A top bar with the notification bell on the right, the pages in a tab pane with the tabs in a left column, and a status line below"
+	"A title bar with the icon, the name, updates and notifications; below it the pages in a tab pane with the tabs in a left column, and a status line. I have no margin: the pages have their own."
 
 	super initialize.
 	backgroundRunner := [ :aBlock |
@@ -310,10 +310,10 @@ ChessCoachAppElement >> initialize [
 				 hMatchParent;
 				 vFitContent;
 				 padding: (BlInsets
-						  top: 8
-						  left: 16
-						  bottom: 0
-						  right: 28);
+						  top: 6
+						  left: 12
+						  bottom: 6
+						  right: 12);
 				 addChild: self newBell;
 				 yourself);
 		addChild: navigation;
@@ -398,18 +398,22 @@ ChessCoachAppElement >> newBell [
 
 { #category : 'initialization' }
 ChessCoachAppElement >> newBrand [
-	"The name above the page titles, in the bar; the logo is the Home tab"
+	"The icon and the name at the left of the title bar; the icon goes Home"
 
 	^ ToElement new
-		  layout: BlLinearLayout horizontal alignCenterLeft;
+		  layout:
+			  (BlLinearLayout horizontal alignCenterLeft cellSpacing: 10);
 		  hMatchParent;
 		  vFitContent;
+		  addChild: ((ChessCoachWidgets logo: 32)
+				   addEventHandlerOn: BlClickEvent
+				   do: [ :event | self showPage: #Home ];
+				   yourself);
 		  addChild: (ToLabel new
 				   text: ('Chessmate' asRopedText
-						    fontSize: 24;
+						    fontSize: 20;
 						    bold;
 						    yourself);
-				   margin: (BlInsets left: 104);
 				   yourself);
 		  yourself
 ]
@@ -551,9 +555,9 @@ ChessCoachAppElement >> newGamesPage [
 
 { #category : 'initialization' }
 ChessCoachAppElement >> newNavigation [
-	"Home (the logo), Stats, Games, Openings and Settings as pages of a Toplo tab pane, tabs in a column on the left. Pages are built once and kept. The coach, a played-through game and an opening tree open as closable pages after them."
+	"Home, Stats, Games, Openings and Settings as pages of a Toplo tab pane, tabs in a column on the left. Pages are built once and kept. The coach, a played-through game and an opening tree open as closable pages after them."
 
-	| pane homeButton |
+	| pane |
 	pane := ToTabPaneElement new.
 	pane horizontal: true.
 	pane matchParent.
@@ -562,12 +566,8 @@ ChessCoachAppElement >> newNavigation [
 	home whenGameChosenDo: [ :entry |
 			self showPage: #Games.
 			self selectGameId: entry gameId ].
-	homeButton := self
-		              newPageButton: 'Home'
-		              icon: 'outlined_home'
-		              page: home.
-	homeButton icon: (ChessCoachWidgets logoIcon: 40).
-	pane addItem: homeButton.
+	pane addItem:
+		(self newPageButton: 'Home' icon: 'outlined_home' page: home).
 	pane addItem:
 		(self
 			 newPageButton: 'Stats'

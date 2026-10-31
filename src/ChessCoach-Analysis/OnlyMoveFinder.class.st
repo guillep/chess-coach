@@ -3,7 +3,7 @@ I find difficult positions with a single good move: the best line beats the seco
 "
 Class {
 	#name : 'OnlyMoveFinder',
-	#superclass : 'Object',
+	#superclass : 'MomentFinder',
 	#instVars : [
 		'analysis'
 	],
@@ -26,7 +26,7 @@ OnlyMoveFinder >> hasOnlyMove: aPlyAnalysis for: aColor [
 	aPlyAnalysis lines size < 2 ifTrue: [ ^ false ].
 	best := aPlyAnalysis lines first winPercentFor: aColor.
 	second := aPlyAnalysis lines second winPercentFor: aColor.
-	best - second >= 20 ifFalse: [ ^ false ].
+	best - second >= (self threshold: 'momentOnlyMoveGap') ifFalse: [ ^ false ].
 	^ (best between: 10 and: 90) or: [
 			  (best >= 50 and: [ second <= 10 ]) or: [
 					  (aPlyAnalysis lines first isMateFor: aColor) and: [

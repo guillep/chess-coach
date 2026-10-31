@@ -3,7 +3,7 @@ Finds the moves a player thought about much longer than usual, from the [%clk] c
 "
 Class {
 	#name : 'LongThinkFinder',
-	#superclass : 'Object',
+	#superclass : 'MomentFinder',
 	#instVars : [
 		'game'
 	],
@@ -36,7 +36,9 @@ LongThinkFinder >> moments [
 	^ (seconds keys asArray sort select: [ :ply |
 			   | used |
 			   used := seconds at: ply.
-			   used >= 10 and: [ used >= (3 * (averages at: ply \\ 2)) ] ])
+			   used >= (self threshold: 'momentLongThinkSeconds') and: [
+				   used >= ((self threshold: 'momentLongThinkFactor')
+				    * (averages at: ply \\ 2)) ] ])
 		  collect: [ :ply |
 				  ChessMoment
 					  ply: ply

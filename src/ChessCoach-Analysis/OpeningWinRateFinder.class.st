@@ -4,7 +4,7 @@ A move is a moment when it scores 5 points or more below the best candidate (can
 "
 Class {
 	#name : 'OpeningWinRateFinder',
-	#superclass : 'Object',
+	#superclass : 'MomentFinder',
 	#instVars : [
 		'game',
 		'explorer',
@@ -62,7 +62,7 @@ OpeningWinRateFinder >> gameCountOf: data [
 { #category : 'accessing' }
 OpeningWinRateFinder >> minimumGames [
 
-	^ 50
+	^ self threshold: 'momentOpeningMinimumGames'
 ]
 
 { #category : 'private' }
@@ -86,7 +86,7 @@ OpeningWinRateFinder >> momentForMove: aSAN ply: aPly color: aColor in: data [
 							        aSAN.
 							        (self describeTop: candidates for: aColor) } ]
 		        ifFalse: [
-				        (self score: played for: aColor) + 5
+				        (self score: played for: aColor) + (self threshold: 'momentOpeningScoreGap')
 				        <= (self score: best for: aColor) ifFalse: [ ^ nil ].
 				        'You played {1} ({2}); better scoring: {3}' format: {
 						        aSAN.

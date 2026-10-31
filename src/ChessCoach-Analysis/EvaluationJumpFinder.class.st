@@ -3,7 +3,7 @@ I find moves that lost winning chances compared with the engine's best move: a d
 "
 Class {
 	#name : 'EvaluationJumpFinder',
-	#superclass : 'Object',
+	#superclass : 'MomentFinder',
 	#instVars : [
 		'analysis'
 	],
@@ -34,9 +34,9 @@ EvaluationJumpFinder >> allowsMate: mover before: before after: after [
 { #category : 'private' }
 EvaluationJumpFinder >> kindForDrop: aNumber [
 
-	aNumber >= 30 ifTrue: [ ^ #blunder ].
-	aNumber >= 20 ifTrue: [ ^ #mistake ].
-	aNumber >= 10 ifTrue: [ ^ #inaccuracy ].
+	aNumber >= (self threshold: 'momentBlunderDrop') ifTrue: [ ^ #blunder ].
+	aNumber >= (self threshold: 'momentMistakeDrop') ifTrue: [ ^ #mistake ].
+	aNumber >= (self threshold: 'momentInaccuracyDrop') ifTrue: [ ^ #inaccuracy ].
 	^ nil
 ]
 

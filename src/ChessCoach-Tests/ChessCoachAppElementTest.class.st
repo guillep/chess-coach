@@ -182,7 +182,7 @@ ChessCoachAppElementTest >> testCoachAndPlayThroughOpenInClosableTabs [
 	self assert: coach isAttachedToSceneGraph.
 	self
 		assert: (app navigation items asArray collect: [ :each | each id ])
-		equals: #( #Home #Stats #Games #Openings #Settings #Coach ).
+		equals: #( #Home #Stats #Games #Openings #Settings #Help #Coach ).
 	coachTab := app navigation items asArray last.
 	app showPage: #Stats.
 	scripter pulse.
@@ -280,6 +280,20 @@ ChessCoachAppElementTest >> testHelpIconOpensItsTooltipOnClick [
 	helpScripter pulse.
 	self assert: icon currentTooltipWindow notNil.
 	self assert: icon currentTooltipWindow isOpened
+]
+
+{ #category : 'tests' }
+ChessCoachAppElementTest >> testHelpShowsTheCurrentThresholds [
+
+	| help |
+	session settings at: 'momentBlunderDrop' put: 42.
+	app helpElement session: session.
+	help := app helpElement.
+	self assert: (help heuristicsText first includesSubstring: '42').
+	self assert: (help mistakeTypesText anySatisfy: [ :each |
+			 each beginsWith: 'Perception' ]).
+	self assert: help mistakeTypesText size
+		> MistakeTaxonomy default tags size
 ]
 
 { #category : 'tests' }

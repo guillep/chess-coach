@@ -17,7 +17,7 @@ Class {
 ChessCoachSettings class >> defaults [
 
 	^ Dictionary new
-		  at: 'formatVersion' put: 1;
+		  at: 'formatVersion' put: 2;
 		  at: 'appTheme' put: 'Light';
 		  at: 'pieceSet' put: 'Meridian';
 		  at: 'boardTheme' put: 'Chessmate';
@@ -34,6 +34,7 @@ ChessCoachSettings class >> defaults [
 		  at: 'findOpeningChoices' put: true;
 		  at: 'openingDatabaseMinGames' put: 5;
 		  at: 'setupDone' put: false;
+		  addAll: MomentFinder defaultThresholds;
 		  yourself
 ]
 
@@ -99,6 +100,17 @@ ChessCoachSettings >> gamesPerLoad [
 ]
 
 { #category : 'accessing' }
+ChessCoachSettings >> momentThresholds [
+	"The thresholds of the moment heuristics"
+
+	^ MomentFinder defaultThresholds keys
+		  inject: Dictionary new
+		  into: [ :thresholds :key |
+			  thresholds at: key put: (self at: key).
+			  thresholds ]
+]
+
+{ #category : 'accessing' }
 ChessCoachSettings >> multiPV [
 
 	^ self at: 'multiPV'
@@ -125,12 +137,14 @@ ChessCoachSettings >> pieceSet [
 
 { #category : 'initialization' }
 ChessCoachSettings >> setFile: aFileReference [
+	"Older files lack the newer settings, which keep their defaults"
 
 	file := aFileReference.
 	values := self class defaults.
 	changedBlock := [ :key |  ].
 	file exists ifTrue: [
-		values addAll: (STONJSON fromString: file contents) ]
+		values addAll: (STONJSON fromString: file contents).
+		values at: 'formatVersion' put: (self class defaults at: 'formatVersion') ]
 ]
 
 { #category : 'accessing' }

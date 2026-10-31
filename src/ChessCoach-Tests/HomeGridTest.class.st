@@ -71,6 +71,19 @@ HomeGridTest >> testResizingBelowAnotherKeepsThemApart [
 ]
 
 { #category : 'tests' }
+HomeGridTest >> testThresholdsComeFromTheFinder [
+
+	| finder |
+	finder := EvaluationJumpFinder new.
+	self assert: (finder kindForDrop: 15) equals: #inaccuracy.
+	finder thresholds: (Dictionary new
+			 at: 'momentInaccuracyDrop' put: 16;
+			 yourself).
+	self assert: (finder kindForDrop: 15) isNil.
+	self assert: (finder kindForDrop: 30) equals: #blunder
+]
+
+{ #category : 'tests' }
 HomeGridTest >> testWidgetsCompactUpwards [
 
 	| widget |

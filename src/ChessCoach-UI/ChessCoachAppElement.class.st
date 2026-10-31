@@ -36,7 +36,8 @@ Class {
 		'home',
 		'speedSelect',
 		'reviewSelect',
-		'reviewStates'
+		'reviewStates',
+		'helpElement'
 	],
 	#category : 'ChessCoach-UI-App',
 	#package : 'ChessCoach-UI',
@@ -307,6 +308,12 @@ ChessCoachAppElement >> games [
 ChessCoachAppElement >> gamesPage [
 
 	^ gamesPage
+]
+
+{ #category : 'accessing' }
+ChessCoachAppElement >> helpElement [
+
+	^ helpElement
 ]
 
 { #category : 'accessing' }
@@ -651,6 +658,11 @@ ChessCoachAppElement >> newNavigation [
 			 newPageButton: 'Settings'
 			 icon: 'outlined_settings'
 			 page: settingsElement).
+	helpElement := HelpElement new.
+	pane addItem: (self
+			 newPageButton: 'Help'
+			 icon: 'outlined_helpoutline'
+			 page: helpElement).
 	pane
 		addEventHandlerOn: ToItemRemovedFromListEvent
 		do: [ :event |
@@ -1048,6 +1060,7 @@ ChessCoachAppElement >> session: aChessCoachSession [
 	self updateFromSession.
 	self updateBell.
 	home session: session.
+	helpElement session: session.
 	self showPage: #Home.
 	session isFirstRun ifTrue: [ self showWizard ]
 ]

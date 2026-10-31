@@ -18,6 +18,19 @@ ChessCoachSettingsTest >> setUp [
 ]
 
 { #category : 'tests' }
+ChessCoachSettingsTest >> testAnOlderFileGetsTheThresholdDefaults [
+
+	| file settings |
+	file := FileSystem memory root / 'old.json'.
+	file writeStreamDo: [ :stream |
+		stream nextPutAll: '{"formatVersion":1,"depth":20}' ].
+	settings := ChessCoachSettings onFile: file.
+	self assert: (settings at: 'depth') equals: 20.
+	self assert: (settings at: 'momentBlunderDrop') equals: 30.
+	self assert: (settings at: 'formatVersion') equals: 2
+]
+
+{ #category : 'tests' }
 ChessCoachSettingsTest >> testAnalysisSettingsKeepStoredAnalyses [
 
 	| engine queue entry |

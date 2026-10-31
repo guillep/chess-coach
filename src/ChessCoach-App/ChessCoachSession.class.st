@@ -814,6 +814,7 @@ ChessCoachSession >> momentsFor: aGameIndexEntry marks: someMarks problems: aCol
 				ifFalse: [
 						aCollection add:
 							'Log in to Lichess to compare your opening moves with its database.' ] ].
+	finders do: [ :each | each thresholds: self settings momentThresholds ].
 	^ (MomentDetector
 		   finders: finders
 		   marksFinder: (MarkedMomentsFinder game: game marks: someMarks)

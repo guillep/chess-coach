@@ -149,28 +149,18 @@ CoachElement >> buildEngineRevealOf: reveal before: before after: after [
 { #category : 'building' }
 CoachElement >> buildList [
 
-	| moments |
-	currentZone addChild:
-		(self row: (#( #all #mistakes #blunders ) collect: [ :each |
-					  self
-						  button: (each = self filter
-								   ifTrue: [ '✓ ' , (self filterLabel: each) ]
-								   ifFalse: [ self filterLabel: each ])
-						  do: [ self filter: each ] ])).
 	self buildTimeBox.
-	moments := review momentsPassing: self filter.
 	self section: 'Moments' build: [
-			moments ifEmpty: [
-				currentZone addChild:
-					(self paragraph: 'No moments with this filter.') ].
-			moments do: [ :each |
+			review moments do: [ :each |
 					currentZone addChild: (self
 							 button:
 								 (self describeMoment: each) , ((review isPlanned: each)
 									  ifTrue: [ '' ]
-									  ifFalse: [ ' · not planned' ])
+									  ifFalse: [ ' · left out' ])
 							 icon: (self stateIconNameOf: each)
 							 do: [ self showMoment: each ]) ].
+			self leftOutText ifNotNil: [ :text |
+				currentZone addChild: (self paragraph: text) ].
 			currentZone addChild:
 				(self paragraph: ('Marking {1} · moments {2}' format: {
 							  (self minutes: review markingSeconds).
@@ -329,7 +319,9 @@ CoachElement >> buildReportNumbers [
 	currentZone addChild:
 		(self paragraph: ('Reviewed {1} of {2} moments' format: {
 					  review reviewedMoments size.
-					  (review momentsPassing: self filter) size })).
+					  review moments size })).
+	self leftOutText ifNotNil: [ :text |
+		currentZone addChild: (self paragraph: text) ].
 	currentZone addChild: (self paragraph: (' · ' join: ({
 					   ('Blunders' -> #blunder).
 					   ('Mistakes' -> #mistake).
@@ -688,27 +680,6 @@ CoachElement >> doneMarking [
 						self refresh ] ]
 ]
 
-{ #category : 'private' }
-CoachElement >> filter [
-
-	^ session settings momentFilter
-]
-
-{ #category : 'actions' }
-CoachElement >> filter: aFilter [
-
-	session settings at: 'momentFilter' put: aFilter asString.
-	self refresh
-]
-
-{ #category : 'private' }
-CoachElement >> filterLabel: aFilter [
-
-	aFilter = #all ifTrue: [ ^ 'All' ].
-	aFilter = #mistakes ifTrue: [ ^ 'Mistakes+' ].
-	^ 'Blunders only'
-]
-
 { #category : 'accessing' }
 CoachElement >> header [
 
@@ -836,6 +807,18 @@ CoachElement >> isActive: aMomentReview [
 	"Whether the coach is asking about aMomentReview right now"
 
 	^ aMomentReview notNil and: [ review currentMoment == aMomentReview ]
+]
+
+{ #category : 'building' }
+CoachElement >> leftOutText [
+	"Why some moments are not reviewed, or nil when none is left out"
+
+	| count |
+	count := review leftOutMoments size.
+	count = 0 ifTrue: [ ^ nil ].
+	^ '{1} left out: they did not fit in the {2} minute time box. The most important moments and your marks go first.' format: {
+			  (count = 1 ifTrue: [ '1 moment' ] ifFalse: [ count printString , ' moments' ]).
+			  review timeBox }
 ]
 
 { #category : 'private' }
@@ -1191,7 +1174,7 @@ CoachElement >> shownMoment [
 { #category : 'private' }
 CoachElement >> startNextAfter: aPly [
 
-	(review nextMomentAfter: aPly passing: self filter)
+	(review nextMomentAfter: aPly)
 		ifNil: [
 				walking := false.
 				mode := #summary ]
@@ -1357,14 +1340,14 @@ CoachElement >> updateHeader [
 						   review number.
 						   review date yyyymmdd.
 						   review reviewedMoments size.
-						   (review momentsPassing: self filter) size.
+						   review moments size.
 						   (self minutes: review totalSeconds) }) ].
 	mode = #summary ifTrue: [ ^ header text: 'Review summary' ].
 	move := game moves at: shownMoment ply.
 	header text:
 		('Moment {1} of {2} · move {3} ({4}) · {5}{6}' format: {
-				 ((review momentsPassing: self filter) indexOf: shownMoment).
-				 (review momentsPassing: self filter) size.
+				 (review moments indexOf: shownMoment).
+				 review moments size.
 				 (shownMoment ply + 1 // 2).
 				 move san.
 				 (ChessCoachWidgets humanize: shownMoment kinds asArray first).

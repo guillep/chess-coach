@@ -627,18 +627,15 @@ ChessCoachSession >> isLoggedIn [
 
 { #category : 'home' }
 ChessCoachSession >> isUnfinishedReview: aString [
-	"While marking, or with moments left that the coach would still walk through: planned ones passing my moment filter. Without a plan, every moment counts. Older files have neither field."
+	"While marking, or with planned moments left. Without a plan, every moment counts. Older files have neither field."
 
-	| dictionary planned filter |
+	| dictionary planned |
 	dictionary := STONJSON fromString: aString.
 	(dictionary at: 'marking' ifAbsent: [ false ]) ifTrue: [ ^ true ].
 	planned := dictionary at: 'planned' ifAbsent: [ nil ].
-	filter := self settings momentFilter.
 	^ (dictionary at: 'moments' ifAbsent: [ #(  ) ]) anySatisfy: [ :each |
-			  | moment |
-			  moment := CoachMomentReview fromDictionary: each.
 			  (planned isNil or: [ planned includes: (each at: 'ply') ]) and: [
-				  moment isReviewed not and: [ moment passes: filter ] ] ]
+				  (CoachMomentReview fromDictionary: each) isReviewed not ] ]
 ]
 
 { #category : 'opening trees' }

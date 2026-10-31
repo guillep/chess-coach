@@ -43,9 +43,7 @@ GameReviewsElement >> describe: aCoachReview [
 				   ifTrue: [ 'marking' ]
 				   ifFalse: [
 						   aCoachReview reviewedMoments size printString , '/'
-						   ,
-							   (aCoachReview momentsPassing: session settings momentFilter)
-								   size printString , ' moments reviewed' ]) }
+						   , aCoachReview moments size printString , ' moments reviewed' ]) }
 ]
 
 { #category : 'private' }

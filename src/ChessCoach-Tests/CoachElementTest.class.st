@@ -176,11 +176,6 @@ CoachElementTest >> testListShowsPastMomentsAndReviewsOneMoment [
 	self
 		assert: (coach stateIconNameOf: moment)
 		equals: 'outlined_timelapse'.
-	coach filter: #blunders.
-	scripter pulse.
-	self assert:
-		(self zoneTexts includes: 'No moments with this filter.').
-	coach filter: #all.
 	coach showMoment: moment.
 	scripter pulse.
 	self assert: (self zoneTexts includes:

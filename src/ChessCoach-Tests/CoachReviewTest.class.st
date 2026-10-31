@@ -193,8 +193,8 @@ CoachReviewTest >> testDialogue [
 	review confirmTag: 'hope-chess' of: moment.
 	review leaveMoment.
 	self assert: review currentMoment isNil.
-	self assert: (review nextMomentAfter: 7 passing: #all) isNil.
-	self assert: (review nextMomentAfter: 0 passing: #all) ply equals: 3
+	self assert: (review nextMomentAfter: 7) isNil.
+	self assert: (review nextMomentAfter: 0) ply equals: 3
 ]
 
 { #category : 'tests' }
@@ -226,7 +226,7 @@ CoachReviewTest >> testFoundOnlyMoveIsNotAMistake [
 	review := self newReview.
 	self answerFirstMoment: review.
 	review leaveMoment.
-	review start: (review nextMomentAfter: 0 passing: #all).
+	review start: (review nextMomentAfter: 0).
 	self assert: review currentMoment ply equals: 3.
 	self assert: review currentQuestion kind equals: #whatDidYouSee.
 	review answerText: 'The knight fork'.
@@ -247,7 +247,7 @@ CoachReviewTest >> testIllegalCandidate [
 ]
 
 { #category : 'tests' }
-CoachReviewTest >> testMarkingPassAndFilters [
+CoachReviewTest >> testMarkingPass [
 
 	| review restored |
 	review := self newReviewMarking.
@@ -288,19 +288,9 @@ CoachReviewTest >> testMarkingPassAndFilters [
 	self assert: review markingSeconds equals: 12.
 	self
 		assert:
-		((review momentsPassing: #all) collect: [ :each | each ply ])
+		(review moments collect: [ :each | each ply ])
 			asArray
 		equals: #( 3 5 7 ).
-	self
-		assert:
-			((review momentsPassing: #mistakes) collect: [ :each | each ply ])
-				asArray
-		equals: #( 3 7 ).
-	self
-		assert:
-			((review momentsPassing: #blunders) collect: [ :each | each ply ])
-				asArray
-		equals: #( 3 ).
 	self assert: (review moments last winDrop between: 17 and: 19).
 	restored := self newReviewMarking
 		            restoreFromJSON: review asJSON analysis: [ analysis ];
@@ -432,8 +422,8 @@ CoachReviewTest >> testTimeBoxPlansMarksThenTheMostImportantMoments [
 	self assert: (review isPlanned: review moments last).
 	self deny: (review isPlanned: review moments first).
 	self assert: review plannedMinutes equals: 5.
-	self assert: (review nextMomentAfter: 0 passing: #all) ply equals: 5.
-	self assert: (review nextMomentAfter: 5 passing: #all) ply equals: 7.
+	self assert: (review nextMomentAfter: 0) ply equals: 5.
+	self assert: (review nextMomentAfter: 5) ply equals: 7.
 	self deny: review isOverTime.
 	review start: review moments last.
 	self wait: 300.

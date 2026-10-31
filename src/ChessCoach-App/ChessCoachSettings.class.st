@@ -28,7 +28,6 @@ ChessCoachSettings class >> defaults [
 		  at: 'multiPV' put: 3;
 		  at: 'ollamaUrl' put: 'http://localhost:11434';
 		  at: 'ollamaModel' put: 'qwen2.5:7b-instruct';
-		  at: 'momentFilter' put: 'mistakes';
 		  at: 'findEvaluationJumps' put: true;
 		  at: 'findOnlyMoves' put: true;
 		  at: 'findLongThinks' put: true;
@@ -97,13 +96,6 @@ ChessCoachSettings >> gamesCheckMinutes [
 ChessCoachSettings >> gamesPerLoad [
 
 	^ self at: 'gamesPerLoad'
-]
-
-{ #category : 'accessing' }
-ChessCoachSettings >> momentFilter [
-	"Which moments a review lists and walks through: #all, #mistakes or #blunders"
-
-	^ (self at: 'momentFilter') asSymbol
 ]
 
 { #category : 'accessing' }

@@ -120,6 +120,16 @@ HomeElementTest >> testEditingTheTitleIsKeptOnDone [
 ]
 
 { #category : 'tests' }
+HomeElementTest >> testEveryUnreviewedMomentKeepsAReviewOpen [
+
+	| moment |
+	moment := '{"ply":10,"color":"black","kinds":["inaccuracy"],"pending":[],"answers":[],"candidates":{},"labels":[]}'.
+	root / 'games' / 'g25.review-1.json' writeStreamDo: [ :stream |
+		stream nextPutAll: '{"marking":false,"moments":[' , moment , ']}' ].
+	self assert: (session reviewStates at: 'g25') equals: 'inProgress'
+]
+
+{ #category : 'tests' }
 HomeElementTest >> testFilterCriteria [
 
 	| filter |
@@ -164,19 +174,6 @@ HomeElementTest >> testGameWidgetsWithoutMatchesSayNoGamesRightNow [
 			rows := widget rowsOn: home.
 			self assert: rows size equals: 1.
 			self assert: rows first text asString equals: 'No games right now' ]
-]
-
-{ #category : 'tests' }
-HomeElementTest >> testMomentsOutsideTheMomentFilterDoNotKeepAReviewOpen [
-
-	| moment |
-	moment := '{"ply":10,"color":"black","kinds":["inaccuracy"],"pending":[],"answers":[],"candidates":{},"labels":[]}'.
-	root / 'games' / 'g25.review-1.json' writeStreamDo: [ :stream |
-		stream nextPutAll: '{"marking":false,"moments":[' , moment , ']}' ].
-	session settings at: 'momentFilter' put: 'mistakes'.
-	self assert: (session reviewStates at: 'g25') equals: 'reviewed'.
-	session settings at: 'momentFilter' put: 'all'.
-	self assert: (session reviewStates at: 'g25') equals: 'inProgress'
 ]
 
 { #category : 'tests' }

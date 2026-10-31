@@ -403,6 +403,13 @@ CoachReview >> leaveMoment [
 	momentClosedBlock value
 ]
 
+{ #category : 'moments' }
+CoachReview >> leftOutMoments [
+	"The moments the time box has no room for"
+
+	^ reviews reject: [ :each | self isPlanned: each ]
+]
+
 { #category : 'marking' }
 CoachReview >> mark: aPly note: aString [
 	"Mark the ply-th half-move as interesting, replacing any earlier mark on it"
@@ -475,21 +482,14 @@ CoachReview >> moments [
 	^ reviews
 ]
 
-{ #category : 'accessing' }
-CoachReview >> momentsPassing: aFilter [
-
-	^ reviews select: [ :each | each passes: aFilter ]
-]
-
-{ #category : 'navigating' }
-CoachReview >> nextMomentAfter: aPly passing: aFilter [
+{ #category : 'moments' }
+CoachReview >> nextMomentAfter: aPly [
 	"The first planned moment after aPly not reviewed yet, or nil when none is left"
 
 	^ reviews
 		  detect: [ :each |
-				  each ply > aPly and: [
-						  each isReviewed not and: [
-							  (each passes: aFilter) and: [ self isPlanned: each ] ] ] ]
+			  each ply > aPly and: [
+				  each isReviewed not and: [ self isPlanned: each ] ] ]
 		  ifNone: [ nil ]
 ]
 

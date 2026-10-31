@@ -561,13 +561,14 @@ ChessCoachAppElement >> newGamesPage [
 
 { #category : 'initialization' }
 ChessCoachAppElement >> newNavigation [
-	"Home (the logo), Stats, Games, Openings and Settings as pages of a Toplo tab pane, tabs in a column on the left. Pages are built once and kept. The coach, a played-through game and an opening tree open as closable pages after them."
+	"Home (the logo), Stats, Games, Openings and Settings as pages of a Toplo tab pane, tabs in a column on the left. Pages are built once and kept. The coach, a played-through game and an opening tree open as closable pages after them. The tab group's menus are hidden until tabs overflow, so the skin's padding around them would only cut the column short."
 
 	| pane homeButton |
 	pane := ToTabPaneElement new.
 	pane horizontal: true.
 	pane matchParent.
 	pane showAddTabItemButton: false.
+	pane tabGroup addTokenNamed: #'padding-content-V' withValue: 0.
 	home := HomeElement new.
 	home whenGameChosenDo: [ :entry |
 			self showPage: #Games.

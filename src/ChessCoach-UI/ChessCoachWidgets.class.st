@@ -159,13 +159,17 @@ ChessCoachWidgets class >> logoIcon: aSize [
 
 { #category : 'building' }
 ChessCoachWidgets class >> page: someElements [
-	"A page's top-level column, with the same margins on every page"
+	"A page's top-level column, with the same margins on every page. None at the bottom: the content reaches the status bar."
 
 	| page |
 	page := ToElement new
 		        layout: BlLinearLayout vertical;
 		        matchParent;
-		        padding: (BlInsets all: 16);
+		        padding: (BlInsets
+				         top: 16
+				         left: 16
+				         bottom: 0
+				         right: 16);
 		        yourself.
 	someElements do: [ :each | page addChild: each ].
 	^ page

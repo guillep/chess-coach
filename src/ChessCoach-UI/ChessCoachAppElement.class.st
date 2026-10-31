@@ -391,14 +391,25 @@ ChessCoachAppElement >> newBell [
 
 { #category : 'initialization' }
 ChessCoachAppElement >> newBrand [
-	"The icon and name at the start of the top bar; the bar's buttons stay on the right"
+	"The icon above the page column and the name above the page titles, aligned with them; the bar's buttons stay on the right"
 
 	^ ToElement new
-		  layout: (BlLinearLayout horizontal alignCenterLeft cellSpacing: 8);
+		  layout:
+			  (BlLinearLayout horizontal alignCenterLeft cellSpacing: 16);
 		  hMatchParent;
 		  vFitContent;
-		  addChild: (ChessCoachWidgets logo: 28);
-		  addChild: (ToLabel text: 'Chessmate');
+		  addChild: (ToElement new
+				   layout: BlLinearLayout horizontal alignCenter;
+				   width: 104;
+				   vFitContent;
+				   addChild: (ChessCoachWidgets logo: 52);
+				   yourself);
+		  addChild: (ToLabel new
+				   text: ('Chessmate' asRopedText
+						    fontSize: 24;
+						    bold;
+						    yourself);
+				   yourself);
 		  yourself
 ]
 

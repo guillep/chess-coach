@@ -403,7 +403,7 @@ MistakesDashboardElement >> section: aTitle help: aHelpString build: aBlock [
 		       section: aTitle
 		       help: aHelpString
 		       rows: #(  ).
-	content := box.
+	content := box rows.
 	aBlock ensure: [ content := page ].
 	content addChild: box
 ]

@@ -50,7 +50,7 @@ MistakesDashboardElementTest >> testEmptyState [
 { #category : 'tests' }
 MistakesDashboardElementTest >> testShowsFrequenciesPhasesTrendAndDetail [
 
-	| dashboard selected |
+	| dashboard selected space |
 	dashboard := MistakesDashboardElement new.
 	dashboard database: self database.
 	dashboard whenRecordSelectedDo: [ :record | selected := record ].
@@ -61,6 +61,10 @@ MistakesDashboardElementTest >> testShowsFrequenciesPhasesTrendAndDetail [
 	dashboard selectTag: 'hope-chess'.
 	self assert:
 		(dashboard texts includes: '2026-10-01 · game g1, move 11: too fast').
+	space := BlSpace new.
+	space extent: 1200 @ 1600.
+	space root addChild: dashboard.
+	4 timesRepeat: [ space pulse ].
 	BlSpace simulateClickOn: dashboard detail children last.
 	self assert: selected gameId equals: 'g1'
 ]

@@ -442,7 +442,7 @@ OpeningTreeElement >> section: aTitle help: aHelpString build: aBlock [
 		       section: aTitle
 		       help: aHelpString
 		       rows: #(  ).
-	panel := box.
+	panel := box rows.
 	aBlock ensure: [ panel := page ].
 	panel addChild: box
 ]

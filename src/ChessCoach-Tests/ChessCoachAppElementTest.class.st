@@ -192,11 +192,11 @@ ChessCoachAppElementTest >> testCoachAndPlayThroughOpenInClosableTabs [
 	self assert: (coach review instVarNamed: #pausedAt) isNil.
 	app playThrough: app selectedEntry.
 	scripter pulse.
-	self assert: app navigation items size equals: 7.
+	self assert: app navigation items size equals: 8.
 	app navigation removeItem: coachTab.
 	scripter pulse.
 	self assert: app coach isNil.
-	self assert: app navigation items size equals: 6
+	self assert: app navigation items size equals: 7
 ]
 
 { #category : 'tests' }

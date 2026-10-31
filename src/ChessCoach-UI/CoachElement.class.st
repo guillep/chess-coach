@@ -1095,7 +1095,7 @@ CoachElement >> section: aTitle build: aBlock [
 	| zone box |
 	zone := currentZone.
 	box := ChessCoachWidgets section: aTitle help: nil rows: #(  ).
-	currentZone := box.
+	currentZone := box rows.
 	aBlock ensure: [ currentZone := zone ].
 	currentZone addChild: box
 ]

@@ -484,7 +484,7 @@ ChessCoachAppElement >> newFilterSelect: someAssociations [
 
 	| select |
 	select := ToSingleSelectElement new
-		          width: 150;
+		          width: 190;
 		          yourself.
 	select popupListElement nodeBuilder: [ :node :assoc :holder |
 		node addChild: (ToLabel text: assoc key) ].

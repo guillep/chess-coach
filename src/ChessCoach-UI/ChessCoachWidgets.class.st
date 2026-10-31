@@ -85,23 +85,6 @@ ChessCoachWidgets class >> credits [
 ]
 
 { #category : 'building' }
-ChessCoachWidgets class >> group: someElements [
-	"A bordered, padded box that keeps related rows together"
-
-	| box |
-	box := ToElement new
-		       layout: (BlLinearLayout vertical cellSpacing: 8);
-		       hMatchParent;
-		       vFitContent;
-		       padding: (BlInsets all: 12);
-		       border: (BlBorder paint: (Color gray alpha: 0.35) width: 1);
-		       geometry: (BlRoundedRectangleGeometry cornerRadius: 6);
-		       yourself.
-	someElements do: [ :each | box addChild: each ].
-	^ box
-]
-
-{ #category : 'building' }
 ChessCoachWidgets class >> heading: aString help: aHelpStringOrNil [
 	"A section heading, larger than the text, with a help icon when there is something to explain"
 
@@ -426,10 +409,13 @@ ChessCoachWidgets class >> scrollable: anElement [
 
 { #category : 'building' }
 ChessCoachWidgets class >> section: aTitle help: aHelpStringOrNil rows: someElements [
-	"A heading followed by a group of rows"
+	"A heading followed by a group of rows, that looks like an accordion and stays open"
 
-	^ self group:
-		  { (self heading: aTitle help: aHelpStringOrNil) } , someElements
+	| group |
+	group := ChessCoachGroupElement new.
+	group title: aTitle help: aHelpStringOrNil.
+	someElements do: [ :each | group rows addChild: each ].
+	^ group
 ]
 
 { #category : 'building' }

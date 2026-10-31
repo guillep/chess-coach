@@ -10,6 +10,8 @@ if [ ! -f "$DATA/Pharo.image" ]; then
   cp -R "$RESOURCES/image/." "$DATA/"
 fi
 
+# Bloc can't open windows from a headless VM
+cp "$RESOURCES/image/open-coach.st" "$DATA/"
 cd "$DATA"
-exec "$RESOURCES/Pharo.app/Contents/MacOS/Pharo" --headless "$DATA/Pharo.image" \
+exec "$RESOURCES/Pharo.app/Contents/MacOS/Pharo" "$DATA/Pharo.image" \
   st "$DATA/open-coach.st"

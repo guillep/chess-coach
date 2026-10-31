@@ -1038,6 +1038,25 @@ ChessCoachSession >> startScheduledChecks [
 	scheduler start
 ]
 
+{ #category : 'coach' }
+ChessCoachSession >> suggestedGame [
+	"The latest game I lost and haven't reviewed, among my recent games, or the latest unreviewed one, or nil"
+
+	| reviewed pending |
+	reviewed := self reviewedGameIds.
+	pending := (self games first: (self games size min: 30)) reject: [
+		           :each | reviewed includes: each gameId ].
+	pending ifEmpty: [ ^ nil ].
+	^ pending
+		  detect: [ :entry |
+				  | game colors |
+				  game := self gameFor: entry.
+				  colors := self myColorsIn: game.
+				  colors size = 1 and: [
+					  (self pointsIn: game as: colors first) = 0 ] ]
+		  ifNone: [ pending first ]
+]
+
 { #category : 'updates' }
 ChessCoachSession >> updater [
 

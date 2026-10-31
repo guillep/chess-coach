@@ -114,6 +114,7 @@ ChessComImportTest >> testAppFiltersTheListBySpeed [
 	scripter := BlDevScripter new.
 	scripter element: app.
 	scripter space extent: 1200 @ 700.
+	app showPage: #Games.
 	scripter pulse.
 	ids := [ app games collect: [ :each | each gameId ] ].
 	self assert: ids value size equals: 3.

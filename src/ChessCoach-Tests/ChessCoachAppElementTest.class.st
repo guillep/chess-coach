@@ -57,14 +57,17 @@ ChessCoachAppElementTest >> scripterOn: anAppElement [
 
 { #category : 'running' }
 ChessCoachAppElementTest >> setUp [
-	"Setup is marked done: the wizard has its own test"
+	"Setup is marked done: the wizard has its own test. The tests start on Games, laid out."
 
 	super setUp.
 	api := LichessAPIClientStub withGames: 25.
 	session := api newSessionOn: FileSystem memory root.
 	session settings at: 'setupDone' put: true.
 	app := self newAppElement.
-	scripter := self scripterOn: app
+	scripter := self scripterOn: app.
+	app showPage: #Games.
+	scripter pulse.
+	scripter pulse
 ]
 
 { #category : 'tests' }
@@ -131,7 +134,7 @@ ChessCoachAppElementTest >> testCoachAndPlayThroughOpenInClosableTabs [
 	self assert: coach isAttachedToSceneGraph.
 	self
 		assert: (app navigation items asArray collect: [ :each | each id ])
-		equals: #( #Stats #Games #Openings #Settings #Coach ).
+		equals: #( #Home #Stats #Games #Openings #Settings #Coach ).
 	coachTab := app navigation items asArray last.
 	app showPage: #Stats.
 	scripter pulse.
@@ -141,11 +144,11 @@ ChessCoachAppElementTest >> testCoachAndPlayThroughOpenInClosableTabs [
 	self assert: (coach review instVarNamed: #pausedAt) isNil.
 	app playThrough: app selectedEntry.
 	scripter pulse.
-	self assert: app navigation items size equals: 6.
+	self assert: app navigation items size equals: 7.
 	app navigation removeItem: coachTab.
 	scripter pulse.
 	self assert: app coach isNil.
-	self assert: app navigation items size equals: 5
+	self assert: app navigation items size equals: 6
 ]
 
 { #category : 'tests' }
@@ -202,6 +205,16 @@ ChessCoachAppElementTest >> testHelpIconOpensItsTooltipOnClick [
 	helpScripter pulse.
 	self assert: icon currentTooltipWindow notNil.
 	self assert: icon currentTooltipWindow isOpened
+]
+
+{ #category : 'tests' }
+ChessCoachAppElementTest >> testHomeIsThePageItOpensOn [
+
+	| other |
+	other := self newAppElement.
+	self assert: other navigation items asArray first id equals: #Home.
+	other home update.
+	self assert: other home children notEmpty
 ]
 
 { #category : 'tests' }

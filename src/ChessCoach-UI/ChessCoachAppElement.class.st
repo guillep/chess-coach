@@ -36,7 +36,8 @@ Class {
 		'shownGameId',
 		'openings',
 		'openingTreeTab',
-		'updateButton'
+		'updateButton',
+		'home'
 	],
 	#category : 'ChessCoach-UI-App',
 	#package : 'ChessCoach-UI',
@@ -276,6 +277,12 @@ ChessCoachAppElement >> gamesPage [
 	^ gamesPage
 ]
 
+{ #category : 'accessing' }
+ChessCoachAppElement >> home [
+
+	^ home
+]
+
 { #category : 'private' }
 ChessCoachAppElement >> inUIDo: aBlock [
 
@@ -391,20 +398,18 @@ ChessCoachAppElement >> newBell [
 
 { #category : 'initialization' }
 ChessCoachAppElement >> newBrand [
-	"The icon above the page column and the name above the page titles, aligned with them; the bar's buttons stay on the right"
+	"The name above the page titles, in the bar; the logo is the Home tab"
 
 	^ ToElement new
-		  layout:
-			  (BlLinearLayout horizontal alignCenterLeft cellSpacing: 50);
+		  layout: BlLinearLayout horizontal alignCenterLeft;
 		  hMatchParent;
 		  vFitContent;
-		  margin: (BlInsets left: -54);
-		  addChild: (ChessCoachWidgets logo: 52);
 		  addChild: (ToLabel new
 				   text: ('Chessmate' asRopedText
 						    fontSize: 24;
 						    bold;
 						    yourself);
+				   margin: (BlInsets left: 104);
 				   yourself);
 		  yourself
 ]
@@ -546,13 +551,23 @@ ChessCoachAppElement >> newGamesPage [
 
 { #category : 'initialization' }
 ChessCoachAppElement >> newNavigation [
-	"Stats, Games, Openings and Settings as pages of a Toplo tab pane, tabs in a column on the left. Pages are built once and kept. The coach, a played-through game and an opening tree open as closable pages after them."
+	"Home (the logo), Stats, Games, Openings and Settings as pages of a Toplo tab pane, tabs in a column on the left. Pages are built once and kept. The coach, a played-through game and an opening tree open as closable pages after them."
 
-	| pane |
+	| pane homeButton |
 	pane := ToTabPaneElement new.
 	pane horizontal: true.
 	pane matchParent.
 	pane showAddTabItemButton: false.
+	home := HomeElement new.
+	home whenGameChosenDo: [ :entry |
+			self showPage: #Games.
+			self selectGameId: entry gameId ].
+	homeButton := self
+		              newPageButton: 'Home'
+		              icon: 'outlined_home'
+		              page: home.
+	homeButton icon: (ChessCoachWidgets logoIcon: 40).
+	pane addItem: homeButton.
 	pane addItem:
 		(self
 			 newPageButton: 'Stats'
@@ -946,7 +961,7 @@ ChessCoachAppElement >> selectedGameChanged [
 
 { #category : 'accessing' }
 ChessCoachAppElement >> session: aChessCoachSession [
-	"Connect to the session. The first time, run the setup wizard; otherwise open on Stats when there are reviewed mistakes, on Games otherwise.
+	"Connect to the session and open on Home. The first time, run the setup wizard.
 	The app theme is applied again when I am added to a space."
 
 	session := aChessCoachSession.
@@ -997,9 +1012,8 @@ ChessCoachAppElement >> session: aChessCoachSession [
 	openings session: session.
 	self updateFromSession.
 	self updateBell.
-	self showPage: (session mistakeDatabase records
-			 ifEmpty: [ #Games ]
-			 ifNotEmpty: [ #Stats ]).
+	home session: session.
+	self showPage: #Home.
 	session isFirstRun ifTrue: [ self showWizard ]
 ]
 

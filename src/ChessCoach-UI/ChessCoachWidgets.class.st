@@ -138,6 +138,26 @@ ChessCoachWidgets class >> logo: aSize [
 ]
 
 { #category : 'building' }
+ChessCoachWidgets class >> logoIcon: aSize [
+	"The Chessmate icon for a tab, or a plain home icon without the assets"
+
+	| file |
+	file := (IceRepository registry
+		         detect: [ :each | each name = 'chess-coach' ]
+		         ifNone: [
+		         ^ self icon: 'outlined_home' extent: aSize asPoint ])
+		        location / 'assets' / 'chessmate-128.png'.
+	file exists ifFalse: [
+		^ self icon: 'outlined_home' extent: aSize asPoint ].
+	^ ToImage new
+		  innerImage:
+			  ((PNGReadWriter formFromFileNamed: file fullName) scaledToSize:
+					   aSize asPoint);
+		  extent: aSize asPoint;
+		  yourself
+]
+
+{ #category : 'building' }
 ChessCoachWidgets class >> page: someElements [
 	"A page's top-level column, with the same margins on every page"
 

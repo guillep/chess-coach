@@ -21,22 +21,22 @@ ChessmateDarkTheme class >> defaultTokenProperties [
 	^ super defaultTokenProperties , {
 		  (ToTokenProperty
 			   name: #'background-color'
-			   value: (Color fromHexString: '#12281b')).
+			   value: (Color fromHexString: '#234a35')).
 		  (ToTokenProperty
 			   name: #'color-bg-container'
-			   value: (Color fromHexString: '#1c3a28')).
+			   value: (Color fromHexString: '#46593a')).
 		  (ToTokenProperty
 			   name: #'color-primary-unchecked'
-			   value: (Color fromHexString: '#1c3a28')).
+			   value: (Color fromHexString: '#46593a')).
 		  (ToTokenProperty
 			   name: #'color-border'
-			   value: (Color fromHexString: '#4d6b55')).
+			   value: (Color fromHexString: '#7d8a5e')).
 		  (ToTokenProperty
 			   name: #'color-text'
 			   value: (Color fromHexString: '#f6ead2')).
 		  (ToTokenProperty
 			   name: #'text-color-primary-checked'
-			   value: (Color fromHexString: '#12281b')).
+			   value: (Color fromHexString: '#234a35')).
 		  (ToTokenProperty
 			   name: #'color-link'
 			   value: (Color fromHexString: '#e8cfa3')) }

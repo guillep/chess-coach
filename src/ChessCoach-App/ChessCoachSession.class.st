@@ -376,6 +376,38 @@ ChessCoachSession >> entriesOf: anOpeningTree at: aKey [
 				   ifFalse: [ nil ] ]) reject: [ :each | each isNil ]
 ]
 
+{ #category : 'home' }
+ChessCoachSession >> entry: anEntry passes: aGameFilter reviewed: someGameIds [
+	"Cheap criteria first: result and color need the parsed game"
+
+	| game colors |
+	(aGameFilter at: 'source') ifNotNil: [ :source |
+		anEntry source = source ifFalse: [ ^ false ] ].
+	(aGameFilter at: 'days') ifNotNil: [ :days |
+			anEntry date < (Date today subtractDays: days) yyyymmdd ifTrue: [
+				^ false ] ].
+	(aGameFilter at: 'review') ifNotNil: [ :review |
+			(someGameIds includes: anEntry gameId) = (review = 'reviewed')
+				ifFalse: [ ^ false ] ].
+	((aGameFilter at: 'color') isNil and: [
+		 (aGameFilter at: 'result') isNil ]) ifTrue: [ ^ true ].
+	game := self gameFor: anEntry.
+	colors := self myColorsIn: game.
+	(aGameFilter at: 'color') ifNotNil: [ :color |
+			(colors size = 1 and: [ colors first asString = color ]) ifFalse: [
+				^ false ] ].
+	(aGameFilter at: 'result') ifNotNil: [ :result |
+			| points |
+			points := self pointsIn: game as: colors first.
+			^ result = (points = 1
+				   ifTrue: [ 'won' ]
+				   ifFalse: [
+						   points = 0
+							   ifTrue: [ 'lost' ]
+							   ifFalse: [ 'draw' ] ]) ].
+	^ true
+]
+
 { #category : 'errors' }
 ChessCoachSession >> errorLog [
 	"Errors the app showed instead of opening a debugger, newest last"
@@ -482,6 +514,16 @@ ChessCoachSession >> gamesMatching: anOpeningTree [
 	^ self
 		  entriesMatching: anOpeningTree
 		  collect: [ :entry :game | game ]
+]
+
+{ #category : 'home' }
+ChessCoachSession >> gamesPassing: aGameFilter [
+	"The stored games aGameFilter accepts, newest first"
+
+	| reviewed |
+	reviewed := self reviewedGameIds.
+	^ (self gamesWithSpeed: (aGameFilter at: 'speed')) select: [ :entry |
+		  self entry: entry passes: aGameFilter reviewed: reviewed ]
 ]
 
 { #category : 'games' }

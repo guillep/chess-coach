@@ -306,7 +306,7 @@ ChessCoachAppElement >> initialize [
 		addChild: (ToElement new
 				 id: #topBar;
 				 layout:
-					 (BlLinearLayout horizontal alignCenterRight cellSpacing: 8);
+					 (BlLinearLayout horizontal alignCenterLeft cellSpacing: 8);
 				 hMatchParent;
 				 vFitContent;
 				 padding: (BlInsets
@@ -398,17 +398,12 @@ ChessCoachAppElement >> newBell [
 
 { #category : 'initialization' }
 ChessCoachAppElement >> newBrand [
-	"The icon and the name at the left of the title bar; the icon goes Home"
+	"The name at the left of the title bar; the logo is the Home tab"
 
 	^ ToElement new
-		  layout:
-			  (BlLinearLayout horizontal alignCenterLeft cellSpacing: 10);
+		  layout: BlLinearLayout horizontal alignCenterLeft;
 		  hMatchParent;
 		  vFitContent;
-		  addChild: ((ChessCoachWidgets logo: 32)
-				   addEventHandlerOn: BlClickEvent
-				   do: [ :event | self showPage: #Home ];
-				   yourself);
 		  addChild: (ToLabel new
 				   text: ('Chessmate' asRopedText
 						    fontSize: 20;
@@ -555,9 +550,9 @@ ChessCoachAppElement >> newGamesPage [
 
 { #category : 'initialization' }
 ChessCoachAppElement >> newNavigation [
-	"Home, Stats, Games, Openings and Settings as pages of a Toplo tab pane, tabs in a column on the left. Pages are built once and kept. The coach, a played-through game and an opening tree open as closable pages after them."
+	"Home (the logo), Stats, Games, Openings and Settings as pages of a Toplo tab pane, tabs in a column on the left. Pages are built once and kept. The coach, a played-through game and an opening tree open as closable pages after them."
 
-	| pane |
+	| pane homeButton |
 	pane := ToTabPaneElement new.
 	pane horizontal: true.
 	pane matchParent.
@@ -566,8 +561,12 @@ ChessCoachAppElement >> newNavigation [
 	home whenGameChosenDo: [ :entry |
 			self showPage: #Games.
 			self selectGameId: entry gameId ].
-	pane addItem:
-		(self newPageButton: 'Home' icon: 'outlined_home' page: home).
+	homeButton := self
+		              newPageButton: 'Home'
+		              icon: 'outlined_home'
+		              page: home.
+	homeButton icon: (ChessCoachWidgets logoIcon: 40).
+	pane addItem: homeButton.
 	pane addItem:
 		(self
 			 newPageButton: 'Stats'

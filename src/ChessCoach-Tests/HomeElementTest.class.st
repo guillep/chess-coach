@@ -67,17 +67,15 @@ HomeElementTest >> testCancelDiscardsChanges [
 ]
 
 { #category : 'tests' }
-HomeElementTest >> testCardsScaleWithTheWindow [
+HomeElementTest >> testColumnsScaleAndRowsKeepTheirHeight [
 
 	| before |
 	before := home cards first extent.
 	space extent: 2000 @ 1600.
 	self pulse.
 	self assert: home cards first extent x > before x.
-	self assert: home cards first extent y > before y.
-	self
-		assert: self widgets first cell extent
-		equals: 12 @ 3
+	self assert: home cards first extent y equals: before y.
+	self assert: self widgets first cell extent equals: 12 @ 3
 ]
 
 { #category : 'tests' }

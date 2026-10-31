@@ -292,9 +292,9 @@ HomeElement >> resize: aWidget to: aPoint [
 
 { #category : 'layout' }
 HomeElement >> rowHeight [
-	"Rows scale with the window as columns do: the visible height holds 18 of them, and text sets a minimum"
+	"Fixed, because text doesn't scale with the window; columns do"
 
-	^ self height / 18 max: 32
+	^ 40
 ]
 
 { #category : 'accessing' }

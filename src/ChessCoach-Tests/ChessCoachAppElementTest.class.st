@@ -98,6 +98,8 @@ ChessCoachAppElementTest >> testAppTheme [
 	app showPage: #Settings.
 	scripter pulse.
 	settings := app settingsElement.
+	settings showSection: 'Appearance'.
+	scripter pulse.
 	self deny: (app space root localTheme isKindOf: ToRawDarkTheme).
 	self click: (settings buttonLabeled: 'Dark').
 	scripter pulse.
@@ -536,6 +538,20 @@ ChessCoachAppElementTest >> testSelectingARowOpensTheGameView [
 ]
 
 { #category : 'tests' }
+ChessCoachAppElementTest >> testSettingsIndexShowsOneSection [
+
+	| settings shown |
+	app showPage: #Settings.
+	scripter pulse.
+	settings := app settingsElement.
+	settings showSection: 'About'.
+	scripter pulse.
+	shown := settings shownSections.
+	self assert: shown size equals: 1.
+	self assert: settings indexButtons size equals: 9
+]
+
+{ #category : 'tests' }
 ChessCoachAppElementTest >> testSettingsPage [
 
 	| settings chessCom |
@@ -557,10 +573,16 @@ ChessCoachAppElementTest >> testSettingsPage [
 	scripter pulse.
 	settings := app settingsElement.
 	self assert: settings isAttachedToSceneGraph.
+	settings showSection: 'Analysis'.
+	scripter pulse.
 	self assert: (settings texts includes: 'Depth: 18').
+	settings showSection: 'Games'.
+	scripter pulse.
 	self click: (settings buttonLabeled: '+').
 	self assert: session settings gamesPerLoad equals: 30.
 	self assert: (settings texts includes: 'Games per Load more: 30').
+	settings showSection: 'Board'.
+	scripter pulse.
 	self click: (settings buttonLabeled: 'Livius').
 	self assert: session settings pieceSet equals: 'Livius'.
 	self assert:
@@ -568,6 +590,8 @@ ChessCoachAppElementTest >> testSettingsPage [
 	self click: (settings buttonLabeled: 'Blue').
 	self assert: session settings boardTheme equals: 'Blue'.
 	self assert: settings previewBoard theme equals: 'Blue'.
+	settings showSection: 'Accounts'.
+	scripter pulse.
 	settings chessComField text: 'nobody'.
 	self click: (settings buttonLabeled: 'Validate').
 	self assert:
@@ -578,14 +602,20 @@ ChessCoachAppElementTest >> testSettingsPage [
 	settings validateChessCom.
 	scripter pulse.
 	self assert: session chessComUsername equals: 'Bob'.
+	settings showSection: 'Analysis'.
+	scripter pulse.
 	self click: (settings buttonLabeled: 'Test').
 	self assert: (settings texts includes: 'OK: Stockfish stub').
+	settings showSection: 'Coach'.
+	scripter pulse.
 	self click: (settings buttonLabeled: 'Load models').
 	self assert: (settings texts includes: '2 models installed').
 	self click: (settings buttonLabeled: 'llama3.1:8b').
 	self assert: session settings ollamaModel equals: 'llama3.1:8b'.
 	self assert:
 		(settings texts includes: 'Validated only with qwen2.5:7b-instruct').
+	settings showSection: 'Moments'.
+	scripter pulse.
 	self click: (settings buttonLabeled: 'Long thinks').
 	self deny: (session settings at: 'findLongThinks')
 ]

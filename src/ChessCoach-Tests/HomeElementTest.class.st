@@ -75,7 +75,7 @@ HomeElementTest >> testColumnsScaleAndRowsKeepTheirHeight [
 	self pulse.
 	self assert: home cards first extent x > before x.
 	self assert: home cards first extent y equals: before y.
-	self assert: self widgets first cell extent equals: 12 @ 3
+	self assert: self widgets first cell extent equals: 6 @ 3
 ]
 
 { #category : 'tests' }
@@ -119,8 +119,8 @@ HomeElementTest >> testDraggingTheCornerResizesTheCard [
 	corner := home cards last childWithId: #corner.
 	BlSpace simulateDragOn: corner by: -300 @ -120.
 	self pulse.
-	self assert: widget cell width < 12.
-	self assert: widget cell height < 6
+	self assert: widget cell width < 6.
+	self assert: widget cell height < 9
 ]
 
 { #category : 'tests' }

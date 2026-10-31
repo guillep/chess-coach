@@ -30,13 +30,13 @@ HomeWidget class >> classForType: aString [
 
 { #category : 'instance creation' }
 HomeWidget class >> defaultWidgets [
-	"Today's Home"
+	"Suggestions, numbers and latest games in one column, notifications along the other"
 
 	^ {
-		  (HomeSuggestionsWidget atCell: (0 @ 0 extent: 12 @ 3)).
+		  (HomeSuggestionsWidget atCell: (0 @ 0 extent: 6 @ 3)).
 		  (HomeNumbersWidget atCell: (0 @ 3 extent: 6 @ 4)).
-		  (HomeNotificationsWidget atCell: (6 @ 3 extent: 6 @ 4)).
-		  (HomeLatestGamesWidget atCell: (0 @ 7 extent: 12 @ 6)) }
+		  (HomeNotificationsWidget atCell: (6 @ 0 extent: 6 @ 16)).
+		  (HomeLatestGamesWidget atCell: (0 @ 7 extent: 6 @ 9)) }
 ]
 
 { #category : 'instance creation' }

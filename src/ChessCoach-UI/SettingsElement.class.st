@@ -25,7 +25,9 @@ Class {
 		'lichessField',
 		'lichessUserStatus',
 		'themeButtons',
-		'appThemeButtons'
+		'appThemeButtons',
+		'sections',
+		'indexElement'
 	],
 	#category : 'ChessCoach-UI-App',
 	#package : 'ChessCoach-UI',
@@ -36,6 +38,13 @@ Class {
 SettingsElement class >> repositoryUrl [
 
 	^ 'https://github.com/guillep/chess-coach'
+]
+
+{ #category : 'accessing' }
+SettingsElement class >> sectionTitles [
+	"In the order build adds them"
+
+	^ #( 'Accounts' 'Games' 'Appearance' 'Board' 'Analysis' 'Moments' 'Openings' 'Coach' 'About' )
 ]
 
 { #category : 'building' }
@@ -186,7 +195,12 @@ SettingsElement >> build [
 			 page: 'Settings'
 			 subtitle:
 			 'Accounts, the board, the engine and the coach model. Every change is saved at once.'
-			 body: (widgets scrollable: content)).
+			 body: (ToElement new
+					   layout: BlLinearLayout horizontal;
+					   matchParent;
+					   addChild: (self newIndexOn: content);
+					   addChild: (widgets scrollable: content);
+					   yourself)).
 	self updateAccounts.
 	self updateNumbers.
 	self updateAppTheme.
@@ -307,6 +321,12 @@ SettingsElement >> inBackground: aBlock then: aUIBlock showingErrorsIn: aStatusL
 				(BlTaskAction new action: [ aUIBlock cull: result ]) ]
 ]
 
+{ #category : 'accessing' }
+SettingsElement >> indexButtons [
+
+	^ indexElement children asArray allButLast
+]
+
 { #category : 'initialization' }
 SettingsElement >> initialize [
 
@@ -402,6 +422,33 @@ SettingsElement >> loginOrLogout [
 		inBackground: [ session login ]
 		then: [ cancelButton visibility: BlVisibility gone ]
 		showingErrorsIn: lichessStatus
+]
+
+{ #category : 'building' }
+SettingsElement >> newIndexOn: aContent [
+	"A column with one button per section of aContent, by its title; the chosen section is the only one shown. Run setup again stays at the end of the column."
+
+	| index setup |
+	setup := aContent children first.
+	aContent removeChild: setup.
+	sections := aContent children asArray.
+	index := ToElement new
+		         id: #settingsIndex;
+		         layout: (BlLinearLayout vertical cellSpacing: 4);
+		         width: 180;
+		         vMatchParent;
+		         padding: (BlInsets right: 12);
+		         yourself.
+	self class sectionTitles with: sections do: [ :title :section |
+		index addChild: (ToButton new
+				 labelText: title;
+				 hMatchParent;
+				 clickAction: [ self show: section among: sections ];
+				 yourself) ].
+	index addChild: setup.
+	self show: sections first among: sections.
+	indexElement := index.
+	^ index
 ]
 
 { #category : 'building' }
@@ -580,6 +627,30 @@ SettingsElement >> session: aChessCoachSession section: aSection [
 				for: self ].
 	self removeChildren.
 	self addChild: (self sectionElement: aSection)
+]
+
+{ #category : 'actions' }
+SettingsElement >> show: aSection among: someSections [
+
+	someSections do: [ :each |
+		each visibility: (each == aSection
+				 ifTrue: [ BlVisibility visible ]
+				 ifFalse: [ BlVisibility gone ]) ]
+]
+
+{ #category : 'actions' }
+SettingsElement >> showSection: aTitle [
+	"As clicking it in the index does"
+
+	self
+		show: (sections at: (self class sectionTitles indexOf: aTitle))
+		among: sections
+]
+
+{ #category : 'accessing' }
+SettingsElement >> shownSections [
+
+	^ sections select: [ :each | each isVisible ]
 ]
 
 { #category : 'building' }

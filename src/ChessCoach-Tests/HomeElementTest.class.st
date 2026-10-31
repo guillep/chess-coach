@@ -167,6 +167,19 @@ HomeElementTest >> testGameWidgetsWithoutMatchesSayNoGamesRightNow [
 ]
 
 { #category : 'tests' }
+HomeElementTest >> testMomentsOutsideTheMomentFilterDoNotKeepAReviewOpen [
+
+	| moment |
+	moment := '{"ply":10,"color":"black","kinds":["inaccuracy"],"pending":[],"answers":[],"candidates":{},"labels":[]}'.
+	root / 'games' / 'g25.review-1.json' writeStreamDo: [ :stream |
+		stream nextPutAll: '{"marking":false,"moments":[' , moment , ']}' ].
+	session settings at: 'momentFilter' put: 'mistakes'.
+	self assert: (session reviewStates at: 'g25') equals: 'reviewed'.
+	session settings at: 'momentFilter' put: 'all'.
+	self assert: (session reviewStates at: 'g25') equals: 'inProgress'
+]
+
+{ #category : 'tests' }
 HomeElementTest >> testNarrowWindowStacksWithoutChangingCells [
 
 	| cells tops |

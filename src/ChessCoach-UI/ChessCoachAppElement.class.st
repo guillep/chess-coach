@@ -569,6 +569,7 @@ ChessCoachAppElement >> newNavigation [
 	pane matchParent.
 	pane showAddTabItemButton: false.
 	pane tabGroup addTokenNamed: #'padding-content-V' withValue: 0.
+	pane tabGroup itemList addTokenNamed: #'padding-content-V' withValue: 6.
 	home := HomeElement new.
 	home whenGameChosenDo: [ :entry |
 			self showPage: #Games.

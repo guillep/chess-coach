@@ -45,7 +45,9 @@ ChessCoachWidgets class >> credits [
 		  fitContent;
 		  addChild: (ToLabel text: 'Done with Pharo');
 		  addChild: self pharoLogo;
-		  addChild: (ToLabel text: ', Bloc and love ❤ by');
+		  addChild: (ToLabel text: ', Bloc and love');
+		  addChild: (self icon: 'filled_favorite' extent: 14 @ 14);
+		  addChild: (ToLabel text: 'by');
 		  addChild: (self link: 'Guille' to: 'https://github.com/guillep');
 		  yourself
 ]

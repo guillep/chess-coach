@@ -291,7 +291,7 @@ ChessCoachAppElement >> inUIDo: aBlock [
 
 { #category : 'initialization' }
 ChessCoachAppElement >> initialize [
-	"A title bar with the icon, the name, updates and notifications; below it the pages in a tab pane with the tabs in a left column, and a status line. I have no margin: the pages have their own."
+	"A title bar with the name, updates and notifications; below it the pages in a tab pane with the tabs in a left column, and a status line, set apart by lines. I have no margin: the pages have their own."
 
 	super initialize.
 	backgroundRunner := [ :aBlock |
@@ -316,7 +316,9 @@ ChessCoachAppElement >> initialize [
 						  right: 12);
 				 addChild: self newBell;
 				 yourself);
+		addChild: ChessCoachWidgets separator;
 		addChild: navigation;
+		addChild: ChessCoachWidgets separator;
 		addChild: self newStatusLine
 ]
 
@@ -1077,7 +1079,7 @@ ChessCoachAppElement >> showTab: aTabButton [
 
 { #category : 'navigation' }
 ChessCoachAppElement >> showWizard [
-	"The first-run setup replaces the pages until it is finished, below the top bar"
+	"The first-run setup replaces the pages until it is finished, between the title bar and the status line"
 
 	| wizard |
 	wizard := SetupWizardElement new.
@@ -1085,11 +1087,11 @@ ChessCoachAppElement >> showWizard [
 	wizard session: session.
 	wizard whenFinishedDo: [
 			wizard removeFromParent.
-			self addChild: navigation at: 2.
+			self addChild: navigation at: 3.
 			self updateFromSession.
 			self showPage: #Games ].
 	navigation removeFromParent.
-	self addChild: wizard at: 2.
+	self addChild: wizard at: 3.
 	^ wizard
 ]
 

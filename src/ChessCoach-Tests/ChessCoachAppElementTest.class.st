@@ -99,6 +99,24 @@ ChessCoachAppElementTest >> setUp [
 ]
 
 { #category : 'tests' }
+ChessCoachAppElementTest >> testAnalysisBoardOpensInAClosableTabAndPausesTheQueue [
+
+	| board |
+	session analyser: (GameAnalyser engine: StockfishEngineStub new).
+	board := app openAnalysisBoardAt: ChessPosition initial.
+	scripter pulse.
+	self assert: board isAttachedToSceneGraph.
+	self assert: session analysisQueue isPaused.
+	board play: 'e2e4'.
+	scripter pulse.
+	self assert: (board chessPosition pieceAt: 'e4') equals: 'P'.
+	app closeTab: (app userData at: #analysisTab).
+	scripter pulse.
+	self deny: session analysisQueue isPaused.
+	self deny: (app userData includesKey: #analysisTab)
+]
+
+{ #category : 'tests' }
 ChessCoachAppElementTest >> testAppTheme [
 
 	| settings |

@@ -427,6 +427,33 @@ ChessCoachAppElement >> newNavigation [
 	^ super newNavigation
 ]
 
+{ #category : 'actions' }
+ChessCoachAppElement >> openAnalysisBoardAt: aChessPosition [
+	"Analyse a position on its own board, in a closable page that replaces an open one. The tab button is kept in my userData (no new slot while windows are open); closing the page lets the background analysis go on."
+
+	| element tab |
+	(self userData at: #analysisTab ifAbsent: [ nil ]) ifNotNil: [ :open |
+		self closeTab: open ].
+	element := AnalysisBoardElement
+		           session: session
+		           position: aChessPosition
+		           runner: backgroundRunner.
+	tab := self
+		       openTab: 'Analysis'
+		       icon: 'outlined_insights'
+		       page: (ChessCoachWidgets
+				        page: 'Analysis board'
+				        subtitle:
+				        'Move the pieces; Stockfish evaluates every position.'
+				        actions: { (self closeButtonDo: [
+						         self closeTab:
+							         (self userData at: #analysisTab ifAbsent: [ nil ]) ]) }
+				        body: element).
+	tab userData at: #analysisBoard put: element.
+	self userData at: #analysisTab put: tab.
+	^ element
+]
+
 { #category : 'coach' }
 ChessCoachAppElement >> openMistake: aMistakeRecord [
 	"Go to Games, select the game of a mistake and show its moment in the most recent review that has it"
@@ -475,7 +502,7 @@ ChessCoachAppElement >> openOpeningTree: anOpeningTree [
 
 { #category : 'coach' }
 ChessCoachAppElement >> openReview: aCoachReview of: aGameIndexEntry [
-	"Show a coach review in its own closable page, replacing an open one. Its game is queued for analysis (Stockfish analyses only the games you review), which the end of the marking pass needs."
+	"Show a coach review in its own closable page, replacing an open one. Its game is queued for analysis (Stockfish analyses only the games you review), which the end of the marking pass needs. A moment can be played on from on an analysis board."
 
 	self closeTab: coachTab.
 	(session isAnalysed: aGameIndexEntry) ifFalse: [
@@ -485,6 +512,8 @@ ChessCoachAppElement >> openReview: aCoachReview of: aGameIndexEntry [
 	coach session: session entry: aGameIndexEntry review: aCoachReview.
 	self applyPieceSet.
 	coach whenExitDo: [ self exitCoach ].
+	coach whenAnalyseDo: [ :position |
+		self openAnalysisBoardAt: position ].
 	coachTab := self
 		            openTab: 'Coach'
 		            icon: 'outlined_school'
@@ -524,7 +553,7 @@ ChessCoachAppElement >> pageRoots [
 
 { #category : 'actions' }
 ChessCoachAppElement >> playThrough: aGameIndexEntry [
-	"Look at the game move by move in its own closable page named after its players, replacing an open one. Its tab shows my opponent. The title has buttons to copy the shown position (FEN) and the game (PGN)."
+	"Look at the game move by move in its own closable page named after its players, replacing an open one. Its tab shows my opponent. The title has buttons to analyse the shown position on its own board and to copy it (FEN) or the game (PGN)."
 
 	| game colors title opponent |
 	self closeTab: playThroughTab.
@@ -547,7 +576,19 @@ ChessCoachAppElement >> playThrough: aGameIndexEntry [
 		                  page: (ChessCoachWidgets
 				                   page: title
 				                   subtitle: aGameIndexEntry date
-				                   actions: (ChessCoachWidgets
+				                   actions: { (ToButton new
+						                    labelText: 'Analyse';
+						                    icon:
+							                    ((ToMaterialDesignIconProvider iconNamed:
+									                      'outlined_insights')
+								                     extent: 16 @ 16;
+								                     yourself);
+						                    tooltipText:
+						                    'Play on from the position on the board, with Stockfish';
+						                    clickAction: [
+						                    self openAnalysisBoardAt:
+							                    playThrough boardElement chessPosition ];
+						                    yourself) } , (ChessCoachWidgets
 						                    exportButtonsForBoard:
 						                    playThrough boardElement
 						                    game: game)
@@ -810,7 +851,7 @@ ChessCoachAppElement >> statusLineExtras [
 
 { #category : 'navigation' }
 ChessCoachAppElement >> tabClosed: aTabButton wasSelected: aBoolean [
-	"A closable page was closed, from its tab or from its own close button. If it was showing, go back to the page it came from rather than to the neighbouring tab, unless a new page of the same kind replaced it. Toplo checks the neighbour in a postponed action queued after this event, so the page is shown one postponed action later."
+	"A closable page was closed, from its tab or from its own close button. If it was showing, go back to the page it came from rather than to the neighbouring tab, unless a new page of the same kind replaced it. Toplo checks the neighbour in a postponed action queued after this event, so the page is shown one postponed action later. A closed analysis board lets the background analysis go on."
 
 	aTabButton == coachTab ifTrue: [
 			coach review leaveMoment.
@@ -833,7 +874,11 @@ ChessCoachAppElement >> tabClosed: aTabButton wasSelected: aBoolean [
 			aBoolean ifTrue: [
 					navigation itemList postponeAction: [
 							navigation itemList postponeAction: [
-								openingTreeTab ifNil: [ self showPage: #Openings ] ] ] ] ]
+								openingTreeTab ifNil: [ self showPage: #Openings ] ] ] ] ].
+	aTabButton == (self userData at: #analysisTab ifAbsent: [ nil ])
+		ifTrue: [
+				(aTabButton userData at: #analysisBoard) close.
+				self userData removeKey: #analysisTab ]
 ]
 
 { #category : 'analysis queue' }

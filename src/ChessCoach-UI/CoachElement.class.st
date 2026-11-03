@@ -61,6 +61,17 @@ CoachElement >> addQuickAnswer: aString [
 			 ifFalse: [ text , ' ' , aString , '. ' ])
 ]
 
+{ #category : 'building' }
+CoachElement >> analyseButton [
+	"Play on from the position before the shown moment, on an analysis board; disabled when nobody listens"
+
+	^ (self button: 'Analyse from here' icon: 'outlined_insights' do: [
+				   (self userData at: #analyseBlock) value:
+						   (self positionBefore: shownMoment) ])
+		  enabled: (self userData includesKey: #analyseBlock);
+		  yourself
+]
+
 { #category : 'accessing' }
 CoachElement >> answerField [
 	"The text field of the current written question, or nil"
@@ -406,16 +417,17 @@ CoachElement >> buildReportTime [
 
 { #category : 'building' }
 CoachElement >> buildReveal [
-	"What the engine says, the time spent and the tags, in sections"
+	"What the engine says (with a button to play on from the position on an analysis board), the time spent and the tags, in sections"
 
 	| reveal before after |
 	reveal := review revealOf: shownMoment.
 	before := self positionBefore: shownMoment.
 	after := game positionAfterPly: shownMoment ply.
 	shownMoment notes ifNotEmpty: [ :notes |
-		self section: 'Why this moment' build: [
-			notes do: [ :each |
-				currentZone addChild: (self paragraph: each) ] ] ].
+			self
+				section: 'Why this moment'
+				build: [
+				notes do: [ :each | currentZone addChild: (self paragraph: each) ] ] ].
 	self section: 'The engine''s view' build: [
 			review hasEngine
 				ifTrue: [
@@ -424,7 +436,8 @@ CoachElement >> buildReveal [
 						currentZone addChild: (self paragraph:
 								 'Stockfish isn''t available, so there is no engine evaluation for this moment.') ].
 			currentZone addChild: (self paragraph:
-					 'Time on this moment: ' , (self minutes: shownMoment seconds)) ].
+					 'Time on this moment: ' , (self minutes: shownMoment seconds)).
+			currentZone addChild: self analyseButton ].
 	self section: 'Mistakes' build: [ self buildTagsOf: shownMoment ].
 	currentZone addChild:
 		(self row: ((walking and: [ self isActive: shownMoment ])
@@ -1566,6 +1579,13 @@ CoachElement >> updateLeftPane [
 	pane removeChildren.
 	pane addChild: wanted.
 	mode = #marking ifTrue: [ replay moveList requestFocus ]
+]
+
+{ #category : 'accessing' }
+CoachElement >> whenAnalyseDo: aBlock [
+	"aBlock receives a position to analyse on its own board. Kept in my userData, so that it needed no new slot while windows are open."
+
+	self userData at: #analyseBlock put: aBlock
 ]
 
 { #category : 'accessing' }

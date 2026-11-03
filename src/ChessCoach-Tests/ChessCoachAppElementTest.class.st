@@ -697,7 +697,7 @@ ChessCoachAppElementTest >> testSetupWizard [
 ChessCoachAppElementTest >> testShowInTheHomeNotificationOpensGames [
 
 	| show |
-	session notifications post: (ChessCoachNotification
+	session notifications post: (MMNotification
 			 key: 'games'
 			 kind: #newGames
 			 title: '2 new games'
@@ -791,7 +791,7 @@ ChessCoachAppElementTest >> testSwitchingBackToGamesWithGamesListed [
 ChessCoachAppElementTest >> testTheBellShowsUnreadNotifications [
 
 	self deny: app bellBadge isVisible description: 'no dot at first'.
-	session notifications post: (ChessCoachNotification
+	session notifications post: (MMNotification
 			 key: 'new-games'
 			 kind: #newGames
 			 title: '2 new games'

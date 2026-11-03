@@ -1,9 +1,9 @@
 "
-I am one entry of the notification center: an available update (#update), newly downloaded games (#newGames) or a failing background check (#error).
+I am one entry of the notification center under the bell. My kind is the app's (Chessmate has #newGames), except the shell's own: an available update (#update), a failing background check (#error) and a saved file that could not be read (#problem).
 My key identifies what I am about (e.g. 'update-v0.4.0', 'error-Lichess'): while I am not dismissed, a new notification with my key replaces me. I am kept in notifications.json.
 "
 Class {
-	#name : 'ChessCoachNotification',
+	#name : 'MMNotification',
 	#superclass : 'Object',
 	#instVars : [
 		'key',
@@ -14,12 +14,12 @@ Class {
 		'read',
 		'dismissed'
 	],
-	#category : 'ChessCoach-App',
-	#package : 'ChessCoach-App'
+	#category : 'Mamotreto-Core',
+	#package : 'Mamotreto-Core'
 }
 
 { #category : 'instance creation' }
-ChessCoachNotification class >> fromDictionary: aDictionary [
+MMNotification class >> fromDictionary: aDictionary [
 	"Read one notification as written by asDictionary"
 
 	^ (self new
@@ -34,7 +34,7 @@ ChessCoachNotification class >> fromDictionary: aDictionary [
 ]
 
 { #category : 'instance creation' }
-ChessCoachNotification class >> key: aString kind: aSymbol title: titleString text: textString [
+MMNotification class >> key: aString kind: aSymbol title: titleString text: textString [
 
 	^ self new
 		  setKey: aString
@@ -44,8 +44,19 @@ ChessCoachNotification class >> key: aString kind: aSymbol title: titleString te
 		  time: DateAndTime now
 ]
 
+{ #category : 'instance creation' }
+MMNotification class >> problem: aString [
+	"A saved file that could not be read; aString says why and where it was kept"
+
+	^ self
+		  key: 'problem-' , aString
+		  kind: #problem
+		  title: 'A saved file could not be read'
+		  text: aString
+]
+
 { #category : 'converting' }
-ChessCoachNotification >> asDictionary [
+MMNotification >> asDictionary [
 
 	^ Dictionary new
 		  at: 'key' put: key;
@@ -59,49 +70,49 @@ ChessCoachNotification >> asDictionary [
 ]
 
 { #category : 'actions' }
-ChessCoachNotification >> beDismissed [
+MMNotification >> beDismissed [
 
 	dismissed := true
 ]
 
 { #category : 'actions' }
-ChessCoachNotification >> beRead [
+MMNotification >> beRead [
 
 	read := true
 ]
 
 { #category : 'testing' }
-ChessCoachNotification >> isDismissed [
+MMNotification >> isDismissed [
 
 	^ dismissed
 ]
 
 { #category : 'testing' }
-ChessCoachNotification >> isRead [
+MMNotification >> isRead [
 
 	^ read
 ]
 
 { #category : 'testing' }
-ChessCoachNotification >> isUpdate [
+MMNotification >> isUpdate [
 
 	^ kind = #update
 ]
 
 { #category : 'accessing' }
-ChessCoachNotification >> key [
+MMNotification >> key [
 
 	^ key
 ]
 
 { #category : 'accessing' }
-ChessCoachNotification >> kind [
+MMNotification >> kind [
 
 	^ kind
 ]
 
 { #category : 'initialization' }
-ChessCoachNotification >> setKey: aString kind: aSymbol title: titleString text: textString time: aDateAndTime [
+MMNotification >> setKey: aString kind: aSymbol title: titleString text: textString time: aDateAndTime [
 
 	key := aString.
 	kind := aSymbol.
@@ -113,26 +124,26 @@ ChessCoachNotification >> setKey: aString kind: aSymbol title: titleString text:
 ]
 
 { #category : 'initialization' }
-ChessCoachNotification >> setRead: readBoolean dismissed: dismissedBoolean [
+MMNotification >> setRead: readBoolean dismissed: dismissedBoolean [
 
 	read := readBoolean.
 	dismissed := dismissedBoolean
 ]
 
 { #category : 'accessing' }
-ChessCoachNotification >> text [
+MMNotification >> text [
 
 	^ text
 ]
 
 { #category : 'accessing' }
-ChessCoachNotification >> time [
+MMNotification >> time [
 
 	^ time
 ]
 
 { #category : 'accessing' }
-ChessCoachNotification >> title [
+MMNotification >> title [
 
 	^ title
 ]

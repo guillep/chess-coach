@@ -18,7 +18,7 @@ ChessCoachNotificationsChanged >> notifications [
 ]
 
 { #category : 'accessing' }
-ChessCoachNotificationsChanged >> notifications: aChessCoachNotifications [
+ChessCoachNotificationsChanged >> notifications: someNotifications [
 
-	notifications := aChessCoachNotifications
+	notifications := someNotifications
 ]

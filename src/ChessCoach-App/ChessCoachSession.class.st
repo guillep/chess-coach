@@ -209,7 +209,7 @@ ChessCoachSession >> checkForNewGames [
 					 importFrom: 'Chess.com'
 					 doing: [ self chessComImporter importNewerGames ]) ].
 	entries ifEmpty: [ ^ self ].
-	self notifications post: (ChessCoachNotification
+	self notifications post: (MMNotification
 			 key: 'new-games'
 			 kind: #newGames
 			 title: (entries size = 1
@@ -225,7 +225,7 @@ ChessCoachSession >> checkForUpdate [
 
 	availableUpdate := self updater availableUpdate.
 	availableUpdate ifNil: [ ^ self ].
-	self notifications post: (ChessCoachNotification
+	self notifications post: (MMNotification
 			 key: 'update-' , availableUpdate
 			 kind: #update
 			 title: 'Update available'
@@ -547,7 +547,7 @@ ChessCoachSession >> homeConfiguration [
 				                       / 'home.json'
 				                       report: [ :text |
 						                       self notifications post:
-							                       (ChessCoachNotification
+							                       (MMNotification
 								                        key: 'home-' , text
 								                        kind: #home
 								                        title: 'Home'
@@ -564,7 +564,7 @@ ChessCoachSession >> importFrom: siteName doing: aBlock [
 				  ((error isKindOf: LichessError) or: [
 					   error isKindOf: NetworkError ]) ifFalse: [
 					  self logError: error ].
-				  self notifications post: (ChessCoachNotification
+				  self notifications post: (MMNotification
 						   key: 'error-' , siteName
 						   kind: #error
 						   title: siteName , ' check failed'
@@ -893,7 +893,7 @@ ChessCoachSession >> notifications [
 	"The notification center, in notifications.json next to the games"
 
 	^ notifications ifNil: [
-			  notifications := ChessCoachNotifications onFile:
+			  notifications := MMNotifications onFile:
 				                   importer fileStore baseDirectory
 				                   / 'notifications.json'.
 			  notifications whenChangedDo: [
@@ -1107,11 +1107,15 @@ ChessCoachSession >> settingChanged: aKey [
 
 { #category : 'settings' }
 ChessCoachSession >> settings [
-	"My preferences, in settings.json next to the games"
+	"My preferences, in settings.json next to the games. A file that can't be read is reported under the bell."
 
 	^ settings ifNil: [
-			  settings := ChessCoachSettings onFile:
-				              importer fileStore baseDirectory / 'settings.json'.
+			  settings := ChessCoachSettings
+				              onFile:
+				              importer fileStore baseDirectory / 'settings.json'
+				              reportingTo: [ :reason |
+				              self notifications post:
+					              (MMNotification problem: reason) ].
 			  settings whenChangedDo: [ :key | self settingChanged: key ].
 			  settings ]
 ]

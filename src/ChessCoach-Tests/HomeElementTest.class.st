@@ -250,7 +250,7 @@ HomeElementTest >> testNotificationsCanBeDismissedAndShown [
 	| shown |
 	shown := false.
 	home whenShowGamesDo: [ shown := true ].
-	session notifications post: (ChessCoachNotification
+	session notifications post: (MMNotification
 			 key: 'games'
 			 kind: #newGames
 			 title: '2 new games'
@@ -271,7 +271,7 @@ HomeElementTest >> testNotificationsHonourKindsUnreadAndCount [
 
 	| widget |
 	#( #newGames #update #error ) doWithIndex: [ :kind :index |
-			session notifications post: (ChessCoachNotification
+			session notifications post: (MMNotification
 					 key: 'k' , index printString
 					 kind: kind
 					 title: kind asString

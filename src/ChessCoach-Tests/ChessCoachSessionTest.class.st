@@ -41,6 +41,19 @@ ChessCoachSessionTest >> testAFailingCheckIsNotifiedOncePerSite [
 ]
 
 { #category : 'tests' }
+ChessCoachSessionTest >> testAnUnreadableSettingsFileIsNotified [
+
+	| directory fresh |
+	directory := FileSystem memory root.
+	directory / 'settings.json' writeStreamDo: [ :stream |
+		stream nextPutAll: '{"depth":' ].
+	fresh := (LichessAPIClientStub withGames: 0) newSessionOn: directory.
+	self assert: fresh settings depth equals: 18.
+	self assert: fresh notifications visible first kind equals: #problem.
+	self assert: (directory / 'settings.json.bad') exists
+]
+
+{ #category : 'tests' }
 ChessCoachSessionTest >> testAppVersionComesFromTheRepository [
 	"Without a registered repository, as in CI, it says so"
 

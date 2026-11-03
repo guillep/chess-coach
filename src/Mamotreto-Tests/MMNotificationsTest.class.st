@@ -1,18 +1,18 @@
 Class {
-	#name : 'ChessCoachNotificationsTest',
+	#name : 'MMNotificationsTest',
 	#superclass : 'TestCase',
 	#instVars : [
 		'file',
 		'notifications'
 	],
-	#category : 'ChessCoach-Tests',
-	#package : 'ChessCoach-Tests'
+	#category : 'Mamotreto-Tests',
+	#package : 'Mamotreto-Tests'
 }
 
 { #category : 'private' }
-ChessCoachNotificationsTest >> notificationKey: aString kind: aSymbol text: textString [
+MMNotificationsTest >> notificationKey: aString kind: aSymbol text: textString [
 
-	^ ChessCoachNotification
+	^ MMNotification
 		  key: aString
 		  kind: aSymbol
 		  title: aString
@@ -20,15 +20,15 @@ ChessCoachNotificationsTest >> notificationKey: aString kind: aSymbol text: text
 ]
 
 { #category : 'running' }
-ChessCoachNotificationsTest >> setUp [
+MMNotificationsTest >> setUp [
 
 	super setUp.
 	file := FileSystem memory root / 'notifications.json'.
-	notifications := ChessCoachNotifications onFile: file
+	notifications := MMNotifications onFile: file
 ]
 
 { #category : 'tests' }
-ChessCoachNotificationsTest >> testADismissedUpdateIsNotNotifiedAgain [
+MMNotificationsTest >> testADismissedUpdateIsNotNotifiedAgain [
 
 	notifications post:
 		(self notificationKey: 'update-v0.4.0' kind: #update text: '').
@@ -42,7 +42,7 @@ ChessCoachNotificationsTest >> testADismissedUpdateIsNotNotifiedAgain [
 ]
 
 { #category : 'tests' }
-ChessCoachNotificationsTest >> testANewerNotificationComesFirst [
+MMNotificationsTest >> testANewerNotificationComesFirst [
 
 	notifications post:
 		(self notificationKey: 'a' kind: #newGames text: '1').
@@ -55,7 +55,17 @@ ChessCoachNotificationsTest >> testANewerNotificationComesFirst [
 ]
 
 { #category : 'tests' }
-ChessCoachNotificationsTest >> testAnErrorComesBackAfterBeingDismissed [
+MMNotificationsTest >> testAVersionZeroFileIsRead [
+
+	file writeStreamDo: [ :stream |
+			stream nextPutAll: (STONJSON toString:
+					 { (self notificationKey: 'a' kind: #newGames text: '')
+						 asDictionary }) ].
+	self assert: (MMNotifications onFile: file) visible size equals: 1
+]
+
+{ #category : 'tests' }
+MMNotificationsTest >> testAnErrorComesBackAfterBeingDismissed [
 
 	notifications post:
 		(self notificationKey: 'error-Lichess' kind: #error text: 'first').
@@ -67,7 +77,7 @@ ChessCoachNotificationsTest >> testAnErrorComesBackAfterBeingDismissed [
 ]
 
 { #category : 'tests' }
-ChessCoachNotificationsTest >> testAnErrorReplacesTheUndismissedOneWithItsKey [
+MMNotificationsTest >> testAnErrorReplacesTheUndismissedOneWithItsKey [
 
 	notifications post:
 		(self notificationKey: 'error-Lichess' kind: #error text: 'first').
@@ -78,7 +88,21 @@ ChessCoachNotificationsTest >> testAnErrorReplacesTheUndismissedOneWithItsKey [
 ]
 
 { #category : 'tests' }
-ChessCoachNotificationsTest >> testChangesAreReported [
+MMNotificationsTest >> testAnUnreadableFileIsReportedInTheCenter [
+
+	| reread |
+	file writeStreamDo: [ :stream | stream nextPutAll: '[{"key":' ].
+	reread := MMNotifications onFile: file.
+	self assert: reread visible size equals: 1.
+	self assert: reread visible first kind equals: #problem.
+	self assert:
+		(reread visible first text includesSubstring:
+			 'notifications.json.bad').
+	self assert: (MMNotifications onFile: file) visible size equals: 1
+]
+
+{ #category : 'tests' }
+MMNotificationsTest >> testChangesAreReported [
 
 	| reported |
 	reported := 0.
@@ -90,7 +114,7 @@ ChessCoachNotificationsTest >> testChangesAreReported [
 ]
 
 { #category : 'tests' }
-ChessCoachNotificationsTest >> testNotificationsAreKeptInTheFile [
+MMNotificationsTest >> testNotificationsAreKeptInTheFile [
 
 	| reread |
 	notifications post:
@@ -99,7 +123,7 @@ ChessCoachNotificationsTest >> testNotificationsAreKeptInTheFile [
 		(self notificationKey: 'games' kind: #newGames text: '3 new games').
 	notifications markAllRead.
 	notifications dismiss: notifications visible last.
-	reread := ChessCoachNotifications onFile: file.
+	reread := MMNotifications onFile: file.
 	self assert: reread visible size equals: 1.
 	self assert: reread visible first kind equals: #newGames.
 	self assert: reread visible first isRead.

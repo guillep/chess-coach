@@ -1279,7 +1279,7 @@ ChessCoachAppElement >> updateAppTo: aRevision [
 		aSession updater updateTo: aRevision thenDo: [ :error |
 				error ifNotNil: [
 						aSession logError: error.
-						aSession notifications post: (ChessCoachNotification
+						aSession notifications post: (MMNotification
 								 key: 'error-Update'
 								 kind: #error
 								 title: 'Update failed'

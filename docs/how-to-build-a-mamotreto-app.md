@@ -62,6 +62,13 @@ Use as little as possible.
   Closing lets the running job finish, then ends the process.
 - **A test checks that nothing is left running.** Starting and shutting down
   the session leaves the same processes as before.
+- **Background work never redraws a page.** Redrawing behind the user's back
+  loses the selection, and the table may still deliver selection events for
+  the rows it had. When what a page shows effectively changed, the session
+  announces it once; the window then shows **Updates available** at the top
+  right, and only a click on it redraws the page (`MMWindow>>showUpdatesAvailable`,
+  `whenRefreshedDo:`). Nothing changed, nothing shown: compare what the pages
+  show, without timestamps or ETags, before announcing.
 
 ## 4. Network
 

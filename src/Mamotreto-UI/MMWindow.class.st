@@ -15,7 +15,9 @@ Class {
 		'notificationsWindow',
 		'updateButton',
 		'backgroundRunner',
-		'app'
+		'app',
+		'updatesButton',
+		'refreshBlock'
 	],
 	#category : 'Mamotreto-UI-Window',
 	#package : 'Mamotreto-UI',
@@ -199,6 +201,12 @@ MMWindow >> closeTab: aTabButton [
 	navigation removeItem: aTabButton
 ]
 
+{ #category : 'testing' }
+MMWindow >> hasUpdatesAvailable [
+
+	^ updatesButton visibility isVisible
+]
+
 { #category : 'background work' }
 MMWindow >> inUIDo: aBlock [
 
@@ -207,11 +215,12 @@ MMWindow >> inUIDo: aBlock [
 
 { #category : 'initialization' }
 MMWindow >> initialize [
-	"A title bar with the bell; below it the pages in a tab pane with the tabs in a left column, and a status line, set apart by lines. I have no margin: the pages have their own."
+	"A title bar with the bell, and left of it Updates available while the shown page is outdated; below it the pages in a tab pane with the tabs in a left column, and a status line, set apart by lines. I have no margin: the pages have their own."
 
 	super initialize.
 	backgroundRunner := [ :aBlock |
 	                    aBlock forkAt: Processor userBackgroundPriority ].
+	refreshBlock := [ ].
 	self layout: BlLinearLayout vertical.
 	self matchParent.
 	navigation := self newNavigation.
@@ -223,6 +232,7 @@ MMWindow >> initialize [
 				 hMatchParent;
 				 vFitContent;
 				 padding: MMWidgets titleBarPadding;
+				 addChild: self newUpdatesButton;
 				 addChild: self newBell;
 				 yourself);
 		addChild: self newBarLine;
@@ -446,6 +456,21 @@ MMWindow >> newStatusLine [
 		  yourself
 ]
 
+{ #category : 'initialization' }
+MMWindow >> newUpdatesButton [
+	"Shown only while what the page shows effectively changed in the background: the page is never redrawn behind the user's back, so the selection stays. Clicking it redraws the page."
+
+	updatesButton := MMWidgets
+		                 primaryButton: 'Updates available'
+		                 icon: 'outlined_refresh'
+		                 do: [ self refreshShownPage ].
+	updatesButton
+		id: #updatesButton;
+		tooltipText: 'Refresh this page with the new data';
+		visibility: BlVisibility gone.
+	^ updatesButton
+]
+
 { #category : 'accessing' }
 MMWindow >> notificationsWindow [
 
@@ -493,6 +518,13 @@ MMWindow >> quietText [
 	"What the notification panel says when it is empty"
 
 	^ 'All quiet.'
+]
+
+{ #category : 'updating' }
+MMWindow >> refreshShownPage [
+
+	updatesButton visibility: BlVisibility gone.
+	refreshBlock value
 ]
 
 { #category : 'background work' }
@@ -586,6 +618,13 @@ MMWindow >> showTab: aTabButton [
 
 	navigation selecter selectIndex:
 		(navigation items asArray indexOf: aTabButton)
+]
+
+{ #category : 'updating' }
+MMWindow >> showUpdatesAvailable [
+	"In the UI thread: what the shown page shows changed"
+
+	updatesButton visibility: BlVisibility visible
 ]
 
 { #category : 'accessing' }
@@ -691,4 +730,12 @@ MMWindow >> updateBell [
 MMWindow >> updateButton [
 
 	^ updateButton
+]
+
+{ #category : 'updating' }
+MMWindow >> whenRefreshedDo: aBlock [
+	"The page now shown: it draws the current data, so it is up to date, and Refresh redraws it with aBlock"
+
+	refreshBlock := aBlock.
+	updatesButton visibility: BlVisibility gone
 ]

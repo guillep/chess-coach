@@ -669,26 +669,7 @@ ChessCoachSession >> loadMoreGames [
 ChessCoachSession >> logError: anError [
 	"Append anError with its stack to errors.log, for bug reports"
 
-	| stack |
-	stack := String streamContents: [ :stream |
-			         anError signalerContext ifNotNil: [ :context |
-					         context stack do: [ :each |
-							         stream
-								         print: each;
-								         cr ] ] ].
-	self errorLog parent ensureCreateDirectory.
-	self errorLog writeStreamDo: [ :stream |
-			stream
-				setToEnd;
-				nextPutAll: '--- ';
-				nextPutAll: DateAndTime now printString;
-				nextPutAll: ' ';
-				nextPutAll: anError class name;
-				nextPutAll: ': ';
-				nextPutAll: (anError messageText ifNil: [ '' ]) asString;
-				lf;
-				nextPutAll: stack;
-				lf ]
+	(MMErrorLog onFile: self errorLog) log: anError
 ]
 
 { #category : 'login' }

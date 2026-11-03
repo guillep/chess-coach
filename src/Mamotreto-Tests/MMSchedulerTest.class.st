@@ -52,6 +52,26 @@ MMSchedulerTest >> testATaskRunsAtOnceThenEveryInterval [
 ]
 
 { #category : 'tests' }
+MMSchedulerTest >> testATaskStartingLaterWaitsUntilThen [
+
+	| start count |
+	start := DateAndTime now.
+	count := 0.
+	scheduler
+		every: 2 hours
+		from: start + 1 hour
+		do: [ count := count + 1 ].
+	scheduler runDueTasksAt: start.
+	self assert: count equals: 0.
+	scheduler runDueTasksAt: start + 1 hour.
+	self assert: count equals: 1.
+	scheduler runDueTasksAt: start + 2 hours.
+	self assert: count equals: 1.
+	scheduler runDueTasksAt: start + 3 hours.
+	self assert: count equals: 2
+]
+
+{ #category : 'tests' }
 MMSchedulerTest >> testStartRunsTheTasksInTheBackgroundUntilStopped [
 
 	scheduler start.

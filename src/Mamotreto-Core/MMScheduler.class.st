@@ -19,12 +19,19 @@ Class {
 
 { #category : 'accessing' }
 MMScheduler >> every: aDuration do: aBlock [
-	"Run aBlock when I start, then every aDuration. A task is { interval. block. next run time }"
+	"Run aBlock when I start, then every aDuration"
+
+	self every: aDuration from: nil do: aBlock
+]
+
+{ #category : 'accessing' }
+MMScheduler >> every: aDuration from: aDateAndTimeOrNil do: aBlock [
+	"Run aBlock first at aDateAndTimeOrNil, or when I start when nil or already past, then every aDuration. An app passes its last run plus aDuration, so that opening it does not repeat what was done a moment ago. A task is { interval. block. next run time }."
 
 	tasks add: {
 			aDuration.
 			aBlock.
-			nil }
+			aDateAndTimeOrNil }
 ]
 
 { #category : 'initialization' }

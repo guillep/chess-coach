@@ -115,6 +115,20 @@ MMWidgets class >> dropdown: someAssociations [
 ]
 
 { #category : 'building' }
+MMWidgets class >> dropdown: someAssociations selecting: aValue do: aBlock [
+	"A dropdown of label -> value associations showing aValue (the first one if aValue isn't there); choosing another one passes its value to aBlock. For settings and remembered filters."
+
+	| select index |
+	select := self dropdown: someAssociations.
+	index := someAssociations findFirst: [ :each | each value = aValue ].
+	index > 0 ifTrue: [ select selecter selectIndex: index ].
+	select addEventHandlerOn: ToSelectChangedEvent do: [ :event |
+			select selectedDataItem ifNotNil: [ :assoc |
+				aBlock value: assoc value ] ].
+	^ select
+]
+
+{ #category : 'building' }
 MMWidgets class >> filledButton: aString icon: anIconName colour: aColor do: aBlock [
 	"A filled button with an icon. The raw themes ignore the #primary and #danger stamps, so the button's own tokens give it its colours."
 

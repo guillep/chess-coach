@@ -14,6 +14,7 @@ ChessCoachSettings class >> defaults [
 	^ super defaults
 		  at: 'pieceSet' put: 'Meridian';
 		  at: 'boardTheme' put: 'Chessmate';
+		  at: 'evaluationUnit' put: 'pawns';
 		  at: 'gamesPerLoad' put: 20;
 		  at: 'gamesCheckMinutes' put: 30;
 		  at: 'stockfishPath' put: '/opt/homebrew/bin/stockfish';
@@ -32,9 +33,9 @@ ChessCoachSettings class >> defaults [
 
 { #category : 'constants' }
 ChessCoachSettings class >> formatVersion [
-	"2 added the moment thresholds"
+	"2 added the moment thresholds, 3 the evaluation unit"
 
-	^ 2
+	^ 3
 ]
 
 { #category : 'accessing' }
@@ -48,6 +49,13 @@ ChessCoachSettings >> boardTheme [
 ChessCoachSettings >> depth [
 
 	^ self at: 'depth'
+]
+
+{ #category : 'accessing' }
+ChessCoachSettings >> evaluationFormat [
+	"How every evaluation is shown: in pawns or as a win chance"
+
+	^ EvaluationFormat unit: (self at: 'evaluationUnit')
 ]
 
 { #category : 'accessing' }

@@ -137,8 +137,10 @@ SettingsElement >> build [
 		addChild: (widgets
 				 section: 'Appearance'
 				 help:
-				 'Light or dark colours for the whole app. The board keeps its own colours.'
-				 rows: { self appThemeRow });
+				 'Light or dark colours for the whole app (the board keeps its own colours), and how evaluations are shown everywhere: in pawns, as Stockfish gives them, or as a win chance.'
+				 rows: {
+						 self appThemeRow.
+						 self evaluationUnitRow });
 		addChild: (widgets
 				 section: 'Board'
 				 help:
@@ -269,6 +271,22 @@ SettingsElement >> chosen: aName is: aChosenName [
 	^ aName = aChosenName
 		  ifTrue: [ '✓ ' , aName ]
 		  ifFalse: [ aName ]
+]
+
+{ #category : 'building' }
+SettingsElement >> evaluationUnitRow [
+	"How every evaluation of the app is shown"
+
+	^ self row: {
+			  (ToLabel text: 'Evaluations in').
+			  ((MMWidgets
+				    dropdown:
+					    (EvaluationFormat units collect: [ :each |
+							     each value -> each key ])
+				    selecting: (session settings at: 'evaluationUnit')
+				    do: [ :unit | session settings at: 'evaluationUnit' put: unit ])
+				   width: 200;
+				   yourself) }
 ]
 
 { #category : 'actions' }

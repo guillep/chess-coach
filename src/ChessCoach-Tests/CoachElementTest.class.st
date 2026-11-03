@@ -70,9 +70,9 @@ CoachElementTest >> testAWholeMoment [
 
 	self assert: coach mode equals: #list.
 	self assert:
-		(self zoneTexts includes: 'Move 2 (Nf3) · only move found · −0%').
+		(self zoneTexts includes: 'Move 2 (Nf3) · only move found · −0.00').
 	self assert:
-		(self zoneTexts includes: 'Move 4 (Ng5) · mistake · −18%').
+		(self zoneTexts includes: 'Move 4 (Ng5) · mistake · −2.00').
 	self
 		assert: (coach stateIconNameOf: review moments last)
 		equals: 'outlined_radiobuttonunchecked'.
@@ -189,7 +189,7 @@ CoachElementTest >> testListShowsPastMomentsAndReviewsOneMoment [
 	self assert: coach mode equals: #list.
 	self assert: review currentMoment isNil.
 	self assert:
-		(self zoneTexts includes: 'Move 4 (Ng5) · mistake · −18%').
+		(self zoneTexts includes: 'Move 4 (Ng5) · mistake · −2.00').
 	self
 		assert: (coach stateIconNameOf: moment)
 		equals: 'outlined_timelapse'.

@@ -108,34 +108,36 @@ CoachElement >> buildBoardAnswer [
 
 { #category : 'building' }
 CoachElement >> buildEngineRevealOf: reveal before: before after: after [
-	"Win chances, my candidates, the engine line, the line after my move to compare with it, and the reply I missed"
+	"The evaluation before and after my move, my candidates, the engine line, the line after my move to compare with it, and the reply I missed. Evaluations in the unit of the settings, from my side."
 
-	| line myLine |
+	| line myLine format color |
+	format := session settings evaluationFormat.
+	color := shownMoment color.
 	line := (review analysis atPly: shownMoment ply - 1) bestLine.
 	currentZone addChild: ((self paragraph:
-				  ('Win chance: {1}% before your move, {2}% after it' format: {
-							   ((reveal at: 'winBefore') printShowingDecimalPlaces: 0).
-							   ((reveal at: 'winAfter') printShowingDecimalPlaces: 0) }))
+				  ('Evaluation: {1} before your move, {2} after it' format: {
+							   (format winPercent: (reveal at: 'winBefore')).
+							   (format winPercent: (reveal at: 'winAfter')) }))
 			 tooltipString:
-				 'Your chance of winning, from the engine evaluation (Lichess formula: +1.00 is about 59%, +3.00 about 75%). It shows how much a move changes the game better than pawns do.';
+				 'From your side, in the unit chosen in the settings (pawns, or the chance of winning from the Lichess formula: +1.00 is about 59%, +3.00 about 75%).';
 			 yourself).
 	(reveal at: 'candidates') ifNotEmpty: [
 			currentZone addChild:
-				(self paragraph: 'Your candidates (win chance after each):') ].
+				(self paragraph: 'Your candidates (evaluation after each):') ].
 	(reveal at: 'candidates') keysAndValuesDo: [ :move :win |
-			currentZone addChild: (self paragraph: ('  {1}: {2}%' format: {
+			currentZone addChild: (self paragraph: ('  {1}: {2}' format: {
 							  (before sanForUCI: move).
-							  (win printShowingDecimalPlaces: 0) })) ].
+							  (format winPercent: win) })) ].
 	currentZone addChild:
 		(self paragraph: ('Engine line ({1}): {2}' format: {
-					  line scoreString.
+					  (format line: line for: color).
 					  (self lineInSAN: (reveal at: 'bestLine') from: before) })).
 	(review analysis atPly: shownMoment ply) lines ifNotEmpty: [ :lines |
 			myLine := lines first.
 			currentZone addChild:
 				(self paragraph: ('Your move {1} ({2}): {1} {3}' format: {
 							  (before sanForUCI: self playedMove).
-							  myLine scoreString.
+							  (format line: myLine for: color).
 							  (self lineInSAN: myLine moves from: after) })) ].
 	(reveal at: 'engineReply') ifNotNil: [ :reply |
 			currentZone addChild: (self paragraph:
@@ -644,18 +646,20 @@ CoachElement >> currentZone [
 
 { #category : 'private' }
 CoachElement >> describeMoment: aMomentReview [
-	"'Move 14 (Ng5) · mistake · −18%'. Only the first kind is named, so that the line fits"
+	"'Move 14 (Ng5) · mistake · −0.90' (in the unit of the settings). Only the first kind is named, so that the line fits. Without engine lines there is no drop."
 
 	| kinds |
 	kinds := aMomentReview kinds asArray.
-	^ 'Move {1} ({2}) · {3}{4} · −{5}%' format: {
+	^ 'Move {1} ({2}) · {3}{4}{5}' format: {
 			  (aMomentReview ply + 1 // 2).
 			  (game moves at: aMomentReview ply) san.
 			  (ChessCoachWidgets humanize: kinds first).
 			  (kinds size > 1
 				   ifTrue: [ ' +' , (kinds size - 1) printString ]
 				   ifFalse: [ '' ]).
-			  (aMomentReview winDrop printShowingDecimalPlaces: 0) }
+			  ((self dropTextOf: aMomentReview)
+				   ifNil: [ '' ]
+				   ifNotNil: [ :text | ' · ' , text ]) }
 ]
 
 { #category : 'private' }
@@ -694,6 +698,21 @@ CoachElement >> doneMarking [
 				problems ifNotEmpty: [
 						message := ' ' join: problems.
 						self refresh ] ]
+]
+
+{ #category : 'private' }
+CoachElement >> dropTextOf: aMomentReview [
+	"What my move lost, in the unit of the settings, or nil without engine lines"
+
+	| before after |
+	review analysis ifNil: [ ^ nil ].
+	before := review analysis atPly: aMomentReview ply - 1.
+	after := review analysis atPly: aMomentReview ply.
+	(before lines isEmpty or: [ after lines isEmpty ]) ifTrue: [ ^ nil ].
+	^ session settings evaluationFormat
+		  dropFrom: before bestLine
+		  to: after bestLine
+		  for: aMomentReview color
 ]
 
 { #category : 'layout' }

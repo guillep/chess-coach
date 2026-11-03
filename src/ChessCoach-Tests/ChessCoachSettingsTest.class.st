@@ -30,7 +30,7 @@ ChessCoachSettingsTest >> testAnOlderFileGetsTheThresholdDefaults [
 	settings at: 'depth' put: 21.
 	self
 		assert: ((STONJSON fromString: file contents) at: 'formatVersion')
-		equals: 2
+		equals: 3
 ]
 
 { #category : 'tests' }
@@ -113,4 +113,15 @@ ChessCoachSettingsTest >> testDefaultsAndSavingAtOnce [
 	self
 		should: [ settings at: 'nonsense' put: 1 ]
 		raise: AssertionFailure
+]
+
+{ #category : 'tests' }
+ChessCoachSettingsTest >> testEvaluationUnit [
+
+	| settings |
+	settings := ChessCoachSettings onFile:
+		            FileSystem memory root / 'settings.json'.
+	self assert: settings evaluationFormat unit equals: 'pawns'.
+	settings at: 'evaluationUnit' put: 'winPercent'.
+	self assert: (settings evaluationFormat winPercent: 50) equals: '50%'
 ]

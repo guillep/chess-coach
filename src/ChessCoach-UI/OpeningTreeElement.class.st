@@ -99,18 +99,20 @@ OpeningTreeElement >> buildDatabase [
 
 { #category : 'building' }
 OpeningTreeElement >> buildEngine [
+	"The engine's lines for the shown position, from the side to move, in the unit of the settings"
 
-	| position |
+	| position format |
 	session isEngineAvailable ifFalse: [
 		^ panel addChild: (ToLabel text: 'Stockfish isn''t available') ].
 	engineLines ifNil: [
 		^ panel addChild: (ToLabel text: 'Calculating…') ].
 	position := ChessPosition fromFEN: self shownNode fen.
+	format := session settings evaluationFormat.
 	engineLines do: [ :each |
 			each firstMove ifNotNil: [ :move |
 					panel addChild: (ToLabel text: ('{1} · {2}' format: {
 									  (position sanForUCI: move).
-									  each scoreString })) ] ]
+									  (format line: each for: position turn) })) ] ]
 ]
 
 { #category : 'building' }

@@ -60,6 +60,16 @@ EngineLine class >> moves: aCollection mate: aNumber sideToMove: aColor [
 ]
 
 { #category : 'win percent' }
+EngineLine class >> pawnsForWinPercent: aNumber [
+	"The inverse of winPercentForCentipawns:, in pawns; certain wins and losses are capped at ±100 pawns"
+
+	| chance |
+	chance := (aNumber max: 0.0001) min: 99.9999.
+	^ ((chance / (100 - chance)) ln / 0.00368208 / 100 max: -100) min:
+		  100
+]
+
+{ #category : 'win percent' }
 EngineLine class >> winPercentForCentipawns: aNumber [
 	"Lichess's winning chance (0-100) for the side the centipawns favour"
 
@@ -92,10 +102,30 @@ EngineLine >> isMateFor: aColor [
 ]
 
 { #category : 'accessing' }
+EngineLine >> mate [
+	"Moves to mate, positive when White mates; nil when the line is not a forced mate"
+
+	^ mate
+]
+
+{ #category : 'accessing' }
 EngineLine >> moves [
 	"Moves in UCI notation (e2e4), starting from the analysed position"
 
 	^ moves
+]
+
+{ #category : 'accessing' }
+EngineLine >> pawnsFor: aColor [
+	"The score in pawns from aColor's side. A forced mate counts as 100 pawns for the side that mates; mate 0 (the side to move is already mated, which I can't tell apart) counts as 0."
+
+	| whitePawns |
+	whitePawns := mate
+		              ifNil: [ centipawns / 100 ]
+		              ifNotNil: [ mate sign * 100 ].
+	^ aColor = #white
+		  ifTrue: [ whitePawns ]
+		  ifFalse: [ whitePawns negated ]
 ]
 
 { #category : 'accessing' }

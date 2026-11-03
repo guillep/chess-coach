@@ -32,6 +32,13 @@ CoachReviewTest >> answerFirstMoment: review [
 ]
 
 { #category : 'helpers' }
+CoachReviewTest >> game [
+	"The game of the fixture: 1. e4 e5 2. Nf3 Nc6 3. Bc4 Nf6 4. Ng5"
+
+	^ game
+]
+
+{ #category : 'helpers' }
 CoachReviewTest >> line: aUCIMove whiteCentipawns: aNumber [
 
 	^ EngineLine

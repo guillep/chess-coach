@@ -116,15 +116,18 @@ MMWidgets class >> dropdown: someAssociations [
 
 { #category : 'building' }
 MMWidgets class >> dropdown: someAssociations selecting: aValue do: aBlock [
-	"A dropdown of label -> value associations showing aValue (the first one if aValue isn't there); choosing another one passes its value to aBlock. For settings and remembered filters."
+	"A dropdown of label -> value associations showing aValue (the first one if aValue isn't there); choosing another value passes it to aBlock. Selection events that don't change the value (Toplo sends one when the dropdown is set up) are ignored, so that aBlock can rebuild the dropdown. For settings and remembered filters."
 
-	| select index |
+	| select index current |
 	select := self dropdown: someAssociations.
 	index := someAssociations findFirst: [ :each | each value = aValue ].
 	index > 0 ifTrue: [ select selecter selectIndex: index ].
+	current := (someAssociations at: (index max: 1)) value.
 	select addEventHandlerOn: ToSelectChangedEvent do: [ :event |
 			select selectedDataItem ifNotNil: [ :assoc |
-				aBlock value: assoc value ] ].
+					assoc value = current ifFalse: [
+							current := assoc value.
+							aBlock value: assoc value ] ] ].
 	^ select
 ]
 

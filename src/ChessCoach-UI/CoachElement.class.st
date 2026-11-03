@@ -111,7 +111,7 @@ CoachElement >> buildBoardAnswer [
 
 { #category : 'building' }
 CoachElement >> buildEngineRevealOf: reveal before: before after: after [
-	"The evaluation before and after my move, my candidates, the engine line, the line after my move to compare with it, and the reply I missed. Evaluations in the unit of the settings, from my side."
+	"The evaluation before and after my move, a table comparing the engine's moves, mine, my candidates and the database's, the engine line, the line after my move to compare with it, and the reply I missed or found. Evaluations in the unit of the settings, from my side."
 
 	| line myLine format color |
 	format := session settings evaluationFormat.
@@ -124,13 +124,13 @@ CoachElement >> buildEngineRevealOf: reveal before: before after: after [
 			 tooltipString:
 				 'From your side, in the unit chosen in the settings (pawns, or the chance of winning from the Lichess formula: +1.00 is about 59%, +3.00 about 75%).';
 			 yourself).
-	(reveal at: 'candidates') ifNotEmpty: [
-			currentZone addChild:
-				(self paragraph: 'Your candidates (evaluation after each):') ].
-	(reveal at: 'candidates') keysAndValuesDo: [ :move :win |
-			currentZone addChild: (self paragraph: ('  {1}: {2}' format: {
-							  (before sanForUCI: move).
-							  (format winPercent: win) })) ].
+	currentZone addChild: (MoveComparisonTable
+			 session: session
+			 game: game
+			 ply: shownMoment ply
+			 analysis: review analysis
+			 candidates: (reveal at: 'candidates')
+			 runner: backgroundRunner).
 	currentZone addChild:
 		(self paragraph: ('Engine line ({1}): {2}' format: {
 					  (format line: line for: color).

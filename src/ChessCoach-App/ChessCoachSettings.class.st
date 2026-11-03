@@ -27,15 +27,17 @@ ChessCoachSettings class >> defaults [
 		  at: 'findLongThinks' put: true;
 		  at: 'findOpeningChoices' put: true;
 		  at: 'openingDatabaseMinGames' put: 5;
+		  at: 'coachDatabase' put: 'lichess';
+		  at: 'coachEngineLines' put: 3;
 		  addAll: MomentFinder defaultThresholds;
 		  yourself
 ]
 
 { #category : 'constants' }
 ChessCoachSettings class >> formatVersion [
-	"2 added the moment thresholds, 3 the evaluation unit, 4 replaced the win-% drops by the evaluation zones (centipawns); the old drop keys are ignored"
+	"2 added the moment thresholds, 3 the evaluation unit, 4 replaced the win-% drops by the evaluation zones (centipawns; the old drop keys are ignored), 5 the coach's database and engine lines"
 
-	^ 4
+	^ 5
 ]
 
 { #category : 'accessing' }

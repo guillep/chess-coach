@@ -79,7 +79,7 @@ ChessCoachSessionTest >> testChangesAreAnnounced [
 { #category : 'tests' }
 ChessCoachSessionTest >> testCheckForUpdateNotifies [
 
-	session updater: (ChessCoachUpdaterStub new
+	session updater: (MMUpdaterStub new
 			 current: 'v1.1.1' tags: #( 'v1.2.0' ) failure: nil;
 			 yourself).
 	session checkForUpdate.

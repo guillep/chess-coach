@@ -2,17 +2,17 @@
 I test finding and installing updates without git or saving the image.
 "
 Class {
-	#name : 'ChessCoachUpdaterTest',
+	#name : 'MMUpdaterTest',
 	#superclass : 'TestCase',
-	#category : 'ChessCoach-Tests',
-	#package : 'ChessCoach-Tests'
+	#category : 'Mamotreto-Tests',
+	#package : 'Mamotreto-Tests'
 }
 
 { #category : 'tests' }
-ChessCoachUpdaterTest >> testAFailedUpdateReportsAndDoesNotSave [
+MMUpdaterTest >> testAFailedUpdateReportsAndDoesNotSave [
 
 	| updater result |
-	updater := ChessCoachUpdaterStub new
+	updater := MMUpdaterStub new
 		           current: 'v1.1.1' tags: #(  ) failure: 'no network';
 		           yourself.
 	updater updateTo: 'v1.2.0' thenDo: [ :error | result := error ].
@@ -21,28 +21,28 @@ ChessCoachUpdaterTest >> testAFailedUpdateReportsAndDoesNotSave [
 ]
 
 { #category : 'tests' }
-ChessCoachUpdaterTest >> testAvailableUpdateIsTheNewestNewerRelease [
+MMUpdaterTest >> testAvailableUpdateIsTheNewestNewerRelease [
 
 	self
-		assert: (ChessCoachUpdaterStub new
+		assert: (MMUpdaterStub new
 				 current: 'v1.1.1'
 				 tags: #( 'v1.0.0' 'v1.1.1' 'v1.2.0' 'v1.10.0' 'wip' )
 				 failure: nil;
 				 availableUpdate)
 		equals: 'v1.10.0'.
-	self assert: (ChessCoachUpdaterStub new
+	self assert: (MMUpdaterStub new
 			 current: 'v1.1.1' tags: #( 'v1.0.0' 'v1.1.1' ) failure: nil;
 			 availableUpdate) isNil.
-	self assert: (ChessCoachUpdaterStub new
+	self assert: (MMUpdaterStub new
 			 current: nil tags: #( 'v9.0.0' ) failure: nil;
 			 availableUpdate) isNil
 ]
 
 { #category : 'tests' }
-ChessCoachUpdaterTest >> testUpdateChecksOutThenSaves [
+MMUpdaterTest >> testUpdateChecksOutThenSaves [
 
 	| updater result |
-	updater := ChessCoachUpdaterStub new
+	updater := MMUpdaterStub new
 		           current: 'v1.1.1' tags: #(  ) failure: nil;
 		           yourself.
 	result := #unset.

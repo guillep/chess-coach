@@ -2,27 +2,27 @@
 I replace the updater's git and image steps with data, and log them.
 "
 Class {
-	#name : 'ChessCoachUpdaterStub',
-	#superclass : 'ChessCoachUpdater',
+	#name : 'MMUpdaterStub',
+	#superclass : 'MMUpdater',
 	#instVars : [
 		'current',
 		'tags',
 		'log',
 		'failure'
 	],
-	#category : 'ChessCoach-Tests',
-	#package : 'ChessCoach-Tests'
+	#category : 'Mamotreto-Tests',
+	#package : 'Mamotreto-Tests'
 }
 
 { #category : 'private - io' }
-ChessCoachUpdaterStub >> checkOut: aTagName [
+MMUpdaterStub >> checkOut: aTagName [
 
 	failure ifNotNil: [ self error: failure ].
 	log add: aTagName
 ]
 
 { #category : 'accessing' }
-ChessCoachUpdaterStub >> current: aTag tags: someTags failure: anErrorMessageOrNil [
+MMUpdaterStub >> current: aTag tags: someTags failure: anErrorMessageOrNil [
 
 	current := aTag.
 	tags := someTags.
@@ -31,31 +31,31 @@ ChessCoachUpdaterStub >> current: aTag tags: someTags failure: anErrorMessageOrN
 ]
 
 { #category : 'private - io' }
-ChessCoachUpdaterStub >> currentTag [
+MMUpdaterStub >> currentTag [
 
 	^ current
 ]
 
 { #category : 'private - io' }
-ChessCoachUpdaterStub >> loadBaseline [
+MMUpdaterStub >> loadBaseline [
 
 	log add: #baseline
 ]
 
 { #category : 'accessing' }
-ChessCoachUpdaterStub >> log [
+MMUpdaterStub >> log [
 
 	^ log
 ]
 
 { #category : 'private - io' }
-ChessCoachUpdaterStub >> releaseTags [
+MMUpdaterStub >> releaseTags [
 
 	^ tags
 ]
 
 { #category : 'private - io' }
-ChessCoachUpdaterStub >> saveImage [
+MMUpdaterStub >> saveImage [
 
 	log add: #saved
 ]

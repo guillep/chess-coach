@@ -1,15 +1,28 @@
 "
-I update the app from the release tags (vX.Y.Z) of the chess-coach repository: I find a newer tag, check it out, save the image and open a new window. Tests subclass me and override my private I/O methods.
+I update an app from the release tags (vX.Y.Z) of its Iceberg repository: I find a newer tag, check it out, load the app's baseline and save the image; the shell then opens a new window. I am made with the repository and baseline names. Tests subclass me and override my private I/O methods.
 "
 Class {
-	#name : 'ChessCoachUpdater',
+	#name : 'MMUpdater',
 	#superclass : 'Object',
-	#category : 'ChessCoach-App',
-	#package : 'ChessCoach-App'
+	#instVars : [
+		'repositoryName',
+		'baselineName'
+	],
+	#category : 'Mamotreto-Core',
+	#package : 'Mamotreto-Core'
 }
 
+{ #category : 'instance creation' }
+MMUpdater class >> repositoryNamed: aRepositoryName baseline: aBaselineName [
+	"The updater of the app in the registered Iceberg repository aRepositoryName, loaded by BaselineOf<aBaselineName> from its src directory"
+
+	^ self new
+		  setRepositoryName: aRepositoryName
+		  baselineName: aBaselineName
+]
+
 { #category : 'checking' }
-ChessCoachUpdater >> availableUpdate [
+MMUpdater >> availableUpdate [
 	"The newest release tag newer than the checked-out code, or nil. Without a current tag nothing is offered: it is a development checkout."
 
 	| current newest |
@@ -25,7 +38,7 @@ ChessCoachUpdater >> availableUpdate [
 ]
 
 { #category : 'private - io' }
-ChessCoachUpdater >> checkOut: aRevision [
+MMUpdater >> checkOut: aRevision [
 	"Load a tag, branch or commit hash. Uncommitted changes in the image would be lost, so they stop the update."
 
 	self repository isModified ifTrue: [
@@ -35,7 +48,7 @@ ChessCoachUpdater >> checkOut: aRevision [
 ]
 
 { #category : 'private - io' }
-ChessCoachUpdater >> currentTag [
+MMUpdater >> currentTag [
 	"The nearest tag in the history of the checked-out commit, or nil"
 
 	self repository ifNil: [ ^ nil ].
@@ -45,7 +58,7 @@ ChessCoachUpdater >> currentTag [
 ]
 
 { #category : 'private' }
-ChessCoachUpdater >> is: aTagName newerThan: anotherTagName [
+MMUpdater >> is: aTagName newerThan: anotherTagName [
 
 	| numbers others |
 	numbers := self numbersOf: aTagName.
@@ -57,18 +70,18 @@ ChessCoachUpdater >> is: aTagName newerThan: anotherTagName [
 ]
 
 { #category : 'testing' }
-ChessCoachUpdater >> isRelease: aTagName [
+MMUpdater >> isRelease: aTagName [
 	"Whether the tag looks like v1.2.3"
 
 	^ aTagName matchesRegex: 'v\d+\.\d+\.\d+'
 ]
 
 { #category : 'private - io' }
-ChessCoachUpdater >> loadBaseline [
+MMUpdater >> loadBaseline [
 	"Load the checked-out baseline, for new packages and dependencies"
 
 	Metacello new
-		baseline: 'ChessCoach';
+		baseline: baselineName;
 		repository: 'tonel://' , (self repository location / 'src') fullName;
 		onConflictUseIncoming;
 		onUpgrade: [ :upgrade | upgrade useIncoming ];
@@ -76,7 +89,7 @@ ChessCoachUpdater >> loadBaseline [
 ]
 
 { #category : 'private' }
-ChessCoachUpdater >> numbersOf: aTagName [
+MMUpdater >> numbersOf: aTagName [
 	"v1.2.3 as #( 1 2 3 )"
 
 	^ ((aTagName allButFirst substrings: '.') collect: [ :each |
@@ -84,7 +97,7 @@ ChessCoachUpdater >> numbersOf: aTagName [
 ]
 
 { #category : 'private - io' }
-ChessCoachUpdater >> releaseTags [
+MMUpdater >> releaseTags [
 	"The names of the repository's tags, after fetching them"
 
 	self repository ifNil: [ ^ #(  ) ].
@@ -93,22 +106,29 @@ ChessCoachUpdater >> releaseTags [
 ]
 
 { #category : 'private - io' }
-ChessCoachUpdater >> repository [
+MMUpdater >> repository [
 	"The app's repository, or nil when it isn't registered"
 
 	^ IceRepository registry
-		  detect: [ :each | each name = 'chess-coach' ]
+		  detect: [ :each | each name = repositoryName ]
 		  ifNone: [ nil ]
 ]
 
 { #category : 'private - io' }
-ChessCoachUpdater >> saveImage [
+MMUpdater >> saveImage [
 
 	Smalltalk snapshot: true andQuit: false
 ]
 
+{ #category : 'initialization' }
+MMUpdater >> setRepositoryName: aRepositoryName baselineName: aBaselineName [
+
+	repositoryName := aRepositoryName.
+	baselineName := aBaselineName
+]
+
 { #category : 'updating' }
-ChessCoachUpdater >> updateTo: aTagName thenDo: aBlock [
+MMUpdater >> updateTo: aTagName thenDo: aBlock [
 	"Load the tag and its baseline and, only if that worked, save the image. Then evaluate aBlock with nil, or with the error if it failed. Off the UI thread; the window must be closed first."
 
 	[

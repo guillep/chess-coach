@@ -1190,7 +1190,10 @@ ChessCoachSession >> suggestedGames: aGameFilter [
 { #category : 'updates' }
 ChessCoachSession >> updater [
 
-	^ updater ifNil: [ updater := ChessCoachUpdater new ]
+	^ updater ifNil: [
+			  updater := MMUpdater
+				             repositoryNamed: 'chess-coach'
+				             baseline: 'ChessCoach' ]
 ]
 
 { #category : 'updates' }

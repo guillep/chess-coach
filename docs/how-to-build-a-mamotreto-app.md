@@ -69,6 +69,9 @@ Use as little as possible.
   right, and only a click on it redraws the page (`MMWindow>>showUpdatesAvailable`,
   `whenRefreshedDo:`). Nothing changed, nothing shown: compare what the pages
   show, without timestamps or ETags, before announcing.
+- **What the user asked for is shown at once.** When the change comes from
+  work the user asked for (Refresh, Bulk close, Send comment, Read failing
+  tests), the announcement says so and the page is redrawn directly.
 
 ## 4. Network
 

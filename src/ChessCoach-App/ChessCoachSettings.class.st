@@ -3,12 +3,7 @@ My preferences, kept in settings.json next to the games: piece set, games per Lo
 "
 Class {
 	#name : 'ChessCoachSettings',
-	#superclass : 'Object',
-	#instVars : [
-		'file',
-		'values',
-		'changedBlock'
-	],
+	#superclass : 'MMSettings',
 	#category : 'ChessCoach-App',
 	#package : 'ChessCoach-App'
 }
@@ -16,9 +11,7 @@ Class {
 { #category : 'defaults' }
 ChessCoachSettings class >> defaults [
 
-	^ Dictionary new
-		  at: 'formatVersion' put: 2;
-		  at: 'appTheme' put: 'Light';
+	^ super defaults
 		  at: 'pieceSet' put: 'Meridian';
 		  at: 'boardTheme' put: 'Chessmate';
 		  at: 'gamesPerLoad' put: 20;
@@ -33,45 +26,15 @@ ChessCoachSettings class >> defaults [
 		  at: 'findLongThinks' put: true;
 		  at: 'findOpeningChoices' put: true;
 		  at: 'openingDatabaseMinGames' put: 5;
-		  at: 'setupDone' put: false;
 		  addAll: MomentFinder defaultThresholds;
 		  yourself
 ]
 
-{ #category : 'instance creation' }
-ChessCoachSettings class >> onFile: aFileReference [
-	"Settings stored in aFileReference; missing values take their defaults"
+{ #category : 'constants' }
+ChessCoachSettings class >> formatVersion [
+	"2 added the moment thresholds"
 
-	^ self new setFile: aFileReference
-]
-
-{ #category : 'accessing' }
-ChessCoachSettings >> appTheme [
-	"'Light' or 'Dark': the look of the whole app (the board has its own colours)"
-
-	^ self at: 'appTheme'
-]
-
-{ #category : 'accessing' }
-ChessCoachSettings >> at: aKey [
-
-	^ values at: aKey
-]
-
-{ #category : 'accessing' }
-ChessCoachSettings >> at: aKey put: aValue [
-	"Change one setting, save the file and report it"
-
-	self assert: (self class defaults includesKey: aKey).
-	(values at: aKey) = aValue ifTrue: [ ^ aValue ].
-	values at: aKey put: aValue.
-	file parent ensureCreateDirectory.
-	file
-		ensureDelete;
-		writeStreamDo: [ :stream |
-			stream nextPutAll: (STONJSON toStringPretty: values) ].
-	changedBlock value: aKey.
-	^ aValue
+	^ 2
 ]
 
 { #category : 'accessing' }
@@ -135,27 +98,8 @@ ChessCoachSettings >> pieceSet [
 	^ self at: 'pieceSet'
 ]
 
-{ #category : 'initialization' }
-ChessCoachSettings >> setFile: aFileReference [
-	"Older files lack the newer settings, which keep their defaults"
-
-	file := aFileReference.
-	values := self class defaults.
-	changedBlock := [ :key |  ].
-	file exists ifTrue: [
-		values addAll: (STONJSON fromString: file contents).
-		values at: 'formatVersion' put: (self class defaults at: 'formatVersion') ]
-]
-
 { #category : 'accessing' }
 ChessCoachSettings >> stockfishPath [
 
 	^ (self at: 'stockfishPath') asFileReference
-]
-
-{ #category : 'accessing' }
-ChessCoachSettings >> whenChangedDo: aBlock [
-	"aBlock receives the key of each changed setting"
-
-	changedBlock := aBlock
 ]

@@ -27,7 +27,10 @@ ChessCoachSettingsTest >> testAnOlderFileGetsTheThresholdDefaults [
 	settings := ChessCoachSettings onFile: file.
 	self assert: (settings at: 'depth') equals: 20.
 	self assert: (settings at: 'momentBlunderDrop') equals: 30.
-	self assert: (settings at: 'formatVersion') equals: 2
+	settings at: 'depth' put: 21.
+	self
+		assert: ((STONJSON fromString: file contents) at: 'formatVersion')
+		equals: 2
 ]
 
 { #category : 'tests' }

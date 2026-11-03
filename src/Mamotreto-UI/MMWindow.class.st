@@ -14,21 +14,47 @@ Class {
 		'bellBadge',
 		'notificationsWindow',
 		'updateButton',
-		'backgroundRunner'
+		'backgroundRunner',
+		'app'
 	],
 	#category : 'Mamotreto-UI-Window',
 	#package : 'Mamotreto-UI',
 	#tag : 'Window'
 }
 
+{ #category : 'instance creation' }
+MMWindow class >> app: anApp [
+	"A window for anApp; the app is set before initialize, which builds its pages"
+
+	^ self basicNew
+		  setApp: anApp;
+		  initialize;
+		  yourself
+]
+
+{ #category : 'instance creation' }
+MMWindow class >> defaultApp [
+	"The app of a window made with new; subclasses for one app answer it"
+
+	^ self subclassResponsibility
+]
+
+{ #category : 'instance creation' }
+MMWindow class >> new [
+
+	^ self app: self defaultApp
+]
+
 { #category : 'opening' }
-MMWindow class >> openOn: aSession [
+MMWindow class >> openApp: anApp on: aSession [
 	"Open maximized on aSession; closing the window shuts the session down"
 
 	| window space |
-	window := self session: aSession.
+	window := (self app: anApp)
+		          session: aSession;
+		          yourself.
 	space := BlSpace new.
-	space title: window appName.
+	space title: anApp name.
 	space extent: 1200 @ 760.
 	space root addChild: window.
 	space
@@ -39,6 +65,13 @@ MMWindow class >> openOn: aSession [
 	window opened.
 	aSession startScheduledChecks.
 	^ window
+]
+
+{ #category : 'opening' }
+MMWindow class >> openOn: aSession [
+	"Open the default app's window on aSession"
+
+	^ self openApp: self defaultApp on: aSession
 ]
 
 { #category : 'instance creation' }
@@ -57,11 +90,39 @@ MMWindow class >> updateOpenAppTo: aRevision [
 		updateAppTo: aRevision
 ]
 
+{ #category : 'accessing' }
+MMWindow >> app [
+
+	^ app
+]
+
 { #category : 'app' }
 MMWindow >> appName [
-	"The name in the title bar and the window title"
+	"The name in the title bar"
 
-	^ self subclassResponsibility
+	^ app name
+]
+
+{ #category : 'theme' }
+MMWindow >> applyAppTheme [
+	"The background and the tint of the icons outside buttons from the app's palette, light or dark as the settings say, also for hidden pages and icons built later"
+
+	| dark palette tint |
+	dark := session settings appTheme = 'Dark'.
+	palette := app palette.
+	self background: (palette at: (dark
+				  ifTrue: [ #darkBackground ]
+				  ifFalse: [ #lightBackground ])).
+	tint := palette at: (dark
+			         ifTrue: [ #darkText ]
+			         ifFalse: [ #lightText ]).
+	MMWidgets iconColor: tint.
+	self pageRoots do: [ :root |
+			root allChildrenBreadthFirstDo: [ :each |
+					((each isKindOf: ToImage) and: [
+							 (each anyInParentsSatisfy: [ :ancestor |
+								  ancestor isKindOf: ToButton ]) not ]) ifTrue: [
+						each innerImageColor: tint ] ] ]
 ]
 
 { #category : 'background work' }
@@ -214,9 +275,23 @@ MMWindow >> newBrand [
 
 { #category : 'app' }
 MMWindow >> newNavigation [
-	"The tab pane with the app's pages; see newPageButton:icon:page:"
+	"The app's pages in a Toplo tab pane, tabs in a column on the left. Pages are built once and kept; closable pages open after them. The tab group's menus are hidden until tabs overflow, so the skin's padding around them would only cut the column short."
 
-	^ self subclassResponsibility
+	| pane |
+	pane := ToTabPaneElement new.
+	pane horizontal: true.
+	pane matchParent.
+	pane showAddTabItemButton: false.
+	pane tabGroup addTokenNamed: #'padding-content-V' withValue: 0.
+	pane tabGroup itemList
+		addTokenNamed: #'padding-content-V'
+		withValue: 6.
+	app pages do: [ :each | pane addItem: (each tabIn: self) ].
+	pane
+		addEventHandlerOn: ToItemRemovedFromListEvent
+		do: [ :event |
+		self tabClosed: event item wasSelected: event wasSelected ].
+	^ pane
 ]
 
 { #category : 'notifications' }
@@ -336,6 +411,13 @@ MMWindow >> pageButton: aPageId [
 	^ navigation items asArray detect: [ :each | each id = aPageId ]
 ]
 
+{ #category : 'theme' }
+MMWindow >> pageRoots [
+	"Where to look for icons to tint: me, and pages that are not attached while hidden"
+
+	^ { self }
+]
+
 { #category : 'app' }
 MMWindow >> quietText [
 	"What the notification panel says when it is empty"
@@ -373,7 +455,7 @@ MMWindow >> session [
 
 { #category : 'accessing' }
 MMWindow >> session: aSession [
-	"Connect to the session: the Update button and the version in the title bar, and listen to the notifications and the settings"
+	"Connect to the session: the Update button and the version in the title bar, the theme, and listen to the notifications and the settings. The theme is applied again when I am added to a space."
 
 	session := aSession.
 	updateButton := MMWidgets
@@ -394,14 +476,24 @@ MMWindow >> session: aSession [
 		do: [ :announcement |
 			self inUIDo: [ self settingChanged: announcement key ] ]
 		for: self.
+	self
+		addEventHandlerOn: BlElementAddedToSceneGraphEvent
+		do: [ :event | self applyAppTheme ].
+	self applyAppTheme.
 	self updateBell
+]
+
+{ #category : 'initialization' }
+MMWindow >> setApp: anApp [
+
+	app := anApp
 ]
 
 { #category : 'app' }
 MMWindow >> settingChanged: aKey [
-	"A setting changed; called in the UI thread. Apps apply theirs."
+	"A setting changed; called in the UI thread. Apps apply theirs, after calling me."
 
-	
+	aKey = 'appTheme' ifTrue: [ self applyAppTheme ]
 ]
 
 { #category : 'app' }
@@ -437,6 +529,13 @@ MMWindow >> statusLineExtras [
 	"Labels of the app shown after the status in the status bar"
 
 	^ #(  )
+]
+
+{ #category : 'navigation' }
+MMWindow >> tabClosed: aTabButton wasSelected: aBoolean [
+	"A closable page was closed, from its tab or from its own close button; apps go back to the page it came from"
+
+	
 ]
 
 { #category : 'notifications' }
@@ -493,7 +592,7 @@ MMWindow >> updateAppTo: aRevision [
 								 title: 'Update failed'
 								 text:
 								 (error messageText ifNil: [ error class name ]) asString) ].
-				self class openOn: aSession ] ] forkAt:
+				self class openApp: app on: aSession ] ] forkAt:
 		Processor userInterruptPriority
 ]
 

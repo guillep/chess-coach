@@ -17,6 +17,12 @@ Class {
 	#package : 'ChessCoach-App'
 }
 
+{ #category : 'app' }
+ChessCoachSession class >> baselineName [
+
+	^ 'ChessCoach'
+]
+
 { #category : 'instance creation' }
 ChessCoachSession class >> default [
 
@@ -75,6 +81,12 @@ ChessCoachSession class >> onDirectory: aFileReference [
 ChessCoachSession class >> onDirectory: aFileReference [
 
 	^ self importer: (LichessGameImporter onDirectory: aFileReference)
+]
+
+{ #category : 'app' }
+ChessCoachSession class >> repositoryName [
+
+	^ 'chess-coach'
 ]
 
 { #category : 'moments' }
@@ -233,12 +245,6 @@ ChessCoachSession >> announceChanged [
 	announcer announce: (ChessCoachSessionChanged new
 			 session: self;
 			 yourself)
-]
-
-{ #category : 'app' }
-ChessCoachSession >> baselineName [
-
-	^ 'ChessCoach'
 ]
 
 { #category : 'opening trees' }
@@ -1751,12 +1757,6 @@ ChessCoachSession >> refresh [
 	self chessComUsername ifNotNil: [
 		self chessComImporter importNewerGames ].
 	self announceChanged
-]
-
-{ #category : 'app' }
-ChessCoachSession >> repositoryName [
-
-	^ 'chess-coach'
 ]
 
 { #category : 'private' }

@@ -35,11 +35,17 @@ Class {
 	#tag : 'App'
 }
 
+{ #category : 'instance creation' }
+ChessCoachAppElement class >> defaultApp [
+
+	^ ChessmateApp new
+]
+
 { #category : 'opening' }
 ChessCoachAppElement class >> open [
 	"Open on the games stored in ~/.chess-coach"
 
-	^ self openOn: ChessCoachSession default
+	^ ChessmateApp new open
 ]
 
 { #category : 'private' }
@@ -68,41 +74,16 @@ ChessCoachAppElement >> analysisStateChangedOf: aGameIdOrNil [
 	gameView ifNotNil: [ gameView updateInfo ]
 ]
 
-{ #category : 'app' }
-ChessCoachAppElement >> appName [
-
-	^ 'Chessmate'
-]
-
 { #category : 'settings' }
 ChessCoachAppElement >> applyAppTheme [
-	"The Chessmate light or dark theme for the whole window, with a matching page background and icon tint, for the icons shown, those of hidden pages and those built later.
+	"The Chessmate light or dark Toplo theme, then the palette.
 	The theme goes on the space: under an element's local theme, Toplo installs no skin on a list's scrollbar (logged as an upstream candidate)."
 
-	| dark tint |
-	dark := session settings appTheme = 'Dark'.
 	self isAttachedToSceneGraph ifTrue: [
-			self space toTheme: (dark
+			self space toTheme: (session settings appTheme = 'Dark'
 					 ifTrue: [ ChessmateDarkTheme new ]
 					 ifFalse: [ ChessmateTheme new ]) ].
-	self background: (Color fromHexString: (dark
-				  ifTrue: [ '#234a35' ]
-				  ifFalse: [ '#f6ead2' ])).
-	tint := Color fromHexString: (dark
-			         ifTrue: [ '#f6ead2' ]
-			         ifFalse: [ '#12281b' ]).
-	MMWidgets iconColor: tint.
-	{
-		self.
-		dashboard.
-		gamesPage.
-		settingsElement.
-		openings } do: [ :root |
-			root allChildrenBreadthFirstDo: [ :each |
-					((each isKindOf: ToImage) and: [
-							 (each anyInParentsSatisfy: [ :parent |
-								  parent isKindOf: ToButton ]) not ]) ifTrue: [
-						each innerImageColor: tint ] ] ]
+	super applyAppTheme
 ]
 
 { #category : 'settings' }
@@ -442,60 +423,20 @@ ChessCoachAppElement >> newGamesPage [
 
 { #category : 'initialization' }
 ChessCoachAppElement >> newNavigation [
-	"Home (the logo), Stats, Games, Openings, Settings and Help as pages of a Toplo tab pane, tabs in a column on the left. Pages are built once and kept. The coach, a played-through game and an opening tree open as closable pages after them. The tab group's menus are hidden until tabs overflow, so the skin's padding around them would only cut the column short."
+	"Build the pages the app declares, wired to each other; the coach, a played-through game and an opening tree open as closable pages after them"
 
-	| pane homeButton |
 	dashboard := self newDashboard.
 	gamesPage := self newGamesPage.
 	settingsElement := SettingsElement new.
-	pane := ToTabPaneElement new.
-	pane horizontal: true.
-	pane matchParent.
-	pane showAddTabItemButton: false.
-	pane tabGroup addTokenNamed: #'padding-content-V' withValue: 0.
-	pane tabGroup itemList
-		addTokenNamed: #'padding-content-V'
-		withValue: 6.
 	home := HomeElement new.
 	home whenShowGamesDo: [ self showPage: #Games ].
 	home whenGameChosenDo: [ :entry |
 			self showPage: #Games.
 			self selectGameId: entry gameId ].
-	homeButton := self
-		              newPageButton: 'Home'
-		              icon: 'outlined_home'
-		              page: home.
-	homeButton icon: (ChessCoachWidgets logoIcon: MMWidgets logoTabSize).
-	pane addItem: homeButton.
-	pane addItem:
-		(self
-			 newPageButton: 'Stats'
-			 icon: 'outlined_insights'
-			 page: dashboard).
-	pane addItem: (self
-			 newPageButton: 'Games'
-			 icon: 'outlined_managesearch'
-			 page: gamesPage).
 	openings := OpeningsElement new.
 	openings whenOpenDo: [ :tree | self openOpeningTree: tree ].
-	pane addItem: (self
-			 newPageButton: 'Openings'
-			 icon: 'outlined_accounttree'
-			 page: openings).
-	pane addItem: (self
-			 newPageButton: 'Settings'
-			 icon: 'outlined_settings'
-			 page: settingsElement).
 	helpElement := HelpElement new.
-	pane addItem: (self
-			 newPageButton: 'Help'
-			 icon: 'outlined_helpoutline'
-			 page: helpElement).
-	pane
-		addEventHandlerOn: ToItemRemovedFromListEvent
-		do: [ :event |
-		self tabClosed: event item wasSelected: event wasSelected ].
-	^ pane
+	^ super newNavigation
 ]
 
 { #category : 'coach' }
@@ -580,6 +521,18 @@ ChessCoachAppElement >> opened [
 ChessCoachAppElement >> openings [
 
 	^ openings
+]
+
+{ #category : 'settings' }
+ChessCoachAppElement >> pageRoots [
+	"The pages that may be hidden when the theme changes"
+
+	^ {
+		  self.
+		  dashboard.
+		  gamesPage.
+		  settingsElement.
+		  openings }
 ]
 
 { #category : 'actions' }
@@ -717,8 +670,7 @@ ChessCoachAppElement >> selectedGameChanged [
 
 { #category : 'accessing' }
 ChessCoachAppElement >> session: aChessCoachSession [
-	"Connect to the session and open on Home. The first time, run the setup wizard.
-	The app theme is applied again when I am added to a space."
+	"Connect to the session and open on Home. The first time, run the setup wizard."
 
 	super session: aChessCoachSession.
 	session announcer
@@ -730,10 +682,6 @@ ChessCoachAppElement >> session: aChessCoachSession [
 		do: [ :announcement |
 			self inUIDo: [ self analysisStateChangedOf: announcement gameId ] ]
 		for: self.
-	self
-		addEventHandlerOn: BlElementAddedToSceneGraphEvent
-		do: [ :event | self applyAppTheme ].
-	self applyAppTheme.
 	settingsElement backgroundRunner: backgroundRunner.
 	settingsElement session: session.
 	settingsElement whenSetupRequestedDo: [ self showWizard ].
@@ -747,11 +695,11 @@ ChessCoachAppElement >> session: aChessCoachSession [
 
 { #category : 'app' }
 ChessCoachAppElement >> settingChanged: aKey [
-	"The boards follow the piece set and colours, the window the app theme"
+	"The boards follow the piece set and colours"
 
+	super settingChanged: aKey.
 	(#( 'pieceSet' 'boardTheme' ) includes: aKey) ifTrue: [
-		self applyPieceSet ].
-	aKey = 'appTheme' ifTrue: [ self applyAppTheme ]
+		self applyPieceSet ]
 ]
 
 { #category : 'accessing' }

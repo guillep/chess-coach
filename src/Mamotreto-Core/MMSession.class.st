@@ -18,11 +18,25 @@ Class {
 	#package : 'Mamotreto-Core'
 }
 
+{ #category : 'app' }
+MMSession class >> baselineName [
+	"The app's baseline, without BaselineOf"
+
+	^ self subclassResponsibility
+]
+
 { #category : 'instance creation' }
 MMSession class >> onDirectory: aFileReference [
 	"A session keeping its data in aFileReference; tests pass a memory file system"
 
 	^ self new setDataDirectory: aFileReference
+]
+
+{ #category : 'app' }
+MMSession class >> repositoryName [
+	"The name of the app's registered Iceberg repository"
+
+	^ self subclassResponsibility
 ]
 
 { #category : 'accessing' }
@@ -60,9 +74,8 @@ MMSession >> availableUpdate [
 
 { #category : 'app' }
 MMSession >> baselineName [
-	"The app's baseline, without BaselineOf"
 
-	^ self subclassResponsibility
+	^ self class baselineName
 ]
 
 { #category : 'updates' }
@@ -121,9 +134,8 @@ MMSession >> notifications [
 
 { #category : 'app' }
 MMSession >> repositoryName [
-	"The name of the app's registered Iceberg repository"
 
-	^ self subclassResponsibility
+	^ self class repositoryName
 ]
 
 { #category : 'running' }

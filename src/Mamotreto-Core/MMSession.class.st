@@ -208,7 +208,7 @@ MMSession >> startScheduledChecks [
 
 { #category : 'running' }
 MMSession >> unfinishedTaskCount [
-	"Background jobs running or waiting, which closing the window would stop; subclasses with a queue answer theirs"
+	"Background jobs running or waiting that change something, which closing the window would stop half done; jobs that only read don't count. Subclasses with a queue answer theirs."
 
 	^ 0
 ]

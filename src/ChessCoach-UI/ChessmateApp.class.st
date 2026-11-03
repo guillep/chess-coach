@@ -34,7 +34,7 @@ ChessmateApp >> name [
 
 { #category : 'declaring' }
 ChessmateApp >> pages [
-	"Home (the logo), Stats, Games, Openings, Settings and Help; the window builds their elements"
+	"Home (the logo), Stats, Games, Openings, Endgames, Settings and Help; the window builds their elements"
 
 	^ {
 		  (MMPage
@@ -53,6 +53,10 @@ ChessmateApp >> pages [
 			   named: 'Openings'
 			   icon: 'outlined_accounttree'
 			   build: [ :window | window openings ]).
+		  (MMPage
+			   named: 'Endgames'
+			   icon: 'outlined_flag'
+			   build: [ :window | window endgamesElement ]).
 		  (MMPage
 			   named: 'Settings'
 			   icon: 'outlined_settings'

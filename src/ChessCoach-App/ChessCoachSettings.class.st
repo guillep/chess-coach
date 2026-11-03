@@ -10,7 +10,7 @@ Class {
 
 { #category : 'defaults' }
 ChessCoachSettings class >> defaults [
-	"The last keys remember the choices of the Stats and Openings pages"
+	"The last keys remember the choices of the Stats, Openings and Endgames pages"
 
 	^ super defaults
 		  at: 'pieceSet' put: 'Meridian';
@@ -37,15 +37,16 @@ ChessCoachSettings class >> defaults [
 		  at: 'openingsDatabase' put: 'lichess';
 		  at: 'openingsDatabaseSpeed' put: nil;
 		  at: 'openingsRating' put: nil;
+		  at: 'endgameMaxPieces' put: 4;
 		  addAll: MomentFinder defaultThresholds;
 		  yourself
 ]
 
 { #category : 'constants' }
 ChessCoachSettings class >> formatVersion [
-	"2 added the moment thresholds, 3 the evaluation unit, 4 replaced the win-% drops by the evaluation zones (centipawns; the old drop keys are ignored), 5 the coach's database and engine lines, 6 the remembered choices of the Stats and Openings pages"
+	"2 added the moment thresholds, 3 the evaluation unit, 4 replaced the win-% drops by the evaluation zones (centipawns; the old drop keys are ignored), 5 the coach's database and engine lines, 6 the remembered choices of the Stats and Openings pages, 7 the endgame size"
 
-	^ 6
+	^ 7
 ]
 
 { #category : 'accessing' }

@@ -214,7 +214,8 @@ ChessCoachAppElementTest >> testCoachAndPlayThroughOpenInClosableTabs [
 	self assert: coach isAttachedToSceneGraph.
 	self
 		assert: (app navigation items asArray collect: [ :each | each id ])
-		equals: #( #Home #Stats #Games #Openings #Settings #Help #Coach ).
+		equals:
+		#( #Home #Stats #Games #Openings #Endgames #Settings #Help #Coach ).
 	coachTab := app navigation items asArray last.
 	app showPage: #Stats.
 	scripter pulse.
@@ -224,11 +225,26 @@ ChessCoachAppElementTest >> testCoachAndPlayThroughOpenInClosableTabs [
 	self assert: (coach review instVarNamed: #pausedAt) isNil.
 	app playThrough: app selectedEntry.
 	scripter pulse.
-	self assert: app navigation items size equals: 8.
+	self assert: app navigation items size equals: 9.
 	app navigation removeItem: coachTab.
 	scripter pulse.
 	self assert: app coach isNil.
-	self assert: app navigation items size equals: 7
+	self assert: app navigation items size equals: 8
+]
+
+{ #category : 'tests' }
+ChessCoachAppElementTest >> testEndgamesPage [
+
+	| endgames |
+	self click: app loginButton.
+	self click: app loadMoreButton.
+	app showPage: #Endgames.
+	scripter pulse.
+	endgames := app endgamesElement.
+	self assert: endgames isAttachedToSceneGraph.
+	scripter pulse.
+	self assert: endgames stats notNil.
+	self assert: endgames maxPieces equals: 4
 ]
 
 { #category : 'tests' }

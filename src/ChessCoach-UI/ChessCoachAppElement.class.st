@@ -133,6 +133,17 @@ ChessCoachAppElement >> dependencyLabel [
 	^ dependencyLabel
 ]
 
+{ #category : 'accessing' }
+ChessCoachAppElement >> endgamesElement [
+	"The Endgames page, built once and kept in my userData (no new slot while windows are open); it gets the session in session:. A game opens played through at the move where it entered the endgame."
+
+	^ self userData at: #endgames ifAbsentPut: [
+			  EndgamesElement new
+				  whenGameChosenDo: [ :entry :ply |
+					  (self playThrough: entry) moveList selectMoveAt: ply ];
+				  yourself ]
+]
+
 { #category : 'coach' }
 ChessCoachAppElement >> exitCoach [
 	"Close the coach's page and go back to the game. Closing the shown tab makes Toplo check its neighbour in a postponed action, so Games is shown in a later postponed action."
@@ -703,6 +714,7 @@ ChessCoachAppElement >> session: aChessCoachSession [
 	settingsElement session: session.
 	settingsElement whenSetupRequestedDo: [ self showWizard ].
 	openings session: session.
+	self endgamesElement session: session runner: backgroundRunner.
 	self updateFromSession.
 	home session: session.
 	helpElement session: session.

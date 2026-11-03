@@ -27,13 +27,15 @@ BaselineOfChessCoach >> baseline: spec [
 					spec repository:
 						'github://pharo-contributions/OSSubprocess:v2.0.1/repository' ].
 
+			spec package: 'Mamotreto-Core'.
+
 			spec
 				package: 'Mamotreto-UI'
-				with: [ spec requires: #( 'Bloc' 'Toplo' ) ].
+				with: [ spec requires: #( 'Mamotreto-Core' 'Bloc' 'Toplo' ) ].
 
 			spec
 				package: 'Mamotreto-Tests'
-				with: [ spec requires: #( 'Mamotreto-UI' ) ].
+				with: [ spec requires: #( 'Mamotreto-Core' 'Mamotreto-UI' ) ].
 
 			spec package: 'ChessCoach-Core'.
 
@@ -69,9 +71,9 @@ BaselineOfChessCoach >> baseline: spec [
 				spec requires: #( 'ChessCoach-Analysis' 'ChessCoach-LLM' ) ].
 
 			spec package: 'ChessCoach-App' with: [
-					spec requires:
-						#( 'ChessCoach-LichessImport' 'ChessCoach-ChessComImport'
-						   'ChessCoach-Analysis' 'ChessCoach-Coach' ) ].
+					spec requires: #( 'Mamotreto-Core' 'ChessCoach-LichessImport'
+						   'ChessCoach-ChessComImport' 'ChessCoach-Analysis'
+						   'ChessCoach-Coach' ) ].
 
 			spec package: 'ChessCoach-UI' with: [
 					spec requires:

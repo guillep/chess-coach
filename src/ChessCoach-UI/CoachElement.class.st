@@ -584,9 +584,10 @@ CoachElement >> buildTimeBox [
 
 { #category : 'private' }
 CoachElement >> busy: aString while: aBlock then: aUIBlock [
-	"Show aString while aBlock runs in the background, then run aUIBlock with aBlock's result and refresh. An error is logged and shown in the panel instead of opening a debugger."
+	"Show aString (with a spinner, until the work reports its progress) while aBlock runs in the background, then run aUIBlock with aBlock's result and refresh. An error is logged and shown in the panel instead of opening a debugger."
 
 	busy := aString.
+	self userData removeKey: #busyProgress ifAbsent: [ ].
 	self refresh.
 	backgroundRunner value: [
 			| result failed |
@@ -605,6 +606,32 @@ CoachElement >> busy: aString while: aBlock then: aUIBlock [
 						ifTrue: [ message := result ]
 						ifFalse: [ aUIBlock cull: result ].
 					self refresh ] ]
+]
+
+{ #category : 'building' }
+CoachElement >> busyElement [
+	"What the running work says, with a progress bar when its end is known, a spinner otherwise"
+
+	| progress |
+	progress := self userData at: #busyProgress ifAbsent: [ nil ].
+	^ ToElement new
+		  layout: (BlLinearLayout vertical cellSpacing: 6);
+		  hMatchParent;
+		  vFitContent;
+		  addChild: (self paragraph: busy);
+		  addChild: (progress
+				   ifNil: [
+						   ToProgressCircle new
+							   isInfinite: true;
+							   extent: 28 @ 28;
+							   yourself ]
+				   ifNotNil: [
+						   ToProgressBar new
+							   hMatchParent;
+							   height: 8;
+							   valueInPercentage: (progress * 100) rounded;
+							   yourself ]);
+		  yourself
 ]
 
 { #category : 'private' }
@@ -708,7 +735,7 @@ CoachElement >> dismissButton [
 
 { #category : 'actions' }
 CoachElement >> doneMarking [
-	"Merge my marks with the heuristic moments (analysing the game if needed, with its progress), then walk through the moments"
+	"Merge my marks with the heuristic moments (analysing the game if needed, with a progress bar), then walk through the moments"
 
 	busy ifNotNil: [ ^ self ].
 	self
@@ -718,10 +745,13 @@ CoachElement >> doneMarking [
 					finishMarking: review
 					of: entry
 					onProgress: [ :done :total |
-							self showBusy:
-								('Analysing the game… move {1} of {2}' format: {
-										 (done + 1 // 2).
-										 (total + 1 // 2) }) ]
+							self
+								showBusy: ('Analysing the game… move {1} of {2}' format: {
+											 (done + 1 // 2).
+											 (total + 1 // 2) })
+								progress: (total = 0
+										 ifTrue: [ 0 ]
+										 ifFalse: [ done / total ]) ]
 					onStep: [ :description | self showBusy: description ] ]
 		then: [ :problems |
 				self continueReview.
@@ -1203,11 +1233,23 @@ CoachElement >> session: aChessCoachSession entry: aGameIndexEntry review: aCoac
 
 { #category : 'private' }
 CoachElement >> showBusy: aString [
-	"From a background process: show aString as the progress of the running work"
+	"From a background process: show aString as the progress of the running work, which has no known end (a spinner)"
 
 	self inUIDo: [
 			busy ifNotNil: [
 					busy := aString.
+					self userData removeKey: #busyProgress ifAbsent: [ ].
+					self updateCurrentZone ] ]
+]
+
+{ #category : 'private' }
+CoachElement >> showBusy: aString progress: aFraction [
+	"From a background process: show aString and a progress bar at aFraction (0 to 1) for the running work. The fraction is kept in my userData, next to busy, so that adding it needed no new slot while windows are open."
+
+	self inUIDo: [
+			busy ifNotNil: [
+					busy := aString.
+					self userData at: #busyProgress put: aFraction.
 					self updateCurrentZone ] ]
 ]
 
@@ -1432,7 +1474,7 @@ CoachElement >> updateCurrentZone [
 	(mode = #moment and: [ self isActive: shownMoment ])
 		ifTrue: [ self scrollToNewest ]
 		ifFalse: [ self scrollToTop ].
-	busy ifNotNil: [ ^ currentZone addChild: (self paragraph: busy) ].
+	busy ifNotNil: [ ^ currentZone addChild: self busyElement ].
 	mode = #marking ifTrue: [ self buildMarking ].
 	mode = #list ifTrue: [ self buildList ].
 	mode = #summary ifTrue: [ self buildSummary ].

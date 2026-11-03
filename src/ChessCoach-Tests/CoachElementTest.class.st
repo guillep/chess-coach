@@ -184,6 +184,24 @@ CoachElementTest >> testBoardSettingsReachTheMarkingReplay [
 ]
 
 { #category : 'tests' }
+CoachElementTest >> testBusyShowsAProgressBar [
+	"A spinner while the work has no known end, a bar once it reports its progress"
+
+	| bars circles |
+	coach backgroundRunner: [ :aBlock | "the work never ends" ].
+	coach busy: 'Working' while: [ ] then: [ ].
+	circles := coach allChildrenBreadthFirstSelect: [ :each |
+		           each isKindOf: ToProgressCircle ].
+	self assert: circles size equals: 1.
+	coach showBusy: 'Half way' progress: 1 / 2.
+	scripter pulse.
+	bars := coach allChildrenBreadthFirstSelect: [ :each |
+		        each isKindOf: ToProgressBar ].
+	self assert: bars size equals: 1.
+	self assert: bars first valueInPercentage equals: 50
+]
+
+{ #category : 'tests' }
 CoachElementTest >> testListShowsPastMomentsAndReviewsOneMoment [
 
 	| moment |

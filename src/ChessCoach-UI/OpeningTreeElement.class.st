@@ -99,13 +99,23 @@ OpeningTreeElement >> buildDatabase [
 
 { #category : 'building' }
 OpeningTreeElement >> buildEngine [
-	"The engine's lines for the shown position, from the side to move, in the unit of the settings"
+	"The engine's lines for the shown position, from the side to move, in the unit of the settings; a spinner while Stockfish calculates"
 
 	| position format |
 	session isEngineAvailable ifFalse: [
 		^ panel addChild: (ToLabel text: 'Stockfish isn''t available') ].
 	engineLines ifNil: [
-		^ panel addChild: (ToLabel text: 'Calculating…') ].
+			^ panel addChild: (ToElement new
+					   layout:
+						   (BlLinearLayout horizontal alignCenterLeft cellSpacing: 8);
+					   hMatchParent;
+					   vFitContent;
+					   addChild: (ToProgressCircle new
+							    isInfinite: true;
+							    size: 20 @ 20;
+							    yourself);
+					   addChild: (ToLabel text: 'Calculating…');
+					   yourself) ].
 	position := ChessPosition fromFEN: self shownNode fen.
 	format := session settings evaluationFormat.
 	engineLines do: [ :each |

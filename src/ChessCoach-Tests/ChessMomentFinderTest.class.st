@@ -99,6 +99,26 @@ ChessMomentFinderTest >> testLongThinksComeFromTheClocks [
 ]
 
 { #category : 'tests' }
+ChessMomentFinderTest >> testMarksOnMyOpponentsMovesAreLeftOut [
+
+	| game marks moments |
+	game := PGNParser new parse: '1. e4 e5 2. Nf3 Nc6'.
+	marks := { 1. 2 } collect: [ :ply |
+			         Dictionary new
+				         at: 'ply' put: ply;
+				         at: 'note' put: '';
+				         yourself ].
+	moments := (MomentDetector
+		            finders: #(  )
+		            marksFinder:
+		            (MarkedMomentsFinder game: game marks: marks)
+		            colors: #( #white )) moments.
+	self
+		assert: (moments collect: [ :each | each ply ]) asArray
+		equals: #( 1 )
+]
+
+{ #category : 'tests' }
 ChessMomentFinderTest >> testNoOnlyMoveWhenSeveralMovesAreGoodOrTheGameIsDecided [
 
 	self assert: (OnlyMoveFinder on:

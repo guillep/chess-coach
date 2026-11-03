@@ -24,12 +24,13 @@ MomentDetector class >> finders: someFinders marksFinder: aMarkedMomentsFinder c
 
 { #category : 'detecting' }
 MomentDetector >> moments [
+	"Only moves of my colors: marks on my opponent's moves are left out too"
 
 	| byPly |
 	byPly := Dictionary new.
 	(finders flatCollect: [ :finder | finder moments ])
 	, marksFinder moments do: [ :moment |
-			(moment isMarked or: [ colors includes: moment color ]) ifTrue: [
+			(colors includes: moment color) ifTrue: [
 					byPly
 						at: moment ply
 						ifPresent: [ :existing | existing absorb: moment ]

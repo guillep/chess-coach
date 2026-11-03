@@ -180,6 +180,7 @@ CoachElement >> buildList [
 
 { #category : 'building' }
 CoachElement >> buildMarking [
+	"My opponent's moves can't be marked: the Mark button stays, disabled, with the reason"
 
 	| marked |
 	self section: 'Marking' build: [
@@ -211,17 +212,23 @@ CoachElement >> buildMarking [
 										 icon: 'outlined_flag'
 										 do: [ self unmarkShown ]) ]
 						ifFalse: [
+								| markButton |
 								noteField := ToTextField new
 									             hMatchParent;
 									             yourself.
+								markButton := self
+									              button: 'Mark'
+									              icon: 'outlined_flag'
+									              do: [ self markShown ].
 								currentZone
 									addChild: (self paragraph: 'Note (optional):');
 									addChild: noteField;
-									addChild:
-										(self
-											 button: 'Mark'
-											 icon: 'outlined_flag'
-											 do: [ self markShown ]) ] ].
+									addChild: markButton.
+								(self isMyPly: shownPly) ifFalse: [
+										markButton enabled: false.
+										noteField enabled: false.
+										currentZone addChild: (self paragraph:
+												 'This is your opponent''s move: only your own moves can be marked.') ] ] ].
 			currentZone addChild: (self paragraph: 'Marked: '
 					 ,
 						 (review marks
@@ -810,6 +817,15 @@ CoachElement >> isActive: aMomentReview [
 	^ aMomentReview notNil and: [ review currentMoment == aMomentReview ]
 ]
 
+{ #category : 'private' }
+CoachElement >> isMyPly: aPly [
+	"Only my own moves can be marked"
+
+	^ (session myColorsIn: game) includes: (aPly odd
+			   ifTrue: [ #white ]
+			   ifFalse: [ #black ])
+]
+
 { #category : 'building' }
 CoachElement >> leftOutText [
 	"Why some moments are not reviewed, or nil when none is left out"
@@ -840,6 +856,7 @@ CoachElement >> lineInSAN: someUCIMoves from: aChessPosition [
 { #category : 'actions' }
 CoachElement >> markShown [
 
+	(self isMyPly: shownPly) ifFalse: [ ^ self ].
 	review mark: shownPly note: noteField text asString trimBoth.
 	self marksChanged
 ]
@@ -1257,11 +1274,12 @@ CoachElement >> titleActions [
 
 { #category : 'actions' }
 CoachElement >> toggleMarkAt: aPly [
-	"Enter or Space: mark the move (with the note being written), or unmark it"
+	"Enter or Space: mark the move (with the note being written), or unmark it. My opponent's moves can't be marked."
 
 	(review isMarked: aPly)
 		ifTrue: [ review unmark: aPly ]
 		ifFalse: [
+				(self isMyPly: aPly) ifFalse: [ ^ self ].
 				review mark: aPly note: (noteField
 						 ifNil: [ '' ]
 						 ifNotNil: [ noteField text asString trimBoth ]) ].

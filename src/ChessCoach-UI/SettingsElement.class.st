@@ -66,11 +66,13 @@ SettingsElement >> aboutSection [
 			  (self row: {
 					   ChessCoachWidgets pharoLogo.
 					   (ChessCoachWidgets link: 'Pharo' to: 'https://pharo.org').
-					   (ChessCoachWidgets link: 'Bloc' to: 'https://github.com/pharo-graphics/Bloc') }).
-			  (ToButton new
+					   (ChessCoachWidgets
+						    link: 'Bloc'
+						    to: 'https://github.com/pharo-graphics/Bloc') }).
+			  ((ChessCoachWidgets
+				    link: self class repositoryUrl
+				    to: self class repositoryUrl)
 				   id: #repository;
-				   labelText: self class repositoryUrl;
-				   clickAction: [ WebBrowser openOn: self class repositoryUrl ];
 				   yourself) }
 ]
 

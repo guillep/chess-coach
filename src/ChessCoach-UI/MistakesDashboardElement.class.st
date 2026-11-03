@@ -111,52 +111,33 @@ MistakesDashboardElement >> buildEmptyState [
 MistakesDashboardElement >> buildPhases [
 	"One stacked bar per phase, one segment per category, on one scale; a legend below"
 
-	| byPhase counts max categories |
+	| byPhase counts max |
 	byPhase := database tagFrequenciesByPhase.
-	categories := #( 'perception' 'calculation' 'evaluation' 'decision' 'knowledge' ).
 	counts := #( 'opening' 'middlegame' 'endgame' ) collect: [ :phase |
-		          phase -> (self categoryCountsOf:
-			           (byPhase at: phase ifAbsent: [ OrderedDictionary new ])) ].
-	max := (counts collect: [ :each | (each value values inject: 0 into: [ :sum :count | sum + count ]) ]) max max: 1.
+			          phase -> (self categoryCountsOf:
+				           (byPhase at: phase ifAbsent: [ OrderedDictionary new ])) ].
+	max := (counts collect: [ :each |
+		        each value values
+			        inject: 0
+			        into: [ :sum :count | sum + count ] ]) max max: 1.
 	counts do: [ :each |
-		| row |
-		row := ToElement new
-			       layout: (BlLinearLayout horizontal alignCenterLeft cellSpacing: 8);
-			       hMatchParent;
-			       vFitContent;
-			       addChild: (ToLabel new
-					        text: each key capitalized;
-					        width: 200;
-					        yourself);
-			       yourself.
-		row addChild: (ToElement new
-				 layout: BlLinearLayout horizontal;
-				 fitContent;
-				 addChildren: ((categories select: [ :category |
-							   (each value at: category ifAbsent: [ 0 ]) > 0 ]) collect: [ :category |
-						  | count |
-						  count := each value at: category.
-						  ToElement new
-							  extent: (count / max * 600) rounded @ 14;
-							  background: (self colorOfCategory: category);
-							  tooltipString: category capitalized , ': ' , count printString;
-							  yourself ]);
-				 yourself).
-		row addChild: (ToLabel text: (each value values inject: 0 into: [ :sum :count | sum + count ]) printString).
-		content addChild: row ].
-	content addChild: (ToElement new
-			 layout: (BlFlowLayout horizontal);
-			 hMatchParent;
-			 vFitContent;
-			 addChildren: (categories flatCollect: [ :category |
-						  {
-							  (BlElement new
-								   extent: 12 @ 12;
-								   margin: (BlInsets top: 4 left: 8 bottom: 0 right: 4);
-								   background: (self colorOfCategory: category);
-								   yourself).
-							  (ToLabel text: category capitalized) } ]);
-			 yourself)
+			content addChild: (ToElement new
+					 layout:
+						 (BlLinearLayout horizontal alignCenterLeft cellSpacing: 8);
+					 hMatchParent;
+					 vFitContent;
+					 addChild: (ToLabel new
+							  text: each key capitalized;
+							  width: 200;
+							  yourself);
+					 addChild:
+					 (ChessCoachWidgets categoryBar: each value scale: max width: 600);
+					 addChild: (ToLabel text:
+							  (each value values
+								   inject: 0
+								   into: [ :sum :count | sum + count ]) printString);
+					 yourself) ].
+	content addChild: ChessCoachWidgets categoryLegend
 ]
 
 { #category : 'building' }
@@ -237,13 +218,8 @@ MistakesDashboardElement >> chooseSpeed: aSpeedOrNil [
 
 { #category : 'building' }
 MistakesDashboardElement >> colorOfCategory: aCategory [
-	"The category colours, from the icon's palette, readable on both themes"
 
-	aCategory = 'perception' ifTrue: [ ^ Color fromHexString: '#4f9a6a' ].
-	aCategory = 'calculation' ifTrue: [ ^ Color fromHexString: '#e0a458' ].
-	aCategory = 'evaluation' ifTrue: [ ^ Color fromHexString: '#a3b85c' ].
-	aCategory = 'decision' ifTrue: [ ^ Color fromHexString: '#b5652b' ].
-	^ Color fromHexString: '#a08a6c'
+	^ ChessCoachWidgets colorOfCategory: aCategory
 ]
 
 { #category : 'private' }

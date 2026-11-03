@@ -36,6 +36,28 @@ MistakesDashboardElementTest >> database [
 ]
 
 { #category : 'tests' }
+MistakesDashboardElementTest >> testCategoryBarIsShared [
+	"The stacked bar of the Stats page, also used by the coach's summary: one segment per category with mistakes, in the categories' order"
+
+	| bar |
+	bar := ChessCoachWidgets
+		       categoryBar: (Dictionary new
+				        at: 'perception' put: 2;
+				        at: 'decision' put: 1;
+				        yourself)
+		       scale: 4
+		       width: 400.
+	self assert: bar children size equals: 2.
+	self
+		assert:
+			(bar children collect: [ :each | each background paint color ])
+				asArray
+		equals: {
+				(ChessCoachWidgets colorOfCategory: 'perception').
+				(ChessCoachWidgets colorOfCategory: 'decision') }
+]
+
+{ #category : 'tests' }
 MistakesDashboardElementTest >> testEmptyState [
 
 	| dashboard started |

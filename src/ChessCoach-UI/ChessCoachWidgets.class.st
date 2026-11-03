@@ -9,6 +9,61 @@ Class {
 	#tag : 'App'
 }
 
+{ #category : 'mistakes' }
+ChessCoachWidgets class >> categoryBar: someCounts scale: aMaximum width: aWidth [
+	"A stacked bar, one segment per mistake category (category -> count), aMaximum mistakes filling aWidth pixels; each segment's tooltip gives its count"
+
+	^ ToElement new
+		  layout: BlLinearLayout horizontal;
+		  fitContent;
+		  addChildren: ((self mistakeCategories select: [ :category |
+					    (someCounts at: category ifAbsent: [ 0 ]) > 0 ]) collect: [
+						   :category |
+						   | count |
+						   count := someCounts at: category.
+						   ToElement new
+							   extent: (count / (aMaximum max: 1) * aWidth) rounded @ 14;
+							   background: (self colorOfCategory: category);
+							   tooltipString:
+								   category capitalized , ': ' , count printString;
+							   yourself ]);
+		  yourself
+]
+
+{ #category : 'mistakes' }
+ChessCoachWidgets class >> categoryLegend [
+	"The colour of each mistake category"
+
+	^ ToElement new
+		  layout: BlFlowLayout horizontal;
+		  hMatchParent;
+		  vFitContent;
+		  addChildren: (self mistakeCategories flatCollect: [ :category |
+						   {
+							   (BlElement new
+								    extent: 12 @ 12;
+								    margin: (BlInsets
+										     top: 4
+										     left: 8
+										     bottom: 0
+										     right: 4);
+								    background: (self colorOfCategory: category);
+								    yourself).
+							   (ToLabel text: category capitalized) } ]);
+		  yourself
+]
+
+{ #category : 'mistakes' }
+ChessCoachWidgets class >> colorOfCategory: aCategory [
+	"The mistake category colours, from the icon's palette, readable on both themes"
+
+	aCategory = 'perception' ifTrue: [ ^ Color fromHexString: '#4f9a6a' ].
+	aCategory = 'calculation' ifTrue: [ ^ Color fromHexString: '#e0a458' ].
+	aCategory = 'evaluation' ifTrue: [ ^ Color fromHexString: '#a3b85c' ].
+	aCategory = 'decision' ifTrue: [ ^ Color fromHexString: '#b5652b' ].
+	^ Color fromHexString: '#a08a6c'
+]
+
 { #category : 'building' }
 ChessCoachWidgets class >> copyButton: aLabel tooltip: aTooltip text: aBlock [
 	"A button that copies aBlock's text to the clipboard; it says 'copied' until the mouse leaves it"
@@ -85,6 +140,12 @@ ChessCoachWidgets class >> logoIcon: aSize [
 					   aSize asPoint);
 		  extent: aSize asPoint;
 		  yourself
+]
+
+{ #category : 'mistakes' }
+ChessCoachWidgets class >> mistakeCategories [
+
+	^ #( 'perception' 'calculation' 'evaluation' 'decision' 'knowledge' )
 ]
 
 { #category : 'building' }

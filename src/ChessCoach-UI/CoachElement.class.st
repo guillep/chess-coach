@@ -321,13 +321,28 @@ CoachElement >> buildReportComparison [
 
 { #category : 'building' }
 CoachElement >> buildReportMistakes [
-	"Counted tags grouped by category"
+	"The counted tags as the Stats page shows them: a stacked bar by category with its legend, then the tags of each category"
 
-	| taxonomy counts |
+	| taxonomy counts byCategory total |
 	taxonomy := MistakeTaxonomy default.
 	counts := review tagCounts.
 	counts ifEmpty: [
 		^ currentZone addChild: (self paragraph: 'No tagged mistakes.') ].
+	byCategory := Dictionary new.
+	counts asSet do: [ :tagId |
+			| category |
+			category := (taxonomy tagAt: tagId) category.
+			byCategory
+				at: category
+				put: (byCategory at: category ifAbsent: [ 0 ])
+					+ (counts occurrencesOf: tagId) ].
+	total := byCategory values
+		         inject: 0
+		         into: [ :sum :each | sum + each ].
+	currentZone
+		addChild:
+			(ChessCoachWidgets categoryBar: byCategory scale: total width: 300);
+		addChild: ChessCoachWidgets categoryLegend.
 	taxonomy categories do: [ :category |
 			| tags |
 			tags := (taxonomy tagsInCategory: category) select: [ :tag |

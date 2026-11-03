@@ -34,8 +34,12 @@ BaselineOfChessCoach >> baseline: spec [
 				with: [ spec requires: #( 'Mamotreto-Core' 'Bloc' 'Toplo' ) ].
 
 			spec
-				package: 'Mamotreto-Tests'
+				package: 'Mamotreto-Example'
 				with: [ spec requires: #( 'Mamotreto-Core' 'Mamotreto-UI' ) ].
+
+			spec package: 'Mamotreto-Tests' with: [
+					spec requires:
+						#( 'Mamotreto-Core' 'Mamotreto-UI' 'Mamotreto-Example' ) ].
 
 			spec package: 'ChessCoach-Core'.
 

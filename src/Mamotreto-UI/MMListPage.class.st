@@ -112,7 +112,9 @@ MMListPage >> initialize [
 				              bottom: 8
 				              right: 12);
 		             yourself.
+	"Toplo's tab pane puts its tabs on the side by default; ours go in a row on top"
 	tabPane := ToTabPaneElement new.
+	tabPane horizontal: false.
 	tabPane matchParent.
 	tabPane showAddTabItemButton: false.
 	body := ToElement new

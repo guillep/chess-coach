@@ -201,6 +201,52 @@ MMWidgets class >> link: aString to: anUrl [
 	^ label
 ]
 
+{ #category : 'sizes' }
+MMWidgets class >> logoTabSize [
+
+	^ 40
+]
+
+{ #category : 'building' }
+MMWidgets class >> notificationRow: aNotification time: aTimeString onDismiss: aDismissBlock onShow: aShowBlockOrNil [
+	"Title, time and text, a dismiss button, and a Show button when aShowBlockOrNil is a block. aDismissBlock receives the row."
+
+	| row header |
+	row := ToElement new
+		       layout: (BlLinearLayout vertical cellSpacing: 4);
+		       hMatchParent;
+		       vFitContent;
+		       yourself.
+	header := ToElement new
+		          layout: (BlLinearLayout horizontal cellSpacing: 8);
+		          hMatchParent;
+		          vFitContent;
+		          addChild: (ToLabel new
+				           text: aNotification title asRopedText bold;
+				           hMatchParent;
+				           yourself);
+		          addChild: (ToLabel text: aTimeString);
+		          addChild: (ToButton new
+				           icon:
+					           ((ToMaterialDesignIconProvider iconNamed:
+							             'outlined_close')
+						            extent: 16 @ 16;
+						            yourself);
+				           tooltipText: 'Dismiss';
+				           clickAction: [ aDismissBlock value: row ];
+				           yourself);
+		          yourself.
+	row addChild: header.
+	aNotification text ifNotEmpty: [ :text |
+		row addChild: (self paragraph: text) ].
+	aShowBlockOrNil ifNotNil: [
+			row addChild: (ToButton new
+					 labelText: 'Show';
+					 clickAction: aShowBlockOrNil;
+					 yourself) ].
+	^ row
+]
+
 { #category : 'building' }
 MMWidgets class >> page: someElements [
 	"A page's top-level column, with the same margins on every page"
@@ -408,6 +454,39 @@ MMWidgets class >> separator [
 				   bottom: 4
 				   right: 0);
 		  yourself
+]
+
+{ #category : 'sizes' }
+MMWidgets class >> statusBarPadding [
+
+	^ BlInsets
+		  top: 6
+		  left: 8
+		  bottom: 6
+		  right: 8
+]
+
+{ #category : 'sizes' }
+MMWidgets class >> tabIconExtent [
+
+	^ 32 @ 32
+]
+
+{ #category : 'sizes' }
+MMWidgets class >> tabWidth [
+	"Fixed, so a long name doesn't move the pages"
+
+	^ 96
+]
+
+{ #category : 'sizes' }
+MMWidgets class >> titleBarPadding [
+
+	^ BlInsets
+		  top: 6
+		  left: 12
+		  bottom: 6
+		  right: 12
 ]
 
 { #category : 'building' }

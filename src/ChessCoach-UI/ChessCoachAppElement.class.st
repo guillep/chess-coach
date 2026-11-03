@@ -1,23 +1,18 @@
 "
-I am the chess-coach main window: a top bar (login/logout, refresh, user, status), the list of stored games with ""Load more"" on the left, and the analysis of the selected game on the right.
-Network work runs through my backgroundRunner (a forked process by default); I update myself when my ChessCoachSession announces a change.
+I am the Chessmate window, on the Mamotreto shell (MMWindow): Home, Stats, Games, Openings, Settings and Help in the rail; the coach, a played-through game and an opening tree open as closable pages. The Games page lists the stored games with filters, Refresh and Load more, and shows the selected one at the right. The status bar also shows the background analysis and missing dependencies.
 "
 Class {
 	#name : 'ChessCoachAppElement',
-	#superclass : 'ToElement',
+	#superclass : 'MMWindow',
 	#instVars : [
-		'session',
 		'refreshButton',
 		'loadMoreButton',
-		'statusLabel',
 		'analysisLabel',
 		'gameList',
 		'analysisPane',
 		'gameView',
-		'backgroundRunner',
 		'coach',
 		'dashboard',
-		'navigation',
 		'gamesPage',
 		'settingsElement',
 		'dependencyLabel',
@@ -25,14 +20,10 @@ Class {
 		'coachTab',
 		'playThroughTab',
 		'playThrough',
-		'bell',
-		'bellBadge',
-		'notificationsWindow',
 		'gameTable',
 		'shownGameId',
 		'openings',
 		'openingTreeTab',
-		'updateButton',
 		'home',
 		'speedSelect',
 		'reviewSelect',
@@ -49,41 +40,6 @@ ChessCoachAppElement class >> open [
 	"Open on the games stored in ~/.chess-coach"
 
 	^ self openOn: ChessCoachSession default
-]
-
-{ #category : 'opening' }
-ChessCoachAppElement class >> openOn: aChessCoachSession [
-
-	| app space |
-	app := self session: aChessCoachSession.
-	space := BlSpace new.
-	space title: 'Chessmate'.
-	space extent: 1200 @ 760.
-	space root addChild: app.
-	space
-		addEventHandlerOn: BlSpaceClosedEvent
-		do: [ :event | aChessCoachSession shutDown ].
-	space show.
-	space maximize.
-	app startBackgroundAnalysis.
-	aChessCoachSession startScheduledChecks.
-	^ app
-]
-
-{ #category : 'instance creation' }
-ChessCoachAppElement class >> session: aChessCoachSession [
-
-	^ self new
-		  session: aChessCoachSession;
-		  yourself
-]
-
-{ #category : 'updating' }
-ChessCoachAppElement class >> updateOpenAppTo: aRevision [
-	"For testing updates, from a Playground: ChessCoachAppElement updateOpenAppTo: 'abc1234'. aRevision is a tag, branch or commit hash."
-
-	(self allInstances detect: [ :each | each isAttachedToSceneGraph ])
-		updateAppTo: aRevision
 ]
 
 { #category : 'private' }
@@ -110,6 +66,12 @@ ChessCoachAppElement >> analysisStateChangedOf: aGameIdOrNil [
 
 	self updateAnalysisStatus.
 	gameView ifNotNil: [ gameView updateInfo ]
+]
+
+{ #category : 'app' }
+ChessCoachAppElement >> appName [
+
+	^ 'Chessmate'
 ]
 
 { #category : 'settings' }
@@ -164,40 +126,9 @@ ChessCoachAppElement >> applyPieceSet [
 ChessCoachAppElement >> backgroundRunner: aBlock [
 	"aBlock receives the work block to run; tests pass [ :work | work value ]"
 
-	backgroundRunner := aBlock.
+	super backgroundRunner: aBlock.
 	settingsElement backgroundRunner: aBlock.
 	openings backgroundRunner: aBlock
-]
-
-{ #category : 'accessing' }
-ChessCoachAppElement >> bell [
-
-	^ bell
-]
-
-{ #category : 'accessing' }
-ChessCoachAppElement >> bellBadge [
-
-	^ bellBadge
-]
-
-{ #category : 'navigation' }
-ChessCoachAppElement >> closeButtonDo: aBlock [
-
-	^ ToButton new
-		  icon: ((ToMaterialDesignIconProvider iconNamed: 'outlined_close')
-				   extent: 18 @ 18;
-				   yourself);
-		  tooltipString: 'Close this page';
-		  clickAction: aBlock;
-		  yourself
-]
-
-{ #category : 'navigation' }
-ChessCoachAppElement >> closeTab: aTabButton [
-
-	aTabButton ifNil: [ ^ self ].
-	navigation removeItem: aTabButton
 ]
 
 { #category : 'accessing' }
@@ -322,43 +253,12 @@ ChessCoachAppElement >> home [
 	^ home
 ]
 
-{ #category : 'private' }
-ChessCoachAppElement >> inUIDo: aBlock [
+{ #category : 'app' }
+ChessCoachAppElement >> isExpectedError: anError [
+	"Lichess errors say what went wrong themselves"
 
-	self enqueueTask: (BlTaskAction new action: aBlock)
-]
-
-{ #category : 'initialization' }
-ChessCoachAppElement >> initialize [
-	"A title bar with the name, updates and notifications; below it the pages in a tab pane with the tabs in a left column, and a status line, set apart by lines. I have no margin: the pages have their own."
-
-	super initialize.
-	backgroundRunner := [ :aBlock |
-	                    aBlock forkAt: Processor userBackgroundPriority ].
-	self layout: BlLinearLayout vertical.
-	self matchParent.
-	dashboard := self newDashboard.
-	gamesPage := self newGamesPage.
-	settingsElement := SettingsElement new.
-	navigation := self newNavigation.
-	self
-		addChild: (ToElement new
-				 id: #topBar;
-				 layout:
-					 (BlLinearLayout horizontal alignCenterLeft cellSpacing: 8);
-				 hMatchParent;
-				 vFitContent;
-				 padding: (BlInsets
-						  top: 6
-						  left: 12
-						  bottom: 6
-						  right: 12);
-				 addChild: self newBell;
-				 yourself);
-		addChild: self newBarLine;
-		addChild: navigation;
-		addChild: self newBarLine;
-		addChild: self newStatusLine
+	^ (anError isKindOf: LichessError) or: [
+		  super isExpectedError: anError ]
 ]
 
 { #category : 'accessing' }
@@ -392,76 +292,6 @@ ChessCoachAppElement >> loginButton [
 	"Login/Logout lives in the settings page"
 
 	^ settingsElement loginButton
-]
-
-{ #category : 'accessing' }
-ChessCoachAppElement >> navigation [
-
-	^ navigation
-]
-
-{ #category : 'initialization' }
-ChessCoachAppElement >> newBarLine [
-	"A separator that touches what it separates: the bars and the tabs have no gap between them."
-
-	^ ChessCoachWidgets separator
-		  margin: BlInsets empty;
-		  yourself
-]
-
-{ #category : 'initialization' }
-ChessCoachAppElement >> newBell [
-	"The notification bell, with a red dot while there are unread notifications. Clicking it pops up the notifications below it, to its left (they would leave the window otherwise), and marks them read.
-	The popup stays open on mouse up (a menu would close), so its buttons get their clicks"
-
-	bellBadge := BlElement new
-		             geometry: BlCircleGeometry new;
-		             extent: 10 @ 10;
-		             background: (Color fromHexString: '#dc2626');
-		             visibility: BlVisibility hidden;
-		             constraintsDo: [ :c |
-				             c frame horizontal alignRight.
-				             c frame vertical alignTop ];
-		             yourself.
-	bell := ToButton new
-		        id: #notifications;
-		        icon:
-			        ((ToMaterialDesignIconProvider iconNamed:
-					          'outlined_notifications')
-				         extent: 24 @ 24;
-				         yourself);
-		        tooltipText: 'Notifications';
-		        yourself.
-	notificationsWindow := ToPopupWindowManager new.
-	notificationsWindow placement: ToAnchoredBottomLeftPlacement new.
-	notificationsWindow closeOnReleased: false.
-	notificationsWindow windowBuilder: [ :window :element |
-			window root addChild: self newNotificationsPanel.
-			session notifications markAllRead ].
-	bell addEventHandler: notificationsWindow.
-	^ ToElement new
-		  layout: BlFrameLayout new;
-		  fitContent;
-		  addChild: bell;
-		  addChild: bellBadge;
-		  yourself
-]
-
-{ #category : 'initialization' }
-ChessCoachAppElement >> newBrand [
-	"The name at the left of the title bar; the logo is the Home tab"
-
-	^ ToElement new
-		  layout: BlLinearLayout horizontal alignCenterLeft;
-		  hMatchParent;
-		  vFitContent;
-		  addChild: (ToLabel new
-				   text: ('Chessmate' asRopedText
-						    fontSize: 20;
-						    bold;
-						    yourself);
-				   yourself);
-		  yourself
 ]
 
 { #category : 'initialization' }
@@ -530,11 +360,10 @@ ChessCoachAppElement >> newGameTable [
 				 dataIndex: [ :entry | entry ];
 				 sorterBlock: [ :entry |
 						 #( 'unreviewed' 'inProgress' 'reviewed' ) indexOf:
-							 (self reviewStateOf: entry) ];
+								 (self reviewStateOf: entry) ];
 				 cellBuilder: [ :cell :entry :holder |
 						 (self isReviewed: entry) ifTrue: [
-									 cell addChild:
-											 ((ChessCoachWidgets
+									 cell addChild: ((ChessCoachWidgets
 												   icon: ((self reviewStateOf: entry) = 'reviewed'
 														    ifTrue: [ 'outlined_school' ]
 														    ifFalse: [ 'outlined_timelapse' ])
@@ -613,15 +442,20 @@ ChessCoachAppElement >> newGamesPage [
 
 { #category : 'initialization' }
 ChessCoachAppElement >> newNavigation [
-	"Home (the logo), Stats, Games, Openings and Settings as pages of a Toplo tab pane, tabs in a column on the left. Pages are built once and kept. The coach, a played-through game and an opening tree open as closable pages after them. The tab group's menus are hidden until tabs overflow, so the skin's padding around them would only cut the column short."
+	"Home (the logo), Stats, Games, Openings, Settings and Help as pages of a Toplo tab pane, tabs in a column on the left. Pages are built once and kept. The coach, a played-through game and an opening tree open as closable pages after them. The tab group's menus are hidden until tabs overflow, so the skin's padding around them would only cut the column short."
 
 	| pane homeButton |
+	dashboard := self newDashboard.
+	gamesPage := self newGamesPage.
+	settingsElement := SettingsElement new.
 	pane := ToTabPaneElement new.
 	pane horizontal: true.
 	pane matchParent.
 	pane showAddTabItemButton: false.
 	pane tabGroup addTokenNamed: #'padding-content-V' withValue: 0.
-	pane tabGroup itemList addTokenNamed: #'padding-content-V' withValue: 6.
+	pane tabGroup itemList
+		addTokenNamed: #'padding-content-V'
+		withValue: 6.
 	home := HomeElement new.
 	home whenShowGamesDo: [ self showPage: #Games ].
 	home whenGameChosenDo: [ :entry |
@@ -631,7 +465,7 @@ ChessCoachAppElement >> newNavigation [
 		              newPageButton: 'Home'
 		              icon: 'outlined_home'
 		              page: home.
-	homeButton icon: (ChessCoachWidgets logoIcon: 40).
+	homeButton icon: (ChessCoachWidgets logoIcon: MMWidgets logoTabSize).
 	pane addItem: homeButton.
 	pane addItem:
 		(self
@@ -662,96 +496,6 @@ ChessCoachAppElement >> newNavigation [
 		do: [ :event |
 		self tabClosed: event item wasSelected: event wasSelected ].
 	^ pane
-]
-
-{ #category : 'notifications' }
-ChessCoachAppElement >> newNotificationRow: aNotification in: aPanel [
-	"A row of the notification center"
-
-	^ ChessCoachWidgets
-		  notificationRow: aNotification
-		  time: (self timeTextFor: aNotification time)
-		  onDismiss: [ :row |
-				  session notifications dismiss: aNotification.
-				  aPanel removeChild: row ]
-		  onShow: [
-				  notificationsWindow currentWindow ifNotNil: [ :window |
-					  window close ].
-				  self showPage: #Games ]
-]
-
-{ #category : 'notifications' }
-ChessCoachAppElement >> newNotificationsPanel [
-	"The notifications, newest first, each with its action and a dismiss button"
-
-	| panel visible |
-	panel := ToElement new
-		         layout: (BlLinearLayout vertical cellSpacing: 8);
-		         width: 360;
-		         vFitContent;
-		         padding: (BlInsets all: 12);
-		         yourself.
-	visible := session notifications visible.
-	visible ifEmpty: [
-			^ panel
-				  addChild: (ToLabel text: 'All quiet. Time for another mate.');
-				  yourself ].
-	visible
-		do: [ :each |
-		panel addChild: (self newNotificationRow: each in: panel) ]
-		separatedBy: [ panel addChild: ChessCoachWidgets separator ].
-	^ panel
-]
-
-{ #category : 'initialization' }
-ChessCoachAppElement >> newPageButton: aString icon: anIconName page: anElement [
-	"A square tab of a fixed width, so that a long name doesn't move the pages: a large Material Design icon above a small label"
-
-	^ ToTabButton new
-		  id: aString asSymbol;
-		  labelText: aString;
-		  icon: ((ToMaterialDesignIconProvider iconNamed: anIconName)
-				   extent: 32 @ 32;
-				   yourself);
-		  beVertical;
-		  width: 96;
-		  removable: false;
-		  paneBuilder: [ :pane :button :holder | pane addChild: anElement ];
-		  yourself
-]
-
-{ #category : 'initialization' }
-ChessCoachAppElement >> newStatusLine [
-	"Background work, errors, the analysis queue and missing dependencies, shared by every page"
-
-	statusLabel := ToLabel text: ''.
-	analysisLabel := ToLabel text: ''.
-	dependencyLabel := ToLabel text: ''.
-	^ ToElement new
-		  layout: (BlLinearLayout horizontal cellSpacing: 16);
-		  hMatchParent;
-		  vFitContent;
-		  padding: (BlInsets
-				   top: 6
-				   left: 8
-				   bottom: 6
-				   right: 8);
-		  addChild: statusLabel;
-		  addChild: analysisLabel;
-		  addChild: dependencyLabel;
-		  addChild: (BlElement new
-				   constraintsDo: [ :c |
-					   c horizontal matchParent.
-					   c vertical exact: 1 ];
-				   yourself);
-		  addChild: ChessCoachWidgets credits;
-		  yourself
-]
-
-{ #category : 'accessing' }
-ChessCoachAppElement >> notificationsWindow [
-
-	^ notificationsWindow
 ]
 
 { #category : 'coach' }
@@ -793,7 +537,9 @@ ChessCoachAppElement >> openOpeningTree: anOpeningTree [
 				                   page: anOpeningTree name
 				                   subtitle:
 				                   'Your games compared with the database.'
-				                   actions: { (self closeButtonDo: [ self closeTab: openingTreeTab ]) }
+				                   actions:
+				                   { (self closeButtonDo: [
+					                    self closeTab: openingTreeTab ]) }
 				                   body: element).
 	element start.
 	^ element
@@ -824,32 +570,16 @@ ChessCoachAppElement >> openReview: aCoachReview of: aGameIndexEntry [
 	^ coach
 ]
 
-{ #category : 'navigation' }
-ChessCoachAppElement >> openTab: aString icon: anIconName page: anElement [
-	"Add a closable page after the fixed ones and show it. Its name is cut to fit the tab."
+{ #category : 'app' }
+ChessCoachAppElement >> opened [
 
-	| button |
-	button := (self
-		           newPageButton: (aString truncateTo: 11)
-		           icon: anIconName
-		           page: anElement)
-		          removable: true;
-		          yourself.
-	navigation addItem: button.
-	self showTab: button.
-	^ button
+	self startBackgroundAnalysis
 ]
 
 { #category : 'accessing' }
 ChessCoachAppElement >> openings [
 
 	^ openings
-]
-
-{ #category : 'navigation' }
-ChessCoachAppElement >> pageButton: aPageId [
-
-	^ navigation items asArray detect: [ :each | each id = aPageId ]
 ]
 
 { #category : 'actions' }
@@ -877,7 +607,9 @@ ChessCoachAppElement >> playThrough: aGameIndexEntry [
 		                  page: (ChessCoachWidgets
 				                   page: title
 				                   subtitle: aGameIndexEntry date
-				                   actions: { (self closeButtonDo: [ self closeTab: playThroughTab ]) }
+				                   actions:
+				                   { (self closeButtonDo: [
+					                    self closeTab: playThroughTab ]) }
 				                   body: playThrough).
 	^ playThrough
 ]
@@ -886,6 +618,12 @@ ChessCoachAppElement >> playThrough: aGameIndexEntry [
 ChessCoachAppElement >> playThroughTab [
 
 	^ playThroughTab
+]
+
+{ #category : 'app' }
+ChessCoachAppElement >> quietText [
+
+	^ 'All quiet. Time for another mate.'
 ]
 
 { #category : 'accessing' }
@@ -931,29 +669,6 @@ ChessCoachAppElement >> reviewStateOf: aGameIndexEntry [
 	^ (reviewStates ifNil: [ Dictionary new ])
 		  at: aGameIndexEntry gameId
 		  ifAbsent: [ 'unreviewed' ]
-]
-
-{ #category : 'private' }
-ChessCoachAppElement >> runInBackground: aBlock [
-	"Run network work off the UI thread and show its progress. Lichess and network errors are shown in the status line; any other error is shown too and appended to errors.log, instead of opening a debugger."
-
-	statusLabel text: 'Working…'.
-	backgroundRunner value: [
-			[
-				aBlock value.
-				self inUIDo: [ statusLabel text: '' ] ]
-				on: Error
-				do: [ :error |
-						((error isKindOf: LichessError) or: [
-							 error isKindOf: NetworkError ]) ifFalse: [
-							session logError: error ].
-						self inUIDo: [
-								statusLabel text: ((error isKindOf: LichessError)
-										 ifTrue: [ error messageText ]
-										 ifFalse: [
-												 'Something went wrong: ' , error class name , ': '
-												 , (error messageText ifNil: [ '' ]) asString
-												 , ' (details in errors.log)' ]) ] ] ]
 ]
 
 { #category : 'actions' }
@@ -1005,43 +720,15 @@ ChessCoachAppElement >> session: aChessCoachSession [
 	"Connect to the session and open on Home. The first time, run the setup wizard.
 	The app theme is applied again when I am added to a space."
 
-	session := aChessCoachSession.
-	updateButton := ChessCoachWidgets
-		                primaryButton: 'Update'
-		                icon: 'filled_arrowforward'
-		                do: [ self updateApp ].
-	(self childWithId: #topBar)
-		addChildFirst: updateButton;
-		addChildFirst: self newBrand;
-		addChild:
-			(ChessCoachWidgets help: 'Chessmate ' , session appVersion)
-		at: 3.
+	super session: aChessCoachSession.
 	session announcer
 		when: ChessCoachSessionChanged
-		do: [ :announcement |
-				self enqueueTask:
-					(BlTaskAction new action: [ self updateFromSession ]) ]
+		do: [ :announcement | self inUIDo: [ self updateFromSession ] ]
 		for: self.
 	session announcer
 		when: AnalysisQueueChanged
 		do: [ :announcement |
-				self enqueueTask: (BlTaskAction new action: [
-						 self analysisStateChangedOf: announcement gameId ]) ]
-		for: self.
-	session announcer
-		when: MMNotificationsChanged
-		do: [ :announcement |
-			self enqueueTask: (BlTaskAction new action: [ self updateBell ]) ]
-		for: self.
-	session announcer
-		when: MMSettingsChanged
-		do: [ :announcement |
-				(#( 'pieceSet' 'boardTheme' ) includes: announcement key) ifTrue: [
-					self enqueueTask:
-						(BlTaskAction new action: [ self applyPieceSet ]) ].
-				announcement key = 'appTheme' ifTrue: [
-					self enqueueTask:
-						(BlTaskAction new action: [ self applyAppTheme ]) ] ]
+			self inUIDo: [ self analysisStateChangedOf: announcement gameId ] ]
 		for: self.
 	self
 		addEventHandlerOn: BlElementAddedToSceneGraphEvent
@@ -1052,11 +739,19 @@ ChessCoachAppElement >> session: aChessCoachSession [
 	settingsElement whenSetupRequestedDo: [ self showWizard ].
 	openings session: session.
 	self updateFromSession.
-	self updateBell.
 	home session: session.
 	helpElement session: session.
 	self showPage: #Home.
 	session isFirstRun ifTrue: [ self showWizard ]
+]
+
+{ #category : 'app' }
+ChessCoachAppElement >> settingChanged: aKey [
+	"The boards follow the piece set and colours, the window the app theme"
+
+	(#( 'pieceSet' 'boardTheme' ) includes: aKey) ifTrue: [
+		self applyPieceSet ].
+	aKey = 'appTheme' ifTrue: [ self applyAppTheme ]
 ]
 
 { #category : 'accessing' }
@@ -1070,6 +765,15 @@ ChessCoachAppElement >> settingsButton [
 ChessCoachAppElement >> settingsElement [
 
 	^ settingsElement
+]
+
+{ #category : 'app' }
+ChessCoachAppElement >> showActionFor: aNotification [
+	"New games are shown on the Games page"
+
+	^ aNotification kind = #newGames
+		  ifTrue: [ [ self showPage: #Games ] ]
+		  ifFalse: [ nil ]
 ]
 
 { #category : 'settings' }
@@ -1104,21 +808,6 @@ ChessCoachAppElement >> showInPane: anElement [
 ]
 
 { #category : 'navigation' }
-ChessCoachAppElement >> showPage: aPageId [
-	"#Games, #Stats or #Settings"
-
-	navigation selecter selectIndex:
-		(navigation items asArray findFirst: [ :each | each id = aPageId ])
-]
-
-{ #category : 'navigation' }
-ChessCoachAppElement >> showTab: aTabButton [
-
-	navigation selecter selectIndex:
-		(navigation items asArray indexOf: aTabButton)
-]
-
-{ #category : 'navigation' }
 ChessCoachAppElement >> showWizard [
 	"The first-run setup replaces the pages until it is finished, between the title bar and the status line"
 
@@ -1141,7 +830,8 @@ ChessCoachAppElement >> speedChoices [
 	"As the speeds, with an All that says what it is about"
 
 	^ self speeds collect: [ :each |
-		  (each value ifNil: [ 'All time controls' ] ifNotNil: [ each key ]) -> each value ]
+			  (each value ifNil: [ 'All time controls' ] ifNotNil: [ each key ])
+			  -> each value ]
 ]
 
 { #category : 'private' }
@@ -1183,10 +873,15 @@ ChessCoachAppElement >> startBackgroundAnalysis [
 	self showDegradedModeNotes
 ]
 
-{ #category : 'accessing' }
-ChessCoachAppElement >> statusLabel [
+{ #category : 'app' }
+ChessCoachAppElement >> statusLineExtras [
+	"The background analysis and missing dependencies"
 
-	^ statusLabel
+	analysisLabel := ToLabel text: ''.
+	dependencyLabel := ToLabel text: ''.
+	^ {
+		  analysisLabel.
+		  dependencyLabel }
 ]
 
 { #category : 'navigation' }
@@ -1217,15 +912,6 @@ ChessCoachAppElement >> tabClosed: aTabButton wasSelected: aBoolean [
 								openingTreeTab ifNil: [ self showPage: #Openings ] ] ] ] ]
 ]
 
-{ #category : 'notifications' }
-ChessCoachAppElement >> timeTextFor: aDateAndTime [
-	"Today's notifications show their time, older ones their date"
-
-	^ aDateAndTime asDate = Date today
-		  ifTrue: [ aDateAndTime asTime print24 first: 5 ]
-		  ifFalse: [ aDateAndTime asDate yyyymmdd ]
-]
-
 { #category : 'analysis queue' }
 ChessCoachAppElement >> updateAnalysisStatus [
 
@@ -1238,82 +924,6 @@ ChessCoachAppElement >> updateAnalysisStatus [
 					 , (left = 1
 							  ifTrue: [ '' ]
 							  ifFalse: [ 's' ]) , ' left. You can keep working.' ])
-]
-
-{ #category : 'actions' }
-ChessCoachAppElement >> updateApp [
-	"Ask in the title bar before updating: the button makes way for the question"
-
-	| tag question bar |
-	tag := session availableUpdate.
-	bar := updateButton parent.
-	question := ToElement new
-		            layout:
-			            (BlLinearLayout horizontal alignCenterLeft
-				             cellSpacing: 8);
-		            fitContent;
-		            yourself.
-	question
-		addChild: (ToLabel text:
-					 'Install ' , tag , '? The window will close and reopen.');
-		addChild: (ChessCoachWidgets
-				 primaryButton: 'Update'
-				 icon: 'filled_arrowforward'
-				 do: [ self updateAppTo: tag ]);
-		addChild: (ToButton new
-				 labelText: 'Cancel';
-				 clickAction: [ bar replaceChild: question with: updateButton ];
-				 yourself).
-	bar replaceChild: updateButton with: question
-]
-
-{ #category : 'actions' }
-ChessCoachAppElement >> updateAppTo: aRevision [
-	"Close the window, install aRevision (a tag, branch or commit hash) at a priority above Bloc's loop (a safe point), and open a new window, also when it failed. A running review is already saved."
-
-	| aSession space |
-	aSession := session.
-	space := self space.
-	space close.
-	[
-		aSession updater updateTo: aRevision thenDo: [ :error |
-				error ifNotNil: [
-						aSession logError: error.
-						aSession notifications post: (MMNotification
-								 key: 'error-Update'
-								 kind: #error
-								 title: 'Update failed'
-								 text:
-								 (error messageText ifNil: [ error class name ]) asString) ].
-				self class openOn: aSession ] ] forkAt:
-		Processor userInterruptPriority
-]
-
-{ #category : 'notifications' }
-ChessCoachAppElement >> updateBell [
-	"Show the red dot while there are unread notifications. The Update button is always there, enabled while a newer version exists"
-
-	bellBadge visibility: (session notifications unreadCount > 0
-			 ifTrue: [ BlVisibility visible ]
-			 ifFalse: [ BlVisibility hidden ]).
-	session availableUpdate
-		ifNil: [
-				updateButton
-					labelText: 'Update';
-					tooltipText: 'You have the latest version';
-					enabled: false ]
-		ifNotNil: [ :tag |
-				updateButton
-					labelText: 'Update to ' , tag;
-					tooltipText:
-						'Install ' , tag , '. The window closes and opens again.';
-					enabled: true ]
-]
-
-{ #category : 'notifications' }
-ChessCoachAppElement >> updateButton [
-
-	^ updateButton
 ]
 
 { #category : 'updating' }

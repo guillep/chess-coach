@@ -1,0 +1,525 @@
+"
+I am the window of a Mamotreto app: a title bar (the name, Update, help with the version, the notification bell), the pages in a rail of fixed-width tabs on the left, closable pages after them, and a status bar with background work, errors and the credits. Lines separate the bars, with no gaps and no app margin.
+I listen to my MMSession; I never poll it. Work off the UI thread goes through runInBackground:, which reports in the status bar.
+An app subclasses me: it answers appName and newNavigation (its pages), and may add to the status bar, react to settings, say which notifications have a Show action and what to do when the window opens.
+"
+Class {
+	#name : 'MMWindow',
+	#superclass : 'ToElement',
+	#instVars : [
+		'session',
+		'navigation',
+		'statusLabel',
+		'bell',
+		'bellBadge',
+		'notificationsWindow',
+		'updateButton',
+		'backgroundRunner'
+	],
+	#category : 'Mamotreto-UI-Window',
+	#package : 'Mamotreto-UI',
+	#tag : 'Window'
+}
+
+{ #category : 'opening' }
+MMWindow class >> openOn: aSession [
+	"Open maximized on aSession; closing the window shuts the session down"
+
+	| window space |
+	window := self session: aSession.
+	space := BlSpace new.
+	space title: window appName.
+	space extent: 1200 @ 760.
+	space root addChild: window.
+	space
+		addEventHandlerOn: BlSpaceClosedEvent
+		do: [ :event | aSession shutDown ].
+	space show.
+	space maximize.
+	window opened.
+	aSession startScheduledChecks.
+	^ window
+]
+
+{ #category : 'instance creation' }
+MMWindow class >> session: aSession [
+
+	^ self new
+		  session: aSession;
+		  yourself
+]
+
+{ #category : 'updating' }
+MMWindow class >> updateOpenAppTo: aRevision [
+	"For testing updates, from a Playground: <the app's window class> updateOpenAppTo: 'abc1234'. aRevision is a tag, branch or commit hash."
+
+	(self allInstances detect: [ :each | each isAttachedToSceneGraph ])
+		updateAppTo: aRevision
+]
+
+{ #category : 'app' }
+MMWindow >> appName [
+	"The name in the title bar and the window title"
+
+	^ self subclassResponsibility
+]
+
+{ #category : 'background work' }
+MMWindow >> backgroundRunner: aBlock [
+	"aBlock receives the work block to run; tests pass [ :work | work value ]"
+
+	backgroundRunner := aBlock
+]
+
+{ #category : 'accessing' }
+MMWindow >> bell [
+
+	^ bell
+]
+
+{ #category : 'accessing' }
+MMWindow >> bellBadge [
+
+	^ bellBadge
+]
+
+{ #category : 'navigation' }
+MMWindow >> closeButtonDo: aBlock [
+	"The close button at the top right of a closable page's title"
+
+	^ ToButton new
+		  icon: ((ToMaterialDesignIconProvider iconNamed: 'outlined_close')
+				   extent: 18 @ 18;
+				   yourself);
+		  tooltipString: 'Close this page';
+		  clickAction: aBlock;
+		  yourself
+]
+
+{ #category : 'navigation' }
+MMWindow >> closeTab: aTabButton [
+
+	aTabButton ifNil: [ ^ self ].
+	navigation removeItem: aTabButton
+]
+
+{ #category : 'background work' }
+MMWindow >> inUIDo: aBlock [
+
+	self enqueueTask: (BlTaskAction new action: aBlock)
+]
+
+{ #category : 'initialization' }
+MMWindow >> initialize [
+	"A title bar with the bell; below it the pages in a tab pane with the tabs in a left column, and a status line, set apart by lines. I have no margin: the pages have their own."
+
+	super initialize.
+	backgroundRunner := [ :aBlock |
+	                    aBlock forkAt: Processor userBackgroundPriority ].
+	self layout: BlLinearLayout vertical.
+	self matchParent.
+	navigation := self newNavigation.
+	self
+		addChild: (ToElement new
+				 id: #topBar;
+				 layout:
+					 (BlLinearLayout horizontal alignCenterLeft cellSpacing: 8);
+				 hMatchParent;
+				 vFitContent;
+				 padding: MMWidgets titleBarPadding;
+				 addChild: self newBell;
+				 yourself);
+		addChild: self newBarLine;
+		addChild: navigation;
+		addChild: self newBarLine;
+		addChild: self newStatusLine
+]
+
+{ #category : 'app' }
+MMWindow >> isExpectedError: anError [
+	"Errors shown in the status bar without going to errors.log"
+
+	^ anError isKindOf: NetworkError
+]
+
+{ #category : 'accessing' }
+MMWindow >> navigation [
+
+	^ navigation
+]
+
+{ #category : 'initialization' }
+MMWindow >> newBarLine [
+	"A separator that touches what it separates: the bars and the tabs have no gap between them."
+
+	^ MMWidgets separator
+		  margin: BlInsets empty;
+		  yourself
+]
+
+{ #category : 'initialization' }
+MMWindow >> newBell [
+	"The notification bell, with a red dot while there are unread notifications. Clicking it pops up the notifications below it, to its left (they would leave the window otherwise), and marks them read.
+	The popup stays open on mouse up (a menu would close), so its buttons get their clicks"
+
+	bellBadge := BlElement new
+		             geometry: BlCircleGeometry new;
+		             extent: 10 @ 10;
+		             background: (Color fromHexString: '#dc2626');
+		             visibility: BlVisibility hidden;
+		             constraintsDo: [ :c |
+				             c frame horizontal alignRight.
+				             c frame vertical alignTop ];
+		             yourself.
+	bell := ToButton new
+		        id: #notifications;
+		        icon:
+			        ((ToMaterialDesignIconProvider iconNamed:
+					          'outlined_notifications')
+				         extent: 24 @ 24;
+				         yourself);
+		        tooltipText: 'Notifications';
+		        yourself.
+	notificationsWindow := ToPopupWindowManager new.
+	notificationsWindow placement: ToAnchoredBottomLeftPlacement new.
+	notificationsWindow closeOnReleased: false.
+	notificationsWindow windowBuilder: [ :window :element |
+			window root addChild: self newNotificationsPanel.
+			session notifications markAllRead ].
+	bell addEventHandler: notificationsWindow.
+	^ ToElement new
+		  layout: BlFrameLayout new;
+		  fitContent;
+		  addChild: bell;
+		  addChild: bellBadge;
+		  yourself
+]
+
+{ #category : 'initialization' }
+MMWindow >> newBrand [
+	"The name at the left of the title bar; the logo is the Home tab"
+
+	^ ToElement new
+		  layout: BlLinearLayout horizontal alignCenterLeft;
+		  hMatchParent;
+		  vFitContent;
+		  addChild: (ToLabel new
+				   text: (self appName asRopedText
+						    fontSize: 20;
+						    bold;
+						    yourself);
+				   yourself);
+		  yourself
+]
+
+{ #category : 'app' }
+MMWindow >> newNavigation [
+	"The tab pane with the app's pages; see newPageButton:icon:page:"
+
+	^ self subclassResponsibility
+]
+
+{ #category : 'notifications' }
+MMWindow >> newNotificationRow: aNotification in: aPanel [
+	"A row of the notification center; Show closes the panel before acting"
+
+	^ MMWidgets
+		  notificationRow: aNotification
+		  time: (self timeTextFor: aNotification time)
+		  onDismiss: [ :row |
+				  session notifications dismiss: aNotification.
+				  aPanel removeChild: row ]
+		  onShow:
+			  ((self showActionFor: aNotification) ifNotNil: [ :action |
+					   [
+						   notificationsWindow currentWindow ifNotNil: [ :window |
+							   window close ].
+						   action value ] ])
+]
+
+{ #category : 'notifications' }
+MMWindow >> newNotificationsPanel [
+	"The notifications, newest first, each with its action and a dismiss button"
+
+	| panel visible |
+	panel := ToElement new
+		         layout: (BlLinearLayout vertical cellSpacing: 8);
+		         width: 360;
+		         vFitContent;
+		         padding: (BlInsets all: 12);
+		         yourself.
+	visible := session notifications visible.
+	visible ifEmpty: [
+			^ panel
+				  addChild: (ToLabel text: self quietText);
+				  yourself ].
+	visible
+		do: [ :each |
+		panel addChild: (self newNotificationRow: each in: panel) ]
+		separatedBy: [ panel addChild: MMWidgets separator ].
+	^ panel
+]
+
+{ #category : 'navigation' }
+MMWindow >> newPageButton: aString icon: anIconName page: anElement [
+	"A square tab of a fixed width, so that a long name doesn't move the pages: a large Material Design icon above a small label"
+
+	^ ToTabButton new
+		  id: aString asSymbol;
+		  labelText: aString;
+		  icon: ((ToMaterialDesignIconProvider iconNamed: anIconName)
+				   extent: MMWidgets tabIconExtent;
+				   yourself);
+		  beVertical;
+		  width: MMWidgets tabWidth;
+		  removable: false;
+		  paneBuilder: [ :pane :button :holder | pane addChild: anElement ];
+		  yourself
+]
+
+{ #category : 'initialization' }
+MMWindow >> newStatusLine [
+	"Background work and errors, then the app's own labels, shared by every page; the credits at the right"
+
+	| line |
+	statusLabel := ToLabel text: ''.
+	line := ToElement new
+		        layout: (BlLinearLayout horizontal cellSpacing: 16);
+		        hMatchParent;
+		        vFitContent;
+		        padding: MMWidgets statusBarPadding;
+		        addChild: statusLabel;
+		        yourself.
+	self statusLineExtras do: [ :each | line addChild: each ].
+	^ line
+		  addChild: (BlElement new
+				   constraintsDo: [ :c |
+						   c horizontal matchParent.
+						   c vertical exact: 1 ];
+				   yourself);
+		  addChild: MMWidgets credits;
+		  yourself
+]
+
+{ #category : 'accessing' }
+MMWindow >> notificationsWindow [
+
+	^ notificationsWindow
+]
+
+{ #category : 'navigation' }
+MMWindow >> openTab: aString icon: anIconName page: anElement [
+	"Add a closable page after the fixed ones and show it. Its name is cut to fit the tab."
+
+	| button |
+	button := (self
+		           newPageButton: (aString truncateTo: 11)
+		           icon: anIconName
+		           page: anElement)
+		          removable: true;
+		          yourself.
+	navigation addItem: button.
+	self showTab: button.
+	^ button
+]
+
+{ #category : 'app' }
+MMWindow >> opened [
+	"The window is shown; apps start their background work here"
+
+	
+]
+
+{ #category : 'navigation' }
+MMWindow >> pageButton: aPageId [
+
+	^ navigation items asArray detect: [ :each | each id = aPageId ]
+]
+
+{ #category : 'app' }
+MMWindow >> quietText [
+	"What the notification panel says when it is empty"
+
+	^ 'All quiet.'
+]
+
+{ #category : 'background work' }
+MMWindow >> runInBackground: aBlock [
+	"Run work off the UI thread and show its progress. Expected errors (see isExpectedError:) are shown in the status line; any other error is shown too and appended to errors.log, instead of opening a debugger."
+
+	statusLabel text: 'Working…'.
+	backgroundRunner value: [
+			[
+				aBlock value.
+				self inUIDo: [ statusLabel text: '' ] ]
+				on: Error
+				do: [ :error |
+						(self isExpectedError: error) ifFalse: [
+							session logError: error ].
+						self inUIDo: [
+								statusLabel text: ((self isExpectedError: error)
+										 ifTrue: [ error messageText ]
+										 ifFalse: [
+												 'Something went wrong: ' , error class name , ': '
+												 , (error messageText ifNil: [ '' ]) asString
+												 , ' (details in errors.log)' ]) ] ] ]
+]
+
+{ #category : 'accessing' }
+MMWindow >> session [
+
+	^ session
+]
+
+{ #category : 'accessing' }
+MMWindow >> session: aSession [
+	"Connect to the session: the Update button and the version in the title bar, and listen to the notifications and the settings"
+
+	session := aSession.
+	updateButton := MMWidgets
+		                primaryButton: 'Update'
+		                icon: 'filled_arrowforward'
+		                do: [ self updateApp ].
+	(self childWithId: #topBar)
+		addChildFirst: updateButton;
+		addChildFirst: self newBrand;
+		addChild: (MMWidgets help: self appName , ' ' , session appVersion)
+		at: 3.
+	session announcer
+		when: MMNotificationsChanged
+		do: [ :announcement | self inUIDo: [ self updateBell ] ]
+		for: self.
+	session announcer
+		when: MMSettingsChanged
+		do: [ :announcement |
+			self inUIDo: [ self settingChanged: announcement key ] ]
+		for: self.
+	self updateBell
+]
+
+{ #category : 'app' }
+MMWindow >> settingChanged: aKey [
+	"A setting changed; called in the UI thread. Apps apply theirs."
+
+	
+]
+
+{ #category : 'app' }
+MMWindow >> showActionFor: aNotification [
+	"The block of its Show button, or nil for none"
+
+	^ nil
+]
+
+{ #category : 'navigation' }
+MMWindow >> showPage: aPageId [
+	"The page whose tab has aPageId, its name as a symbol"
+
+	navigation selecter selectIndex:
+		(navigation items asArray findFirst: [ :each | each id = aPageId ])
+]
+
+{ #category : 'navigation' }
+MMWindow >> showTab: aTabButton [
+
+	navigation selecter selectIndex:
+		(navigation items asArray indexOf: aTabButton)
+]
+
+{ #category : 'accessing' }
+MMWindow >> statusLabel [
+
+	^ statusLabel
+]
+
+{ #category : 'app' }
+MMWindow >> statusLineExtras [
+	"Labels of the app shown after the status in the status bar"
+
+	^ #(  )
+]
+
+{ #category : 'notifications' }
+MMWindow >> timeTextFor: aDateAndTime [
+	"Today's notifications show their time, older ones their date"
+
+	^ aDateAndTime asDate = Date today
+		  ifTrue: [ aDateAndTime asTime print24 first: 5 ]
+		  ifFalse: [ aDateAndTime asDate yyyymmdd ]
+]
+
+{ #category : 'updates' }
+MMWindow >> updateApp [
+	"Ask in the title bar before updating: the button makes way for the question"
+
+	| tag question bar |
+	tag := session availableUpdate.
+	bar := updateButton parent.
+	question := ToElement new
+		            layout:
+			            (BlLinearLayout horizontal alignCenterLeft
+				             cellSpacing: 8);
+		            fitContent;
+		            yourself.
+	question
+		addChild: (ToLabel text:
+					 'Install ' , tag , '? The window will close and reopen.');
+		addChild: (MMWidgets
+				 primaryButton: 'Update'
+				 icon: 'filled_arrowforward'
+				 do: [ self updateAppTo: tag ]);
+		addChild: (ToButton new
+				 labelText: 'Cancel';
+				 clickAction: [ bar replaceChild: question with: updateButton ];
+				 yourself).
+	bar replaceChild: updateButton with: question
+]
+
+{ #category : 'updates' }
+MMWindow >> updateAppTo: aRevision [
+	"Close the window, install aRevision (a tag, branch or commit hash) at a priority above Bloc's loop (a safe point), and open a new window, also when it failed."
+
+	| aSession space |
+	aSession := session.
+	space := self space.
+	space close.
+	[
+		aSession updater updateTo: aRevision thenDo: [ :error |
+				error ifNotNil: [
+						aSession logError: error.
+						aSession notifications post: (MMNotification
+								 key: 'error-Update'
+								 kind: #error
+								 title: 'Update failed'
+								 text:
+								 (error messageText ifNil: [ error class name ]) asString) ].
+				self class openOn: aSession ] ] forkAt:
+		Processor userInterruptPriority
+]
+
+{ #category : 'notifications' }
+MMWindow >> updateBell [
+	"Show the red dot while there are unread notifications. The Update button is always there, enabled while a newer version exists"
+
+	bellBadge visibility: (session notifications unreadCount > 0
+			 ifTrue: [ BlVisibility visible ]
+			 ifFalse: [ BlVisibility hidden ]).
+	session availableUpdate
+		ifNil: [
+				updateButton
+					labelText: 'Update';
+					tooltipText: 'You have the latest version';
+					enabled: false ]
+		ifNotNil: [ :tag |
+				updateButton
+					labelText: 'Update to ' , tag;
+					tooltipText:
+						'Install ' , tag , '. The window closes and opens again.';
+					enabled: true ]
+]
+
+{ #category : 'accessing' }
+MMWindow >> updateButton [
+
+	^ updateButton
+]

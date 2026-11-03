@@ -37,6 +37,21 @@ GameTest >> testLegalUCIMoves [
 ]
 
 { #category : 'tests' }
+GameTest >> testPGN [
+
+	| game again |
+	game := PGNParser new parse: '[White "Ann"]
+[Result "1-0"]
+
+1. e4 e5 2. Qh5 Nc6 3. Bc4 Nf6 4. Qxf7# 1-0'.
+	self assert: (game pgn includesSubstring: '[White "Ann"]').
+	self assert:
+		(game pgn endsWith: '1. e4 e5 2. Qh5 Nc6 3. Bc4 Nf6 4. Qxf7# 1-0').
+	again := PGNParser new parse: game pgn.
+	self assert: again uciMoves equals: game uciMoves
+]
+
+{ #category : 'tests' }
 GameTest >> testPGNCommentsClocksNagsAndVariations [
 
 	| game moves |

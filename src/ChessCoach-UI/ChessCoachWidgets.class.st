@@ -10,6 +10,44 @@ Class {
 }
 
 { #category : 'building' }
+ChessCoachWidgets class >> copyButton: aLabel tooltip: aTooltip text: aBlock [
+	"A button that copies aBlock's text to the clipboard; it says 'copied' until the mouse leaves it"
+
+	| button |
+	button := ToButton new
+		          labelText: aLabel;
+		          icon:
+			          ((ToMaterialDesignIconProvider iconNamed:
+					            'outlined_contentcopy')
+				           extent: 16 @ 16;
+				           yourself);
+		          tooltipText: aTooltip;
+		          yourself.
+	button clickAction: [
+			Clipboard clipboardText: aBlock value.
+			button labelText: aLabel , ' copied' ].
+	button
+		addEventHandlerOn: BlMouseLeaveEvent
+		do: [ :event | button labelText: aLabel ].
+	^ button
+]
+
+{ #category : 'building' }
+ChessCoachWidgets class >> exportButtonsForBoard: aChessBoardElement game: aGame [
+	"Copy the position shown on aChessBoardElement as FEN, and aGame as PGN"
+
+	^ {
+		  (self
+			   copyButton: 'FEN'
+			   tooltip: 'Copy the position on the board (FEN)'
+			   text: [ aChessBoardElement chessPosition fen ]).
+		  (self
+			   copyButton: 'PGN'
+			   tooltip: 'Copy the whole game (PGN)'
+			   text: [ aGame pgn ]) }
+]
+
+{ #category : 'building' }
 ChessCoachWidgets class >> logo: aSize [
 	"The Chessmate icon, from the assets of the app's repository; an empty element without them"
 

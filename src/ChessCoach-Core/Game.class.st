@@ -59,6 +59,31 @@ Game >> moves [
 	^ moves
 ]
 
+{ #category : 'converting' }
+Game >> pgn [
+	"The game as PGN: its tags, then its moves with their numbers and the result"
+
+	^ String streamContents: [ :stream |
+			  metadata keysAndValuesDo: [ :key :value |
+					  stream
+						  nextPutAll: '[';
+						  nextPutAll: key;
+						  nextPutAll: ' "';
+						  nextPutAll: (value asString copyReplaceAll: '"' with: '\"');
+						  nextPutAll: '"]';
+						  lf ].
+			  metadata ifNotEmpty: [ stream lf ].
+			  moves withIndexDo: [ :move :ply |
+					  ply odd ifTrue: [
+							  stream
+								  print: ply + 1 // 2;
+								  nextPutAll: '. ' ].
+					  stream
+						  nextPutAll: move san;
+						  space ].
+			  stream nextPutAll: (metadata at: 'Result' ifAbsent: [ '*' ]) ]
+]
+
 { #category : 'positions' }
 Game >> positionAfterPly: aNumber [
 	"Ply 0 is the initial position; ply N is the position after the Nth half-move"

@@ -1367,9 +1367,9 @@ CoachElement >> submitText [
 
 { #category : 'building' }
 CoachElement >> titleActions [
-	"For the title of the page: report a problem and close, which pauses the review"
+	"For the title of the page: copy the position (FEN) or the game (PGN), report a problem and close, which pauses the review"
 
-	^ {
+	^ (ChessCoachWidgets exportButtonsForBoard: board game: game) , {
 		  (self
 			   iconButton: 'outlined_bugreport'
 			   tooltip:

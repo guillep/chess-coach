@@ -202,6 +202,31 @@ CoachElementTest >> testBusyShowsAProgressBar [
 ]
 
 { #category : 'tests' }
+CoachElementTest >> testCopyFENAndPGN [
+
+	| buttons saved space |
+	saved := Clipboard clipboardText.
+	buttons := coach titleActions first: 2.
+	space := BlSpace new.
+	space extent: 400 @ 200.
+	space root addChild: (ToElement new
+			 layout: (BlLinearLayout horizontal cellSpacing: 10);
+			 fitContent;
+			 addChildren: buttons;
+			 yourself).
+	space pulse.
+	[
+		BlSpace simulateClickOn: buttons first.
+		self
+			assert: Clipboard clipboardText asString
+			equals: coach board chessPosition fen.
+		BlSpace simulateClickOn: buttons second.
+		self assert:
+			(Clipboard clipboardText asString includesSubstring: '4. Ng5') ]
+		ensure: [ Clipboard clipboardText: saved ]
+]
+
+{ #category : 'tests' }
 CoachElementTest >> testListShowsPastMomentsAndReviewsOneMoment [
 
 	| moment |

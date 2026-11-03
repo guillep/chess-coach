@@ -521,7 +521,7 @@ ChessCoachAppElement >> pageRoots [
 
 { #category : 'actions' }
 ChessCoachAppElement >> playThrough: aGameIndexEntry [
-	"Look at the game move by move in its own closable page named after its players, replacing an open one. Its tab shows my opponent."
+	"Look at the game move by move in its own closable page named after its players, replacing an open one. Its tab shows my opponent. The title has buttons to copy the shown position (FEN) and the game (PGN)."
 
 	| game colors title opponent |
 	self closeTab: playThroughTab.
@@ -544,9 +544,13 @@ ChessCoachAppElement >> playThrough: aGameIndexEntry [
 		                  page: (ChessCoachWidgets
 				                   page: title
 				                   subtitle: aGameIndexEntry date
-				                   actions:
-				                   { (self closeButtonDo: [
-					                    self closeTab: playThroughTab ]) }
+				                   actions: (ChessCoachWidgets
+						                    exportButtonsForBoard:
+						                    playThrough boardElement
+						                    game: game)
+					                   ,
+					                   { (self closeButtonDo: [
+						                    self closeTab: playThroughTab ]) }
 				                   body: playThrough).
 	^ playThrough
 ]

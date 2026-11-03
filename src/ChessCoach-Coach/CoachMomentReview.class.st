@@ -147,9 +147,9 @@ CoachMomentReview >> confirmTag: aTagId [
 
 { #category : 'labels' }
 CoachMomentReview >> countedLabels [
-	"The tags that count as my mistakes: proposed or confirmed, not rejected"
+	"The tags that count as my mistakes: confirmed, or proposed with enough confidence and not rejected"
 
-	^ labels reject: [ :each | each isRejected ]
+	^ labels select: [ :each | each isCounted ]
 ]
 
 { #category : 'dialogue' }
@@ -309,14 +309,14 @@ CoachMomentReview >> setPly: aPly color: aColor kinds: someKinds [
 
 { #category : 'labels' }
 CoachMomentReview >> toggleTag: aTagId [
-	"A counted tag stops counting; a rejected one, or one not proposed, counts and is confirmed"
+	"A counted tag stops counting; a rejected or tentative one, or one not proposed, counts and is confirmed"
 
 	(labels detect: [ :each | each tagId = aTagId ] ifNone: [ nil ])
 		ifNil: [ self confirmTag: aTagId ]
 		ifNotNil: [ :label |
-				label isRejected
-					ifTrue: [ label confirm ]
-					ifFalse: [ label reject ] ]
+				label isCounted
+					ifTrue: [ label reject ]
+					ifFalse: [ label confirm ] ]
 ]
 
 { #category : 'accessing' }

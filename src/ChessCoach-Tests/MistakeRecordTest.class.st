@@ -57,3 +57,21 @@ MistakeRecordTest >> testReadingSignalsNoDeprecation [
 		shouldnt: [ MistakeRecord fromDictionary: dictionary ]
 		raise: Deprecation
 ]
+
+{ #category : 'tests' }
+MistakeRecordTest >> testTentativeLabelsCountOnlyOnceConfirmed [
+
+	| moment |
+	moment := CoachMomentReview ply: 7 color: #white kinds: #( #mistake ).
+	moment proposeLabels: {
+			(MistakeLabel tagId: 'hope-chess' confidence: 0.9).
+			(MistakeLabel tagId: 'no-blunder-check' confidence: 0.5) }.
+	self
+		assert:
+		(moment countedLabels collect: [ :each | each tagId ]) asArray
+		equals: #( 'hope-chess' ).
+	moment toggleTag: 'no-blunder-check'.
+	self assert: moment countedLabels size equals: 2.
+	moment toggleTag: 'no-blunder-check'.
+	self assert: moment countedLabels size equals: 1
+]

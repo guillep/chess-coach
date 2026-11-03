@@ -28,6 +28,13 @@ MistakeLabel class >> fromDictionary: aDictionary [
 	^ label
 ]
 
+{ #category : 'constants' }
+MistakeLabel class >> minimumConfidence [
+	"Below it, a proposed tag is only a 'maybe': it counts once I confirm it"
+
+	^ 0.7
+]
+
 { #category : 'instance creation' }
 MistakeLabel class >> tagId: anId confidence: aNumber [
 
@@ -66,9 +73,25 @@ MistakeLabel >> isConfirmed [
 ]
 
 { #category : 'testing' }
+MistakeLabel >> isCounted [
+	"Counts as my mistake: confirmed, or proposed with enough confidence and not rejected"
+
+	confirmed ifTrue: [ ^ true ].
+	^ rejected not and: [ confidence >= self class minimumConfidence ]
+]
+
+{ #category : 'testing' }
 MistakeLabel >> isRejected [
 
 	^ rejected
+]
+
+{ #category : 'testing' }
+MistakeLabel >> isTentative [
+	"Proposed with too little confidence to count unless I confirm it"
+
+	^ confirmed not and: [
+		  rejected not and: [ confidence < self class minimumConfidence ] ]
 ]
 
 { #category : 'actions' }

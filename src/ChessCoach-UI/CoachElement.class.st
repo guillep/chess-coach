@@ -471,19 +471,20 @@ CoachElement >> buildTagPickerFor: aMomentReview [
 
 { #category : 'building' }
 CoachElement >> buildTagsOf: aMomentReview [
-	"Each proposed tag is a toggle with a check box icon: checked counts as a mistake, unchecked doesn't. Its label never changes: the percentage is how sure the model was, shown whether or not the tag is checked. The tag's description is its tooltip. When time trouble counts, it is shown as the main cause. Without the local model, the tag picker opens so the tags are chosen by hand."
+	"Each proposed tag is a toggle with a check box icon: checked counts as a mistake, unchecked doesn't. Its label says how sure the model was; a tag below the minimum confidence is only a 'maybe?', unchecked until I confirm it. The tag's description is its tooltip. When time trouble counts, it is shown as the main cause. Without the local model, the tag picker opens so the tags are chosen by hand. A move that was not a mistake has nothing to tag."
 
 	| taxonomy labels manual |
 	(review isSuccess: aMomentReview) ifTrue: [
 			^ currentZone addChild: (self paragraph: (aMomentReview isSuccess
 						    ifTrue: [ 'Well found: no mistake to tag.' ]
-						    ifFalse: [
-						    'Your move was as good as the best one: no mistake to tag.' ])) ].
+						    ifFalse: [ 'Your move was not a mistake: nothing to tag.' ])) ].
 	taxonomy := MistakeTaxonomy default.
 	manual := review isClassifierUnavailable and: [
 		          aMomentReview isClassifying ].
 	currentZone addChild: ((self paragraph:
-				  'Checked tags count as mistakes in your stats; click one to change it. The percentage is how sure the coach model is that the tag fits your answers.')
+				  'Checked tags count as mistakes in your stats; click one to change it. The percentage is how sure the coach model is that the tag fits your answers; below '
+				  , (MistakeLabel minimumConfidence * 100) rounded printString
+				  , '% a tag is only a maybe until you check it.')
 			 tooltipString: 'Hover over a tag for its description.';
 			 yourself).
 	manual
@@ -502,17 +503,21 @@ CoachElement >> buildTagsOf: aMomentReview [
 			currentZone addChild: (self paragraph:
 					 'Time trouble looks like the main cause; the other tags may matter less.') ].
 	labels do: [ :label |
-			| tag |
+			| tag button |
 			tag := taxonomy tagAt: label tagId.
-			currentZone addChild: ((self
-					  button: tag name , ' · ' , tag category , ' ('
-						  , (label confidence * 100) rounded printString , '%)'
-					  icon: (label isRejected
-							   ifTrue: [ 'outlined_checkboxoutlineblank' ]
-							   ifFalse: [ 'outlined_checkbox' ])
-					  do: [ self toggleTag: label tagId ])
-					 tooltipString: tag description;
-					 yourself) ].
+			button := self
+				          button: (label isTentative
+						           ifTrue: [ 'maybe? ' ]
+						           ifFalse: [ '' ]) , tag name , ' · ' , tag category
+					          , ' (' , (label confidence * 100) rounded printString
+					          , '%)'
+				          icon: (label isCounted
+						           ifTrue: [ 'outlined_checkbox' ]
+						           ifFalse: [ 'outlined_checkboxoutlineblank' ])
+				          do: [ self toggleTag: label tagId ].
+			button tooltipString: tag description.
+			label isTentative ifTrue: [ button opacity: 0.6 ].
+			currentZone addChild: button ].
 	(manual or: [ addingTag == true ])
 		ifTrue: [ self buildTagPickerFor: aMomentReview ]
 		ifFalse: [

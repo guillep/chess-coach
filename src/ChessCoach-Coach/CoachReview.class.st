@@ -196,6 +196,7 @@ CoachReview >> changed [
 { #category : 'answering' }
 CoachReview >> classifyPending [
 	"Classify every written answer not classified yet. Slow (local LLM): call it off the UI thread.
+	Only the answers about a mistake are sent to the model: a move the zones didn't classify as an inaccuracy or worse has no mistake to tag (its answers are marked classified with no labels; tags can still be added by hand).
 	When Ollama or its model is not available the answers stay unclassified and isClassifierUnavailable is true until a later call succeeds."
 
 	reviews do: [ :moment |
@@ -203,15 +204,18 @@ CoachReview >> classifyPending [
 				reject: [ :each | each isClassified ]
 				thenDo: [ :answer |
 						| labels |
-						labels := [
-							          classifier
-								          classify: answer text
-								          question: answer question text
-								          context: (self contextOf: moment) ]
-							          on: NetworkError , ZnHttpUnsuccessful
-							          do: [
-									          classifierUnavailable := true.
-									          ^ self ].
+						labels := (self isSuccess: moment)
+							          ifTrue: [ #(  ) ]
+							          ifFalse: [
+									          [
+										          classifier
+											          classify: answer text
+											          question: answer question text
+											          context: (self contextOf: moment) ]
+										          on: NetworkError , ZnHttpUnsuccessful
+										          do: [
+												          classifierUnavailable := true.
+												          ^ self ] ].
 						classifierUnavailable := false.
 						answer classifiedAs: labels.
 						moment proposeLabels: labels.
@@ -234,17 +238,31 @@ CoachReview >> confirmTag: aTagId of: aMomentReview [
 
 { #category : 'private - questions' }
 CoachReview >> contextOf: aMomentReview [
-	"A short description of the moment for the classifier"
+	"A short description of the moment for the classifier: the position, my move and what it was, how much it lost (in pawns, from my side), the engine's best move and the reply that punishes mine"
 
-	| before |
+	| before after context |
 	before := analysis atPly: aMomentReview ply - 1.
-	^ 'Position (FEN): {1}. I played {2} ({3}){4}.' format: {
-			  before fen.
-			  (game moves at: aMomentReview ply) san.
-			  (', ' join: aMomentReview kinds).
-			  (before lines ifEmpty: [ '' ] ifNotEmpty: [
-					   '; the engine''s best move was '
-					   , (before sanOf: before bestLine firstMove) ]) }
+	after := analysis atPly: aMomentReview ply.
+	context := 'Position (FEN): {1}. I played {2} ({3})' format: {
+			           before fen.
+			           (game moves at: aMomentReview ply) san.
+			           (', ' join: aMomentReview kinds) }.
+	(before lines notEmpty and: [ after lines notEmpty ]) ifTrue: [
+			context := context
+			           ,
+				           ('; the evaluation went from {1} to {2} for me; the engine''s best move was {3}'
+					            format: {
+							            (EvaluationFormat pawns
+								             line: before bestLine
+								             for: aMomentReview color).
+							            (EvaluationFormat pawns
+								             line: after bestLine
+								             for: aMomentReview color).
+							            (before sanOf: before bestLine firstMove) }).
+			after bestLine firstMove ifNotNil: [ :reply |
+					context := context , '; the reply that punishes my move is '
+					           , (after sanOf: reply) ] ].
+	^ context , '.'
 ]
 
 { #category : 'navigating' }

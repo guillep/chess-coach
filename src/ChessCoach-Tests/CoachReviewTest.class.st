@@ -120,6 +120,30 @@ CoachReviewTest >> setUp [
 ]
 
 { #category : 'tests' }
+CoachReviewTest >> testAGoodMoveIsNotSentToTheClassifier [
+	"A marked move that the zones didn't classify has no mistake: its answers get no labels"
+
+	| review moment |
+	review := self newReviewMarking
+		          finishMarkingWith: analysis moments: { (ChessMoment
+				           ply: 5
+				           color: #white
+				           kind: #marked
+				           source: #marks
+				           note: nil) };
+		          yourself.
+	moment := review moments first.
+	review start: moment.
+	[ moment isRevealed ] whileFalse: [
+			moment currentQuestion expectsMoves
+				ifTrue: [ review answerMoves: #(  ) ]
+				ifFalse: [ review answerText: 'I wanted to develop' ] ].
+	review classifyPending.
+	self assert: moment labels isEmpty.
+	self assert: (review isSuccess: moment)
+]
+
+{ #category : 'tests' }
 CoachReviewTest >> testClassificationWaitsForOllamaAndSavesEveryChange [
 
 	| review saves |

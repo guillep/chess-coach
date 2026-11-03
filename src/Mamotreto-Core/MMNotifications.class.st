@@ -13,10 +13,24 @@ Class {
 	#package : 'Mamotreto-Core'
 }
 
+{ #category : 'constants' }
+MMNotifications class >> limit [
+	"Notifications kept under the bell; older ones are dropped"
+
+	^ 50
+]
+
 { #category : 'actions' }
 MMNotifications >> dismiss: aNotification [
 
 	aNotification beDismissed.
+	self saveAndReport
+]
+
+{ #category : 'actions' }
+MMNotifications >> dismissAll [
+
+	self visible do: [ :each | each beDismissed ].
 	self saveAndReport
 ]
 
@@ -46,15 +60,21 @@ MMNotifications >> markAllRead [
 
 { #category : 'actions' }
 MMNotifications >> post: aNotification [
-	"Show aNotification first, replacing the undismissed one with its key. A dismissed update with its key is not shown again.
+	"Show aNotification first, replacing the undismissed one with its key, and keep only the newest ones. A dismissed update with its key is not shown again.
 	items is replaced, never changed, so the UI can read it while a background check posts"
 
+	| kept |
 	(aNotification isUpdate and: [
 			 items anySatisfy: [ :each |
 				 each key = aNotification key and: [ each isDismissed ] ] ])
 		ifTrue: [ ^ self ].
+	kept := 0.
 	items := { aNotification } , (items reject: [ :each |
 		          each key = aNotification key and: [ each isDismissed not ] ]).
+	items := items select: [ :each |
+			         each isDismissed or: [
+					         kept := kept + 1.
+					         kept <= self class limit ] ].
 	self saveAndReport
 ]
 

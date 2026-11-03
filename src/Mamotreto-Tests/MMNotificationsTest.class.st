@@ -132,3 +132,20 @@ MMNotificationsTest >> testNotificationsAreKeptInTheFile [
 		(self notificationKey: 'update-v0.4.0' kind: #update text: 'notes').
 	self assert: reread visible size equals: 1
 ]
+
+{ #category : 'tests' }
+MMNotificationsTest >> testOnlyTheNewestAreKeptAndAllCanBeCleared [
+
+	1 to: MMNotifications limit + 5 do: [ :i |
+			notifications post: (MMNotification
+					 key: 'n' , i printString
+					 kind: #info
+					 title: 'Note ' , i printString
+					 text: '') ].
+	self assert: notifications visible size equals: MMNotifications limit.
+	self
+		assert: notifications visible first title
+		equals: 'Note ' , (MMNotifications limit + 5) printString.
+	notifications dismissAll.
+	self assert: notifications visible isEmpty
+]

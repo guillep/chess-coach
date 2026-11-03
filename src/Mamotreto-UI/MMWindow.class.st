@@ -238,6 +238,13 @@ MMWindow >> isExpectedError: anError [
 	^ anError isKindOf: NetworkError
 ]
 
+{ #category : 'notifications' }
+MMWindow >> maxNotificationsHeight [
+	"The notifications never take more than 70% of the window's height"
+
+	^ (self height * 0.7) rounded max: 200
+]
+
 { #category : 'accessing' }
 MMWindow >> navigation [
 
@@ -349,25 +356,53 @@ MMWindow >> newNotificationRow: aNotification in: aPanel [
 
 { #category : 'notifications' }
 MMWindow >> newNotificationsPanel [
-	"The notifications, newest first, each with its action and a dismiss button"
+	"The notifications, newest first, each with its action and a dismiss button, in a list that scrolls once it reaches 70% of the window's height; below it, always there, Clear all, disabled when there is nothing to clear"
 
-	| panel visible |
-	panel := ToElement new
-		         layout: (BlLinearLayout vertical cellSpacing: 8);
-		         width: 360;
-		         vFitContent;
-		         padding: (BlInsets all: 12);
-		         yourself.
+	| list visible scrollable clearAll |
+	list := ToElement new
+		        id: #notificationList;
+		        layout: (BlLinearLayout vertical cellSpacing: 8);
+		        hMatchParent;
+		        vFitContent;
+		        padding: (BlInsets all: 12);
+		        yourself.
 	visible := session notifications visible.
-	visible ifEmpty: [
-			^ panel
-				  addChild: (ToLabel text: self quietText);
-				  yourself ].
 	visible
-		do: [ :each |
-		panel addChild: (self newNotificationRow: each in: panel) ]
-		separatedBy: [ panel addChild: MMWidgets separator ].
-	^ panel
+		ifEmpty: [ list addChild: (ToLabel text: self quietText) ]
+		ifNotEmpty: [
+				visible
+					do: [ :each |
+					list addChild: (self newNotificationRow: each in: list) ]
+					separatedBy: [ list addChild: MMWidgets separator ] ].
+	scrollable := list asScrollableElement.
+	scrollable constraintsDo: [ :c |
+			c horizontal matchParent.
+			c vertical fitContent.
+			c maxHeight: self maxNotificationsHeight ].
+	clearAll := ToButton new
+		            id: #clearNotifications;
+		            labelText: 'Clear all';
+		            enabled: visible notEmpty;
+		            clickAction: [
+				            session notifications dismissAll.
+				            notificationsWindow currentWindow ifNotNil: [ :window |
+						            window close ] ];
+		            yourself.
+	^ ToElement new
+		  id: #notificationsPanel;
+		  layout: BlLinearLayout vertical;
+		  width: 360;
+		  vFitContent;
+		  addChild: scrollable;
+		  addChild: MMWidgets separator;
+		  addChild: (ToElement new
+				   layout: BlLinearLayout horizontal;
+				   hMatchParent;
+				   vFitContent;
+				   padding: (BlInsets all: 8);
+				   addChild: clearAll;
+				   yourself);
+		  yourself
 ]
 
 { #category : 'navigation' }

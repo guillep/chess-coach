@@ -68,6 +68,26 @@ MMExampleWindowTest >> testLinksAreButtons [
 ]
 
 { #category : 'tests' }
+MMExampleWindowTest >> testManyNotificationsScrollInsteadOfLeavingTheScreen [
+
+	| panel panelScripter |
+	1 to: 30 do: [ :i |
+			session notifications post: (MMNotification
+					 key: 'n' , i printString
+					 kind: #info
+					 title: 'Note ' , i printString
+					 text: 'Something happened that is worth a line of text.') ].
+	panel := window newNotificationsPanel.
+	panelScripter := BlDevScripter new.
+	panelScripter element: panel.
+	panelScripter space extent: 400 @ 2000.
+	panelScripter pulse.
+	self assert: panel height > 300.
+	self assert: panel height <= (700 * 0.7 + 80).
+	self assert: (panel childWithId: #clearNotifications) isEnabled
+]
+
+{ #category : 'tests' }
 MMExampleWindowTest >> testShowPage [
 
 	window showPage: #Look.

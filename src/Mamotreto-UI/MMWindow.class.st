@@ -47,16 +47,17 @@ MMWindow class >> new [
 
 { #category : 'opening' }
 MMWindow class >> openApp: anApp on: aSession [
-	"Open maximized on aSession; closing the window shuts the session down"
+	"Open maximized on aSession; closing the window asks first while background jobs run, then shuts the session down"
 
 	| window space |
 	window := (self app: anApp)
 		          session: aSession;
 		          yourself.
-	space := BlSpace new.
+	space := MMSpace new.
 	space title: anApp name.
 	space extent: 1200 @ 760.
 	space root addChild: window.
+	space whenCloseRequestedDo: [ window closeRequestedIn: space ].
 	space
 		addEventHandlerOn: BlSpaceClosedEvent
 		do: [ :event | aSession shutDown ].
@@ -155,6 +156,40 @@ MMWindow >> closeButtonDo: aBlock [
 		  tooltipString: 'Close this page';
 		  clickAction: aBlock;
 		  yourself
+]
+
+{ #category : 'closing' }
+MMWindow >> closeRequestedIn: aSpace [
+	"The user closed the window: close it, unless background jobs would be stopped; then ask first, in a banner below the title bar"
+
+	| count |
+	count := session unfinishedTaskCount.
+	count = 0 ifTrue: [ ^ aSpace close ].
+	(self childWithId: #closeBanner ifNone: [ nil ]) ifNotNil: [ ^ self ].
+	self
+		addChild: (ToElement new
+				 id: #closeBanner;
+				 layout:
+					 (BlLinearLayout horizontal alignCenterLeft cellSpacing: 8);
+				 hMatchParent;
+				 vFitContent;
+				 padding: MMWidgets titleBarPadding;
+				 background: (Color fromHexString: '#fff8c5');
+				 addChild: (ToLabel text: (count = 1
+								   ifTrue: [ '1 task is still running.' ]
+								   ifFalse: [ count printString , ' tasks are still running.' ])
+							  , ' Close anyway?');
+				 addChild: (ToButton new
+						  labelText: 'Wait';
+						  clickAction: [
+							  (self childWithId: #closeBanner) removeFromParent ];
+						  yourself);
+				 addChild: (ToButton new
+						  labelText: 'Close and stop them';
+						  clickAction: [ aSpace close ];
+						  yourself);
+				 yourself)
+		at: 2
 ]
 
 { #category : 'navigation' }

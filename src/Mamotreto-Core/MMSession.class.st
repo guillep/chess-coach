@@ -206,6 +206,13 @@ MMSession >> startScheduledChecks [
 	scheduler start
 ]
 
+{ #category : 'running' }
+MMSession >> unfinishedTaskCount [
+	"Background jobs running or waiting, which closing the window would stop; subclasses with a queue answer theirs"
+
+	^ 0
+]
+
 { #category : 'updates' }
 MMSession >> updater [
 

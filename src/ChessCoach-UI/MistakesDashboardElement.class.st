@@ -424,6 +424,13 @@ MistakesDashboardElement >> speed [
 ]
 
 { #category : 'accessing' }
+MistakesDashboardElement >> speed: aSpeedOrNil [
+	"The time control shown (nil for all games), as remembered from the last visit; the page is rebuilt with the next database"
+
+	speed := aSpeedOrNil
+]
+
+{ #category : 'accessing' }
 MistakesDashboardElement >> texts [
 	"Every label and paragraph text shown, in order (for tests)"
 

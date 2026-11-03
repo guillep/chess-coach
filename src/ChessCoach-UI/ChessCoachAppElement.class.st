@@ -266,6 +266,7 @@ ChessCoachAppElement >> loginButton [
 
 { #category : 'initialization' }
 ChessCoachAppElement >> newDashboard [
+	"The chosen time control is remembered for the next time"
 
 	| board |
 	board := MistakesDashboardElement new.
@@ -274,7 +275,9 @@ ChessCoachAppElement >> newDashboard [
 			self showPage: #Games.
 			self games ifNotEmpty: [ :entries |
 				self selectGameId: entries first gameId ] ].
-	board whenSpeedChosenDo: [ :speed | self updateDashboard ].
+	board whenSpeedChosenDo: [ :speed |
+			session settings at: 'statsSpeed' put: speed.
+			self updateDashboard ].
 	^ board
 ]
 
@@ -849,8 +852,9 @@ ChessCoachAppElement >> updateAnalysisStatus [
 
 { #category : 'updating' }
 ChessCoachAppElement >> updateDashboard [
-	"The mistakes of the time control chosen on the Stats page"
+	"The mistakes of the time control chosen on the Stats page, remembered in the settings"
 
+	dashboard speed: (session settings at: 'statsSpeed').
 	dashboard
 		database: (session mistakeDatabaseWithSpeed: dashboard speed)
 		times: session reviewTimes

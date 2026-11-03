@@ -223,6 +223,13 @@ OpeningTree >> nodeAt: aKey [
 ]
 
 { #category : 'accessing' }
+OpeningTree >> period [
+	"Days counted back from each build, or nil for every game"
+
+	^ period
+]
+
+{ #category : 'accessing' }
 OpeningTree >> period: aNumberOfDaysOrNil [
 	"Keep only the games of the last days, counted from each build; nil keeps them all"
 

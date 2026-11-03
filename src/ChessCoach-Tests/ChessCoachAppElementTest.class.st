@@ -777,6 +777,26 @@ ChessCoachAppElementTest >> testStartsLoggedOut [
 ]
 
 { #category : 'tests' }
+ChessCoachAppElementTest >> testStatsAndOpeningsRememberTheChoices [
+
+	| openings |
+	app showPage: #Stats.
+	scripter pulse.
+	app dashboard chooseSpeed: 'blitz'.
+	scripter pulse.
+	self assert: (session settings at: 'statsSpeed') equals: 'blitz'.
+	app dashboard speed: nil.
+	app updateDashboard.
+	self assert: app dashboard speed equals: 'blitz'.
+	session settings at: 'openingsColor' put: 'black'.
+	session settings at: 'openingsPeriod' put: 30.
+	openings := OpeningsElement new.
+	openings session: session.
+	self assert: openings newTree color equals: #black.
+	self assert: openings newTree period equals: 30
+]
+
+{ #category : 'tests' }
 ChessCoachAppElementTest >> testStatsFilterByTimeControl [
 
 	app showPage: #Stats.

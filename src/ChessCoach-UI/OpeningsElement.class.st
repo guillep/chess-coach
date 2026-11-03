@@ -106,22 +106,34 @@ OpeningsElement >> newColumn: someElements [
 
 { #category : 'building' }
 OpeningsElement >> newForm [
-	"Every filter of a new tree, in two columns so that it fits one page: my games on the left, the database on the right"
+	"Every filter of a new tree, in two columns so that it fits one page: my games on the left, the database on the right. Every choice is remembered for the next visit."
 
 	nameField := ToTextField new
 		             hMatchParent;
 		             yourself.
-	periodSelect := self newSelect: {
-			                ('Always' -> nil).
-			                ('Today' -> 0).
-			                ('Last week' -> 7).
-			                ('Last month' -> 30).
-			                ('Last year' -> 365) }.
-	ratingSelect := self newSelect: self ratingOptions.
+	periodSelect := (MMWidgets
+		                 dropdown: {
+				                 ('Always' -> nil).
+				                 ('Today' -> 0).
+				                 ('Last week' -> 7).
+				                 ('Last month' -> 30).
+				                 ('Last year' -> 365) }
+		                 selecting: (session settings at: 'openingsPeriod')
+		                 do: [ :each |
+			                 self remember: 'openingsPeriod' as: each ])
+		                hMatchParent;
+		                yourself.
+	ratingSelect := (MMWidgets
+		                 dropdown: self ratingOptions
+		                 selecting: (session settings at: 'openingsRating')
+		                 do: [ :each |
+			                 self remember: 'openingsRating' as: each ])
+		                hMatchParent;
+		                yourself.
 	^ ChessCoachWidgets
 		  section: 'New tree'
 		  help:
-		  'Choose your games, then the database to compare with. The period counts back from each build, so Rebuild moves it forward.'
+		  'Choose your games, then the database to compare with. The period counts back from each build, so Rebuild moves it forward. Your choices are kept for the next time.'
 		  rows: {
 				  (ToElement new
 					   layout: (BlLinearLayout horizontal cellSpacing: 24);
@@ -136,11 +148,13 @@ OpeningsElement >> newForm [
 												     ('White' -> #white).
 												     ('Black' -> #black) }
 										     selected: color
-										     do: [ :each | color := each ]).
+										     do: [ :each |
+												     color := each.
+												     self remember: 'openingsColor' as: each asString ]).
 									    (ToLabel text: 'Time control').
-									    (ChessCoachWidgets
-										     speedBar: speed
-										     do: [ :each | speed := each ]).
+									    (ChessCoachWidgets speedBar: speed do: [ :each |
+												     speed := each.
+												     self remember: 'openingsSpeed' as: each ]).
 									    (ToLabel text: 'Period').
 									    periodSelect });
 					   addChild: (self newColumn: {
@@ -150,11 +164,13 @@ OpeningsElement >> newForm [
 												     ('Lichess players' -> 'lichess').
 												     ('Masters' -> 'masters') }
 										     selected: databaseSource
-										     do: [ :each | databaseSource := each ]).
+										     do: [ :each |
+												     databaseSource := each.
+												     self remember: 'openingsDatabase' as: each ]).
 									    (ToLabel text: 'Database time control').
-									    (ChessCoachWidgets
-										     speedBar: databaseSpeed
-										     do: [ :each | databaseSpeed := each ]).
+									    (ChessCoachWidgets speedBar: databaseSpeed do: [ :each |
+												     databaseSpeed := each.
+												     self remember: 'openingsDatabaseSpeed' as: each ]).
 									    (ToLabel text: 'Database rating').
 									    ratingSelect });
 					   yourself).
@@ -257,6 +273,13 @@ OpeningsElement >> ratingOptions [
 	  , { ('Any rating' -> #(  )) }
 ]
 
+{ #category : 'private' }
+OpeningsElement >> remember: aKey as: aValue [
+	"Keep a choice of the form for the next visit"
+
+	session settings at: aKey put: aValue
+]
+
 { #category : 'actions' }
 OpeningsElement >> rename: anOpeningTree in: aRow [
 
@@ -283,8 +306,13 @@ OpeningsElement >> rename: anOpeningTree in: aRow [
 
 { #category : 'accessing' }
 OpeningsElement >> session: aChessCoachSession [
+	"The form starts with the choices of the last visit"
 
 	session := aChessCoachSession.
+	color := (session settings at: 'openingsColor') asSymbol.
+	speed := session settings at: 'openingsSpeed'.
+	databaseSource := session settings at: 'openingsDatabase'.
+	databaseSpeed := session settings at: 'openingsDatabaseSpeed'.
 	self build
 ]
 

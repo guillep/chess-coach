@@ -25,6 +25,20 @@ ChessPositionTest >> testDisambiguationByFile [
 ]
 
 { #category : 'tests' }
+ChessPositionTest >> testDoublePawnPushAfterAQueenPawnOpening [
+	"From errors.log: Stockfish's e2e4 was rejected as illegal in these stored analyses"
+
+	#( 'rnbqkbnr/pp1ppppp/2p5/8/3P4/8/PPP1PPPP/RNBQKBNR w KQkq - 0 2'
+	   'rnbqkb1r/pp2pppp/5n2/2pp4/3P1B2/2N5/PPP1PPPP/R2QKBNR w KQkq c6 0 4'
+	   'r3kb1r/p1B2ppp/1p6/3N1b1n/1n1P4/5N2/PP2PPPP/R3KB1R w KQkq - 1 11' )
+		do: [ :fen |
+				| position |
+				position := ChessPosition fromFEN: fen.
+				self assert: (position isLegalUCI: 'e2e4').
+				self assert: (position sanForUCI: 'e2e4') equals: 'e4' ]
+]
+
+{ #category : 'tests' }
 ChessPositionTest >> testEnPassant [
 
 	| position |

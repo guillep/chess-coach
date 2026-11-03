@@ -327,7 +327,7 @@ MMWindow >> newBrand [
 
 { #category : 'app' }
 MMWindow >> newNavigation [
-	"The app's pages in a Toplo tab pane, tabs in a column on the left. Pages are built once and kept; closable pages open after them. The tab group's menus are hidden until tabs overflow, so the skin's padding around them would only cut the column short."
+	"The app's pages in a Toplo tab pane, tabs in a column on the left. Pages are built once and kept; closable pages open after them. The tab group's menus are hidden until tabs overflow, so the skin's padding around them would only cut the column short. Closing a tab can be undone (the page opens again), so its close button gets no red border on hover."
 
 	| pane |
 	pane := ToTabPaneElement new.
@@ -338,6 +338,9 @@ MMWindow >> newNavigation [
 	pane tabGroup itemList
 		addTokenNamed: #'padding-content-V'
 		withValue: 6.
+	pane tabGroup
+		addTokenNamed: #'border-color-danger-selection'
+		withValue: Color transparent.
 	app pages do: [ :each | pane addItem: (each tabIn: self) ].
 	pane
 		addEventHandlerOn: ToItemRemovedFromListEvent

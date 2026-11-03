@@ -155,6 +155,23 @@ CoachElementTest >> testAWholeMoment [
 ]
 
 { #category : 'tests' }
+CoachElementTest >> testBoardSettingsReachTheMarkingReplay [
+
+	| fixture marking session |
+	fixture := CoachReviewTest new.
+	fixture setUp.
+	marking := fixture newReviewMarking.
+	session := (LichessAPIClientStub withGames: 0) newSessionOn:
+		           FileSystem memory root.
+	coach := CoachElement new.
+	coach session: session entry: nil review: marking.
+	coach pieceSet: LiviusPieceSet new theme: 'Blue'.
+	self assert: coach replay boardElement theme equals: 'Blue'.
+	self assert:
+		(coach replay boardElement pieceSet isKindOf: LiviusPieceSet)
+]
+
+{ #category : 'tests' }
 CoachElementTest >> testListShowsPastMomentsAndReviewsOneMoment [
 
 	| moment |

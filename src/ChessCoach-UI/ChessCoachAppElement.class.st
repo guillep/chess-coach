@@ -88,7 +88,7 @@ ChessCoachAppElement >> applyAppTheme [
 
 { #category : 'settings' }
 ChessCoachAppElement >> applyPieceSet [
-	"Every open board uses the piece set and the colour theme of the settings"
+	"Every open board uses the piece set and the colour theme of the settings: the game played through, the coach (and its marking replay) and the opening tree"
 
 	| pieceSet theme |
 	pieceSet := ChessPieceSet named: session settings pieceSet.
@@ -97,10 +97,12 @@ ChessCoachAppElement >> applyPieceSet [
 			playThrough boardElement
 				pieceSet: pieceSet;
 				theme: theme ].
-	coach ifNotNil: [
-			coach board
-				pieceSet: pieceSet;
-				theme: theme ]
+	coach ifNotNil: [ coach pieceSet: pieceSet theme: theme ].
+	openingTreeTab ifNotNil: [
+			openingTreeTab userData at: #openingTree ifPresent: [ :tree |
+					tree board
+						pieceSet: pieceSet;
+						theme: theme ] ]
 ]
 
 { #category : 'accessing' }
@@ -441,7 +443,7 @@ ChessCoachAppElement >> openMistake: aMistakeRecord [
 
 { #category : 'actions' }
 ChessCoachAppElement >> openOpeningTree: anOpeningTree [
-	"Explore a tree in its own closable page named after it, replacing an open one. A new tree is built there."
+	"Explore a tree in its own closable page named after it, replacing an open one. A new tree is built there. The tab keeps the tree element, so that its board follows the settings."
 
 	| element |
 	self closeTab: openingTreeTab.
@@ -449,9 +451,6 @@ ChessCoachAppElement >> openOpeningTree: anOpeningTree [
 		           session: session
 		           tree: anOpeningTree
 		           runner: backgroundRunner.
-	element board
-		pieceSet: (ChessPieceSet named: session settings pieceSet);
-		theme: session settings boardTheme.
 	element whenGameChosenDo: [ :entry | self playThrough: entry ].
 	element whenBuiltDo: [ openings updateTrees ].
 	openingTreeTab := self
@@ -465,6 +464,8 @@ ChessCoachAppElement >> openOpeningTree: anOpeningTree [
 				                   { (self closeButtonDo: [
 					                    self closeTab: openingTreeTab ]) }
 				                   body: element).
+	openingTreeTab userData at: #openingTree put: element.
+	self applyPieceSet.
 	element start.
 	^ element
 ]

@@ -105,15 +105,14 @@ HelpElement >> topics [
 
 { #category : 'updating' }
 HelpElement >> update [
+	"Every topic open, as a plain group: the page scrolls"
 
 	zone removeChildren.
-	self topics doWithIndex: [ :topic :index |
-		| group |
-		group := MMGroupElement new.
-		group title: topic key help: nil.
-		group beCollapsible.
-		topic value do: [ :each |
-			group rows addChild: (ChessCoachWidgets paragraph: each) ].
-		index = 1 ifFalse: [ group collapse ].
-		zone addChild: group ]
+	self topics do: [ :topic |
+			| group |
+			group := MMGroupElement new.
+			group title: topic key help: nil.
+			topic value do: [ :each |
+				group rows addChild: (ChessCoachWidgets paragraph: each) ].
+			zone addChild: group ]
 ]

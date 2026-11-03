@@ -276,7 +276,9 @@ CoachElement >> buildReplay [
 	"The marking pass shows the game with its move list: arrow keys step through it, Enter or Space marks the selected move"
 
 	replay := GameAnalysisElement new.
-	replay boardElement pieceSet: board pieceSet.
+	replay boardElement
+		pieceSet: board pieceSet;
+		theme: board theme.
 	replay boardElement orientation: self myColor.
 	replay game: game.
 	replay moveList markedPlies:
@@ -966,6 +968,19 @@ CoachElement >> pause [
 	exitBlock value
 ]
 
+{ #category : 'accessing' }
+CoachElement >> pieceSet: aPieceSet theme: aThemeName [
+	"Both of my boards, the coach's and the marking replay's, follow the settings"
+
+	board
+		pieceSet: aPieceSet;
+		theme: aThemeName.
+	replay ifNotNil: [
+			replay boardElement
+				pieceSet: aPieceSet;
+				theme: aThemeName ]
+]
+
 { #category : 'private' }
 CoachElement >> playedMove [
 
@@ -1363,6 +1378,7 @@ CoachElement >> updateCurrentZone [
 
 { #category : 'updating' }
 CoachElement >> updateHeader [
+	"The summary's header is a title"
 
 	| move |
 	mode = #marking ifTrue: [
@@ -1381,7 +1397,11 @@ CoachElement >> updateHeader [
 						   review reviewedMoments size.
 						   review moments size.
 						   (self minutes: review totalSeconds) }) ].
-	mode = #summary ifTrue: [ ^ header text: 'Review summary' ].
+	mode = #summary ifTrue: [
+			^ header text: ('Review summary' asRopedText
+					   fontSize: 18;
+					   bold;
+					   yourself) ].
 	move := game moves at: shownMoment ply.
 	header text:
 		('Moment {1} of {2} · move {3} ({4}) · {5}{6}' format: {

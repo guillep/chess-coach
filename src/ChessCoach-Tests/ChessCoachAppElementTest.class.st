@@ -137,6 +137,20 @@ ChessCoachAppElementTest >> testArrowKeysMoveTheGameSelection [
 ]
 
 { #category : 'tests' }
+ChessCoachAppElementTest >> testBoardSettingsReachTheOpenOpeningTree [
+
+	| element |
+	self click: app loginButton.
+	self click: app loadMoreButton.
+	session explorer: LichessExplorerClientStub new.
+	element := app openOpeningTree: app openings newTree.
+	scripter pulse.
+	session settings at: 'boardTheme' put: 'Blue'.
+	scripter pulse.
+	self assert: element board theme equals: 'Blue'
+]
+
+{ #category : 'tests' }
 ChessCoachAppElementTest >> testClickingTheDropdownsFiltersTheGames [
 
 	| games |
@@ -261,6 +275,18 @@ ChessCoachAppElementTest >> testGamesListedWhileOnStatsShowLater [
 	scripter pulse.
 	self deny: scripter space hasLayoutError.
 	self assert: app gameView isAttachedToSceneGraph
+]
+
+{ #category : 'tests' }
+ChessCoachAppElementTest >> testHelpGroupsAreNotCollapsible [
+
+	| groups |
+	app showPage: #Help.
+	scripter pulse.
+	groups := app helpElement allChildrenBreadthFirstSelect: [ :each |
+		          each isKindOf: MMGroupElement ].
+	self assert: groups notEmpty.
+	self deny: (groups anySatisfy: [ :each | each isCollapsible ])
 ]
 
 { #category : 'tests' }

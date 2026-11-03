@@ -99,6 +99,32 @@ GameAnalysisElementTest >> testOperaGameLastPly [
 ]
 
 { #category : 'tests' }
+GameAnalysisElementTest >> testSelectedMoveStaysInView [
+
+	| pgn view space selected scroller |
+	pgn := String streamContents: [ :stream |
+			       1 to: 40 do: [ :n |
+					       stream nextPutAll: n printString , (n odd
+							        ifTrue: [ '. Nf3 Nf6 ' ]
+							        ifFalse: [ '. Ng1 Ng8 ' ]) ] ].
+	view := GameAnalysisElement new.
+	view game: (PGNParser new parse: pgn).
+	space := BlSpace new.
+	space extent: 700 @ 300.
+	space root addChild: view.
+	space pulse.
+	view moveList selectMoveAt: 80.
+	space pulse.
+	space pulse.
+	scroller := view moveList parent.
+	[ scroller isKindOf: BlScrollableElement ] whileFalse: [
+		scroller := scroller parent ].
+	selected := view moveList selectedMoveElement.
+	self assert:
+		selected boundsInSpace bottom <= (scroller boundsInSpace bottom + 1)
+]
+
+{ #category : 'tests' }
 GameAnalysisElementTest >> testSelectingAMoveShowsThePositionAfterIt [
 
 	| analysis |

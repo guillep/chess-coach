@@ -68,22 +68,26 @@ CoachReview >> analysis: aGameAnalysis [
 
 { #category : 'answering' }
 CoachReview >> answerMoves: someUCIMoves [
-	"Answer a board question with the moves I marked"
+	"Answer a board question with the moves I marked. My candidates are evaluated after my expected reply, or right after the candidates when there is no reply to expect (my move ended the game)."
 
-	| question position |
+	| question position moment |
 	question := self currentQuestion.
 	self assert: question expectsMoves.
+	moment := self currentMoment.
 	position := game positionAfterPly: (question kind = #candidates
-			             ifTrue: [ self currentMoment ply - 1 ]
-			             ifFalse: [ self currentMoment ply ]).
+			             ifTrue: [ moment ply - 1 ]
+			             ifFalse: [ moment ply ]).
 	someUCIMoves do: [ :move |
 		(position isLegalUCI: move) ifFalse: [
 			CoachIllegalMove signal: move ] ].
-	self currentMoment answer:
-		((CoachAnswer question: question moves: someUCIMoves)
+	moment answer: ((CoachAnswer question: question moves: someUCIMoves)
 			 seconds: self takeAnswerSeconds;
 			 yourself).
-	question kind = #expectedReply ifTrue: [ self askAboutCandidates ].
+	(question kind = #expectedReply or: [
+			 question kind = #candidates and: [
+					 (moment pending anySatisfy: [ :each |
+						  each kind = #expectedReply ]) not ] ]) ifTrue: [
+		self askAboutCandidates ].
 	self changed
 ]
 
@@ -273,6 +277,20 @@ CoachReview >> dropTag: aTagId of: aMomentReview [
 
 	aMomentReview dropTag: aTagId.
 	self changed
+]
+
+{ #category : 'private - questions' }
+CoachReview >> expectedReplyQuestionsFor: aMoment [
+	"What I expected my opponent to play, unless my move left no reply (mate or stalemate)"
+
+	| played |
+	(game positionAfterPly: aMoment ply) hasLegalMove ifFalse: [ ^ #(  ) ].
+	played := (game moves at: aMoment ply) san.
+	^ { (CoachQuestion
+		   kind: #expectedReply
+		   text:
+		   'After ' , played
+		   , ', what did you expect your opponent to play?') }
 ]
 
 { #category : 'marking' }
@@ -545,7 +563,7 @@ CoachReview >> plySeconds [
 
 { #category : 'private - questions' }
 CoachReview >> questionsAboutMoveOf: aMoment [
-	"Candidates are the moves I considered before calculating; the bad ones I discarded were discarded rightly. So only a bad move asks for them, to find a better move I discarded wrongly. A good move I thought long about, or marked, only asks why and what I expected"
+	"Candidates are the moves I considered before calculating; the bad ones I discarded were discarded rightly. So only a bad move asks for them, to find a better move I discarded wrongly. A good move I thought long about, or marked, only asks why and what I expected. No expected reply when my move ended the game."
 
 	| played |
 	played := (game moves at: aMoment ply) san.
@@ -558,24 +576,15 @@ CoachReview >> questionsAboutMoveOf: aMoment [
 					   'Your move was bad. Which other candidate moves did you evaluate and discard here? Mark them on the board.').
 				  (CoachQuestion
 					   kind: #why
-					   text: 'Why did you play ' , played , '?').
-				  (CoachQuestion
-					   kind: #expectedReply
-					   text:
-					   'After ' , played
-					   , ', what did you expect your opponent to play?') } ].
+					   text: 'Why did you play ' , played , '?') }
+			  , (self expectedReplyQuestionsFor: aMoment) ].
 	(aMoment kinds includesAny: #( #longThink #marked )) ifTrue: [
-			^ {
-				  (CoachQuestion
-					   kind: #why
-					   text: 'Why did you play ' , played , '?').
-				  (CoachQuestion
-					   kind: #expectedReply
-					   text:
-					   'After ' , played
-					   , ', what did you expect your opponent to play?') } ].
-	((aMoment kinds includes: #openingChoice) and: [ aMoment notes notEmpty ])
-		ifTrue: [
+			^ { (CoachQuestion
+				   kind: #why
+				   text: 'Why did you play ' , played , '?') }
+			  , (self expectedReplyQuestionsFor: aMoment) ].
+	((aMoment kinds includes: #openingChoice) and: [
+		 aMoment notes notEmpty ]) ifTrue: [
 			^ {
 				  (CoachQuestion
 					   kind: #why
@@ -584,12 +593,8 @@ CoachReview >> questionsAboutMoveOf: aMoment [
 				  (CoachQuestion
 					   kind: #candidates
 					   text:
-					   'Which other moves did you consider here? Mark them on the board.').
-				  (CoachQuestion
-					   kind: #expectedReply
-					   text:
-					   'After ' , played
-					   , ', what did you expect your opponent to play?') } ].
+					   'Which other moves did you consider here? Mark them on the board.') }
+			  , (self expectedReplyQuestionsFor: aMoment) ].
 	(aMoment kinds includes: #onlyMoveFound) ifTrue: [
 			^ { (CoachQuestion
 				   kind: #whatDidYouSee

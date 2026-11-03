@@ -151,6 +151,27 @@ MoveListElement >> initializeShortcuts [
 		do: [ :event | self requestFocus ]
 ]
 
+{ #category : 'selection' }
+MoveListElement >> keepSelectedInView [
+	"Once laid out, scroll the list (inside a scrollable element) just enough to show the selected move"
+
+	| scroller |
+	scroller := self parent.
+	[ scroller isNil or: [ scroller isKindOf: BlScrollableElement ] ]
+		whileFalse: [ scroller := scroller parent ].
+	scroller ifNil: [ ^ self ].
+	self whenLayoutedDoOnce: [
+			self selectedMoveElement ifNotNil: [ :selected |
+					| top bottom |
+					top := selected boundsInSpace top - scroller boundsInSpace top.
+					bottom := selected boundsInSpace bottom
+					          - scroller boundsInSpace top.
+					top < 0 ifTrue: [ scroller scrollBy: 0 @ top ].
+					bottom > scroller height ifTrue: [
+						scroller scrollBy: 0 @ (bottom - scroller height) ] ] ].
+	self requestLayout
+]
+
 { #category : 'accessing' }
 MoveListElement >> layoutMode [
 
@@ -219,10 +240,11 @@ MoveListElement >> rebuildMoves [
 
 { #category : 'selection' }
 MoveListElement >> selectMoveAt: anIndex [
-	"Select the move at anIndex (a ply); 0 means no move, i.e. the initial position"
+	"Select the move at anIndex (a ply); 0 means no move, i.e. the initial position. The selected move stays in view."
 
 	selectedMoveIndex := anIndex.
 	self highlightSelected.
+	self keepSelectedInView.
 	announcer announce: (MoveSelectedAnnouncement new
 			 moveIndex: anIndex;
 			 game: game;
@@ -239,6 +261,17 @@ MoveListElement >> selectNextMove [
 MoveListElement >> selectPreviousMove [
 
 	self selectMoveAt: (selectedMoveIndex - 1 max: 0)
+]
+
+{ #category : 'selection' }
+MoveListElement >> selectedMoveElement [
+	"The element showing the selected move, or nil at the initial position"
+
+	^ (layoutMode = #rigid
+		   ifTrue: [ rigidMoveElements ]
+		   ifFalse: [ moveElements ])
+		  at: selectedMoveIndex
+		  ifAbsent: [ nil ]
 ]
 
 { #category : 'accessing' }

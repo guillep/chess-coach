@@ -331,6 +331,41 @@ CoachReviewTest >> testMistakeRecordsAndJSON [
 ]
 
 { #category : 'tests' }
+CoachReviewTest >> testNoExpectedReplyAfterMate [
+
+	| mate review moment |
+	now := DateAndTime year: 2026 month: 10 day: 29.
+	mate := PGNParser new parse: '1. f3 e5 2. g4 Qh4#'.
+	review := (CoachReview
+		           gameId: 'g2'
+		           game: mate
+		           engine: nil
+		           classifier:
+			           (AnswerClassifier
+				            client: client
+				            taxonomy: MistakeTaxonomy default))
+		          clock: [ now ];
+		          yourself.
+	review
+		finishMarkingWith:
+			(GameAnalysis depth: 18 plies: ((0 to: 4) collect: [ :ply |
+						  PlyAnalysis
+							  ply: ply
+							  fen: (mate positionAfterPly: ply) fen
+							  lines: #(  ) ]))
+		moments: { (ChessMoment
+				 ply: 4
+				 color: #black
+				 kind: #marked
+				 source: #marks
+				 note: nil) }.
+	moment := review moments first.
+	review start: moment.
+	review answerText: 'It mates'.
+	self assert: moment pending isEmpty
+]
+
+{ #category : 'tests' }
 CoachReviewTest >> testOpeningMomentKeepsWhyItWasChosenAndAsksAboutIt [
 
 	| moment restored questions |

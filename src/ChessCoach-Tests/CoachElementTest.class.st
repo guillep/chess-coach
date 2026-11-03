@@ -92,6 +92,36 @@ CoachElementTest >> testAWholeMoment [
 	self assert: (coach header text asString includesSubstring:
 			 'Moment 2 of 2 · move 4 (Ng5)').
 	self assert: coach board orientation equals: #white.
+	"First find what punishes Ng5, on the position after it: one move"
+	self assert: review currentQuestion kind equals: #refutation.
+	self assert: (coach board chessPosition pieceAt: 'g5') equals: 'N'.
+	self clickOn: 'd7'.
+	self clickOn: 'd5'.
+	self clickOn: 'h7'.
+	self clickOn: 'h6'.
+	self
+		assert: (self arrowsOfStyle: #candidate) asArray
+		equals: #( 'h7h6' ).
+	self assert: (self zoneTexts includes: 'Marked: h6').
+	self clickOn: 'e1'.
+	self clickOn: 'e5'.
+	self assert: coach message equals: 'Illegal move'.
+	coach submitMoves.
+	scripter pulse.
+	self assert: (self zoneTexts includes: 'Why did you play Ng5?').
+	self assert:
+		(self zoneTexts includes: 'It looked natural (intuition)').
+	self deny: (self zoneTexts includes: 'Intuition').
+	coach addQuickAnswer: 'It looked natural (intuition)'.
+	coach addQuickAnswer: 'No time'.
+	self
+		assert: coach answerField text asString
+		equals: 'It looked natural (intuition). No time. '.
+	self answer: 'I wanted to attack f7'.
+	self assert: (coach history children anySatisfy: [ :each |
+				 (each isKindOf: ToLabel) and: [
+					 each text asString = '→ I wanted to attack f7' ] ]).
+	"Then the candidates, on the position before my move"
 	self
 		assert: (self arrowsOfStyle: #played) asArray
 		equals: #( 'f3g5' ).
@@ -101,26 +131,6 @@ CoachElementTest >> testAWholeMoment [
 		assert: (self arrowsOfStyle: #candidate) asArray
 		equals: #( 'd2d3' ).
 	self assert: (self zoneTexts includes: 'Marked: d3').
-	self clickOn: 'e1'.
-	self clickOn: 'e5'.
-	self assert: coach message equals: 'Illegal move'.
-	coach submitMoves.
-	scripter pulse.
-	self assert: (self zoneTexts includes: 'Why did you play Ng5?').
-	self assert: (self zoneTexts includes: 'It looked natural').
-	self deny: (self zoneTexts includes: 'I didn''t see it').
-	coach addQuickAnswer: 'It looked natural'.
-	coach addQuickAnswer: 'Intuition'.
-	self
-		assert: coach answerField text asString
-		equals: 'It looked natural. Intuition. '.
-	self answer: 'I wanted to attack f7'.
-	self assert: (coach history children anySatisfy: [ :each |
-				 (each isKindOf: ToLabel) and: [
-					 each text asString = '→ I wanted to attack f7' ] ]).
-	self assert: (coach board chessPosition pieceAt: 'g5') equals: 'N'.
-	self clickOn: 'h7'.
-	self clickOn: 'h6'.
 	coach submitMoves.
 	scripter pulse.
 	self assert:
@@ -132,6 +142,8 @@ CoachElementTest >> testAWholeMoment [
 	3 timesRepeat: [ self answer: 'I did not see it' ].
 	self assert: review currentMoment isRevealed.
 	self assert: (self zoneTexts includes: 'Engine line (+0.50): d4').
+	self assert: (self zoneTexts anySatisfy: [ :each |
+			 each beginsWith: 'The refutation: ' ]).
 	self assert:
 		(self zoneTexts includes:
 			 'Missed opponent threat · perception (70%)').
@@ -198,7 +210,7 @@ CoachElementTest >> testListShowsPastMomentsAndReviewsOneMoment [
 	self assert: (self zoneTexts includes:
 			 'You started this moment but did not finish it.').
 	coach reviewShown.
-	self assert: review currentQuestion kind equals: #expectedReply
+	self assert: review currentQuestion kind equals: #candidates
 ]
 
 { #category : 'tests' }

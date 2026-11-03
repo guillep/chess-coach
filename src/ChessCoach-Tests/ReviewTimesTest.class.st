@@ -23,10 +23,10 @@ ReviewTimesTest >> reviewDictionary [
 		moments: fixture momentsForTests.
 	review start: review moments last.
 	fixture wait: 30.
-	review answerMoves: #( 'f3g5' ).
+	review answerMoves: #( 'h7h6' ).
 	fixture wait: 45.
 	review answerText: 'attack'.
-	review answerMoves: #(  ).
+	review answerMoves: #( 'f3g5' ).
 	[ review currentMoment isRevealed ] whileFalse: [
 		review answerText: 'no' ].
 	fixture wait: 15.
@@ -60,7 +60,7 @@ ReviewTimesTest >> testAverages [
 		assert: (times secondsPerMomentKind at: 'onlyMoveFound')
 		equals: 20.
 	self
-		assert: (times secondsPerQuestionKind at: 'candidates')
+		assert: (times secondsPerQuestionKind at: 'refutation')
 		equals: 30.
 	self assert: (times secondsPerQuestionKind at: 'why') equals: 45.
 	self

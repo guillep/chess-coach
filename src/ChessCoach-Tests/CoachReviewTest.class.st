@@ -20,11 +20,12 @@ CoachReviewTest >> analysisForTests [
 
 { #category : 'helpers' }
 CoachReviewTest >> answerFirstMoment: review [
+	"The mistake at ply 7: the refutation, why, the candidates, then the engine's questions"
 
 	review start: (review moments detect: [ :each | each ply = 7 ]).
-	review answerMoves: #( 'f3g5' 'd2d3' ).
-	review answerText: 'I wanted to attack f7'.
 	review answerMoves: #( 'h7h6' ).
+	review answerText: 'I wanted to attack f7'.
+	review answerMoves: #( 'f3g5' 'd2d3' ).
 	[ review currentMoment isRevealed ] whileFalse: [
 		review answerText: 'I did not see it' ].
 	review classifyPending
@@ -144,6 +145,7 @@ CoachReviewTest >> testClassificationWaitsForOllamaAndSavesEveryChange [
 
 { #category : 'tests' }
 CoachReviewTest >> testDialogue [
+	"A bad move: find what punishes it first, then why, then the candidates"
 
 	| review moment reveal |
 	review := self newReview.
@@ -153,16 +155,21 @@ CoachReviewTest >> testDialogue [
 	self deny: (review moments anySatisfy: [ :each | each isStarted ]).
 	moment := review moments second.
 	review start: moment.
-	self assert: review currentQuestion kind equals: #candidates.
-	self assert:
-		(review currentQuestion text beginsWith: 'Your move was bad.').
-	review answerMoves: #( 'f3g5' 'd2d3' ).
+	self assert: review currentQuestion kind equals: #refutation.
+	self
+		assert: review currentQuestion text
+		equals:
+		'Ng5 was a mistake. Which reply of your opponent punishes it? Play it on the board.'.
+	self
+		should: [ review answerMoves: #( 'h7h6' 'd7d5' ) ]
+		raise: AssertionFailure.
+	review answerMoves: #( 'h7h6' ).
 	self
 		assert: review currentQuestion text
 		equals: 'Why did you play Ng5?'.
 	review answerText: 'I wanted to attack f7'.
-	self assert: review currentQuestion kind equals: #expectedReply.
-	review answerMoves: #( 'h7h6' ).
+	self assert: review currentQuestion kind equals: #candidates.
+	review answerMoves: #( 'f3g5' 'd2d3' ).
 	self
 		assert:
 		(moment pending collect: [ :each | each kind -> each move ]) asArray
@@ -185,6 +192,7 @@ CoachReviewTest >> testDialogue [
 	reveal := review revealOf: moment.
 	self assert: (reveal at: 'bestLine') equals: #( 'd2d4' ).
 	self assert: (reveal at: 'expectedReply') equals: #( 'h7h6' ).
+	self assert: (reveal at: 'replyQuestion') equals: #refutation.
 	self assert: ((reveal at: 'candidates') at: 'd2d3')
 		> ((reveal at: 'candidates') at: 'f3g5').
 	self
@@ -205,9 +213,9 @@ CoachReviewTest >> testDiscardedBadCandidatesAreNotQuestioned [
 	review := self newReview.
 	moment := review moments second.
 	review start: moment.
-	review answerMoves: #( 'f3g5' 'b1a3' 'd2d3' ).
-	review answerText: 'I wanted to attack f7'.
 	review answerMoves: #( 'h7h6' ).
+	review answerText: 'I wanted to attack f7'.
+	review answerMoves: #( 'f3g5' 'b1a3' 'd2d3' ).
 	self assert:
 		((moment pending collect: [ :each | each kind ]) asSet includesAll:
 			 #( #whyNotConsidered #whyNotBetter )).
@@ -236,6 +244,7 @@ CoachReviewTest >> testFoundOnlyMoveIsNotAMistake [
 
 { #category : 'tests' }
 CoachReviewTest >> testIllegalCandidate [
+	"The refutation is played in the position after my move"
 
 	| review |
 	review := self newReview.
@@ -243,7 +252,7 @@ CoachReviewTest >> testIllegalCandidate [
 	self
 		should: [ review answerMoves: #( 'e1e3' ) ]
 		raise: CoachIllegalMove.
-	self assert: review currentQuestion kind equals: #candidates
+	self assert: review currentQuestion kind equals: #refutation
 ]
 
 { #category : 'tests' }
@@ -450,7 +459,7 @@ CoachReviewTest >> testTimings [
 	moment := review moments last.
 	review start: moment.
 	self wait: 30.
-	review answerMoves: #( 'f3g5' ).
+	review answerMoves: #( 'h7h6' ).
 	self wait: 45.
 	review answerText: 'attack'.
 	self wait: 10.

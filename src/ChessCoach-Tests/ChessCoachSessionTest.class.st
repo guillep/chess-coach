@@ -425,9 +425,9 @@ ChessCoachSessionTest >> testReviewIsSavedAndFeedsTheMistakeDatabase [
 	session finishMarking: review of: entry.
 	review start: review moments first.
 	self assert: review currentMoment ply equals: 1.
-	review answerMoves: #(  ).
-	review answerText: 'It looked natural'.
 	review answerMoves: { game uciMoves second }.
+	review answerText: 'It looked natural'.
+	review answerMoves: #(  ).
 	[ review currentMoment isRevealed ] whileFalse: [
 		review answerText: 'I moved too fast' ].
 	review classifyPending.
@@ -448,9 +448,9 @@ ChessCoachSessionTest >> testReviewIsSavedAndFeedsTheMistakeDatabase [
 	self assert: second number equals: 2.
 	session finishMarking: second of: entry.
 	second start: second moments first.
-	second answerMoves: #(  ).
-	second answerText: 'Again'.
 	second answerMoves: { game uciMoves second }.
+	second answerText: 'Again'.
+	second answerMoves: #(  ).
 	[ second currentMoment isRevealed ] whileFalse: [
 		second answerText: 'Same' ].
 	second classifyPending.

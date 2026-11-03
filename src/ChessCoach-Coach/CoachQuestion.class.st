@@ -48,7 +48,21 @@ CoachQuestion >> asDictionary [
 CoachQuestion >> expectsMoves [
 	"Whether I answer by marking moves on the board instead of writing"
 
-	^ #( #candidates #expectedReply ) includes: kind
+	^ #( #candidates #expectedReply #refutation ) includes: kind
+]
+
+{ #category : 'testing' }
+CoachQuestion >> expectsOneMove [
+	"The refutation is one move: marking another replaces it"
+
+	^ kind = #refutation
+]
+
+{ #category : 'testing' }
+CoachQuestion >> isAboutTheReply [
+	"Answered on the position after my move: the reply I expected, or the one that punishes my move"
+
+	^ #( #expectedReply #refutation ) includes: kind
 ]
 
 { #category : 'accessing' }

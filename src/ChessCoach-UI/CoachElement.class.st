@@ -100,6 +100,9 @@ CoachElement >> buildBoardAnswer [
 	review currentQuestion kind = #candidates ifTrue: [
 			currentZone addChild: (self paragraph:
 					 'Your move is already marked in blue. Mark a move again to remove it.') ].
+	review currentQuestion expectsOneMove ifTrue: [
+			currentZone addChild: (self paragraph:
+					 'Play one move for your opponent; another move replaces it. Done with nothing marked means you don''t see it.') ].
 	currentZone addChild: (ChessCoachWidgets
 			 primaryButton: 'Done'
 			 icon: 'filled_arrowforward'
@@ -140,15 +143,18 @@ CoachElement >> buildEngineRevealOf: reveal before: before after: after [
 							  (format line: myLine for: color).
 							  (self lineInSAN: myLine moves from: after) })) ].
 	(reveal at: 'engineReply') ifNotNil: [ :reply |
-			currentZone addChild: (self paragraph:
-					 ('Engine''s reply: {1} · you expected: {2}' format: {
-							  (after sanForUCI: reply).
-							  ((reveal at: 'expectedReply') isEmpty
-								   ifTrue: [ 'nothing' ]
-								   ifFalse: [
-										   ', ' join:
-											   ((reveal at: 'expectedReply') collect: [ :each |
-												    after sanForUCI: each ]) ]) })) ]
+			currentZone addChild:
+				(self paragraph: (((reveal at: 'replyQuestion') = #refutation
+						   ifTrue: [ 'The refutation: {1} · you found: {2}' ]
+						   ifFalse: [ 'Engine''s reply: {1} · you expected: {2}' ])
+						  format: {
+								  (after sanForUCI: reply).
+								  ((reveal at: 'expectedReply') isEmpty
+									   ifTrue: [ 'nothing' ]
+									   ifFalse: [
+											   ', ' join:
+												   ((reveal at: 'expectedReply') collect: [ :each |
+													    after sanForUCI: each ]) ]) })) ]
 ]
 
 { #category : 'building' }
@@ -668,8 +674,7 @@ CoachElement >> describeMoves: someUCIMoves in: aCoachQuestion [
 
 	| position |
 	someUCIMoves ifEmpty: [ ^ 'none' ].
-	position := game positionAfterPly:
-		            (aCoachQuestion kind = #expectedReply
+	position := game positionAfterPly: (aCoachQuestion isAboutTheReply
 			             ifTrue: [ shownMoment ply ]
 			             ifFalse: [ shownMoment ply - 1 ]).
 	^ ', ' join:
@@ -929,7 +934,7 @@ CoachElement >> mode [
 
 { #category : 'actions' }
 CoachElement >> moveMarked: aUCIMove [
-	"Toggle aUCIMove in the answer being composed; my real move is always a candidate"
+	"Toggle aUCIMove in the answer being composed; my real move is always a candidate. The refutation is one move: marking another replaces it."
 
 	| question |
 	question := self currentQuestionOrNil.
@@ -943,7 +948,9 @@ CoachElement >> moveMarked: aUCIMove [
 		ifTrue: [ ^ self refresh ].
 	(markedMoves includes: aUCIMove)
 		ifTrue: [ markedMoves remove: aUCIMove ]
-		ifFalse: [ markedMoves add: aUCIMove ].
+		ifFalse: [
+				question expectsOneMove ifTrue: [ markedMoves removeAll ].
+				markedMoves add: aUCIMove ].
 	self refresh
 ]
 
@@ -1031,7 +1038,7 @@ CoachElement >> questionTitle: aCoachQuestion [
 
 { #category : 'private' }
 CoachElement >> quickAnswersFor: aCoachQuestion [
-	"Answers that fit the question: why I played a move, why I missed or discarded another, why I thought so long, or what I saw"
+	"Answers that fit the question: why I played a move, why I missed or discarded another, why I thought so long, or what I saw. 'It looked natural' and intuition are one answer."
 
 	| kind |
 	kind := aCoachQuestion kind.
@@ -1048,9 +1055,9 @@ CoachElement >> quickAnswersFor: aCoachQuestion [
 			     'I thought my move was better' 'No time' ) ].
 	kind = #whatDidYouSee ifTrue: [
 			^ #( 'I calculated the line' 'It was the only move that didn''t lose'
-			     'Intuition' ) ].
-	^ #( 'It looked natural' 'I calculated it and it looked good'
-	     'Intuition' 'No time' )
+			     'It looked natural (intuition)' ) ].
+	^ #( 'It looked natural (intuition)' 'I calculated it and it looked good'
+	     'No time' )
 ]
 
 { #category : 'updating' }
@@ -1259,13 +1266,14 @@ CoachElement >> stop [
 
 { #category : 'actions' }
 CoachElement >> submitMoves [
-	"The expected reply triggers the engine evaluation of my candidates, so it runs in the background"
+	"The expected reply, or the candidates when they come last, trigger the engine evaluation of my candidates, so they run in the background"
 
 	| moves |
 	moves := markedMoves asArray.
 	markedMoves := OrderedCollection new.
 	message := nil.
-	review currentQuestion kind = #expectedReply ifFalse: [
+	(review currentQuestion kind = #expectedReply or: [
+		 review currentQuestion kind = #candidates ]) ifFalse: [
 			review answerMoves: moves.
 			^ self refresh ].
 	self
@@ -1349,7 +1357,7 @@ CoachElement >> updateBoard [
 			^ board arrows: #(  ) ].
 	question := self currentQuestionOrNil.
 	board orientation: shownMoment color.
-	(question notNil and: [ question kind = #expectedReply ]) ifTrue: [
+	(question notNil and: [ question isAboutTheReply ]) ifTrue: [
 			board chessPosition: (game positionAfterPly: shownMoment ply).
 			^ board arrows: (markedMoves collect: [ :each |
 					   ChessArrow uci: each style: #candidate ]) ].

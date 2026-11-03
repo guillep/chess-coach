@@ -68,15 +68,17 @@ CoachReview >> analysis: aGameAnalysis [
 
 { #category : 'answering' }
 CoachReview >> answerMoves: someUCIMoves [
-	"Answer a board question with the moves I marked. My candidates are evaluated after my expected reply, or right after the candidates when there is no reply to expect (my move ended the game)."
+	"Answer a board question with the moves I marked (the refutation is one move). My candidates are evaluated after my expected reply, or right after the candidates when no reply question is left."
 
 	| question position moment |
 	question := self currentQuestion.
 	self assert: question expectsMoves.
+	self assert:
+		(question expectsOneMove not or: [ someUCIMoves size <= 1 ]).
 	moment := self currentMoment.
-	position := game positionAfterPly: (question kind = #candidates
-			             ifTrue: [ moment ply - 1 ]
-			             ifFalse: [ moment ply ]).
+	position := game positionAfterPly: (question isAboutTheReply
+			             ifTrue: [ moment ply ]
+			             ifFalse: [ moment ply - 1 ]).
 	someUCIMoves do: [ :move |
 		(position isLegalUCI: move) ifFalse: [
 			CoachIllegalMove signal: move ] ].
@@ -565,21 +567,20 @@ CoachReview >> plySeconds [
 
 { #category : 'private - questions' }
 CoachReview >> questionsAboutMoveOf: aMoment [
-	"Candidates are the moves I considered before calculating; the bad ones I discarded were discarded rightly. So only a bad move asks for them, to find a better move I discarded wrongly. A good move I thought long about, or marked, only asks why and what I expected. No expected reply when my move ended the game."
+	"A bad move first asks me to find what punishes it (one reply on the board): realising why it was bad comes before explaining it. Then why I played it, and last the candidates I discarded, to find a better move I discarded wrongly. A good move I thought long about, or marked, asks why and what I expected. No reply question when my move left no reply."
 
 	| played |
 	played := (game moves at: aMoment ply) san.
 	(aMoment kinds includesAny:
 		 #( #inaccuracy #mistake #blunder #onlyMoveMissed )) ifTrue: [
-			^ {
+			^ (self refutationQuestionsFor: aMoment) , {
+				  (CoachQuestion
+					   kind: #why
+					   text: 'Why did you play ' , played , '?').
 				  (CoachQuestion
 					   kind: #candidates
 					   text:
-					   'Your move was bad. Which other candidate moves did you evaluate and discard here? Mark them on the board.').
-				  (CoachQuestion
-					   kind: #why
-					   text: 'Why did you play ' , played , '?') }
-			  , (self expectedReplyQuestionsFor: aMoment) ].
+					   'Which other candidate moves did you evaluate and discard here? Mark them on the board.') } ].
 	(aMoment kinds includesAny: #( #longThink #marked )) ifTrue: [
 			^ { (CoachQuestion
 				   kind: #why
@@ -619,6 +620,29 @@ CoachReview >> recordShownPly [
 	shownPly := nil
 ]
 
+{ #category : 'private - questions' }
+CoachReview >> refutationQuestionsFor: aMoment [
+	"Find the reply that punishes my bad move, unless it left no reply"
+
+	| played kind |
+	(game positionAfterPly: aMoment ply) hasLegalMove ifFalse: [ ^ #(  ) ].
+	played := (game moves at: aMoment ply) san.
+	kind := #( #blunder #mistake #inaccuracy #onlyMoveMissed ) detect: [
+		        :each | aMoment kinds includes: each ].
+	^ { (CoachQuestion
+		   kind: #refutation
+		   text:
+			   ('{1} was {2}. Which reply of your opponent punishes it? Play it on the board.'
+				    format: {
+						    played.
+						    (kind = #onlyMoveMissed
+							     ifTrue: [ 'a miss: only one move kept the balance' ]
+							     ifFalse: [
+									     'a' , (kind = #inaccuracy
+										      ifTrue: [ 'n ' ]
+										      ifFalse: [ ' ' ]) , kind ]) })) }
+]
+
 { #category : 'converting' }
 CoachReview >> restoreFromJSON: aString analysis: aBlock [
 	"Continue a saved review. A review saved before reviews had numbers (review.json) has no marks or timings.
@@ -656,12 +680,15 @@ CoachReview >> resumeClock [
 
 { #category : 'revealing' }
 CoachReview >> revealOf: aMomentReview [
-	"What the engine says about a finished moment: my candidates' win %, the best line, the reply I missed and the proposed tags. Without Stockfish only my expected reply and the tags."
+	"What the engine says about a finished moment: my candidates' win %, the best line, the reply that punishes my move (or the one it expected), the reply I found or expected and the proposed tags. Without Stockfish only my reply and the tags."
 
-	| before after |
+	| before after replyAnswer |
 	self assert: aMomentReview isRevealed.
 	before := analysis atPly: aMomentReview ply - 1.
 	after := analysis atPly: aMomentReview ply.
+	replyAnswer := aMomentReview answers
+		               detect: [ :each | each question isAboutTheReply ]
+		               ifNone: [ nil ].
 	^ Dictionary new
 		  at: 'candidates' put: aMomentReview candidateWinPercents;
 		  at: 'bestLine'
@@ -677,10 +704,10 @@ CoachReview >> revealOf: aMomentReview [
 				   ifEmpty: [ nil ]
 				   ifNotEmpty: [ after bestLine firstMove ]);
 		  at: 'expectedReply'
-		  put: ((aMomentReview answers anySatisfy: [ :each |
-					    each question kind = #expectedReply ])
-				   ifTrue: [ (aMomentReview answerTo: #expectedReply) moves ]
-				   ifFalse: [ #(  ) ]);
+		  put:
+			  (replyAnswer ifNil: [ #(  ) ] ifNotNil: [ replyAnswer moves ]);
+		  at: 'replyQuestion'
+		  put: (replyAnswer ifNotNil: [ replyAnswer question kind ]);
 		  at: 'labels' put: aMomentReview labels;
 		  yourself
 ]

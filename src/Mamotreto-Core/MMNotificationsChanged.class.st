@@ -2,23 +2,23 @@
 Announced by the session when a notification is posted, read or dismissed.
 "
 Class {
-	#name : 'ChessCoachNotificationsChanged',
+	#name : 'MMNotificationsChanged',
 	#superclass : 'Announcement',
 	#instVars : [
 		'notifications'
 	],
-	#category : 'ChessCoach-App',
-	#package : 'ChessCoach-App'
+	#category : 'Mamotreto-Core',
+	#package : 'Mamotreto-Core'
 }
 
 { #category : 'accessing' }
-ChessCoachNotificationsChanged >> notifications [
+MMNotificationsChanged >> notifications [
 
 	^ notifications
 ]
 
 { #category : 'accessing' }
-ChessCoachNotificationsChanged >> notifications: someNotifications [
+MMNotificationsChanged >> notifications: someNotifications [
 
 	notifications := someNotifications
 ]

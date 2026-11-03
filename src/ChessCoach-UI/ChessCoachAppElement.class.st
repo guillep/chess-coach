@@ -1029,12 +1029,12 @@ ChessCoachAppElement >> session: aChessCoachSession [
 						 self analysisStateChangedOf: announcement gameId ]) ]
 		for: self.
 	session announcer
-		when: ChessCoachNotificationsChanged
+		when: MMNotificationsChanged
 		do: [ :announcement |
 			self enqueueTask: (BlTaskAction new action: [ self updateBell ]) ]
 		for: self.
 	session announcer
-		when: ChessCoachSettingsChanged
+		when: MMSettingsChanged
 		do: [ :announcement |
 				(#( 'pieceSet' 'boardTheme' ) includes: announcement key) ifTrue: [
 					self enqueueTask:

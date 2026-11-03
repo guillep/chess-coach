@@ -2,23 +2,23 @@
 A setting changed (key as in settings.json); the session has already applied it.
 "
 Class {
-	#name : 'ChessCoachSettingsChanged',
+	#name : 'MMSettingsChanged',
 	#superclass : 'Announcement',
 	#instVars : [
 		'key'
 	],
-	#category : 'ChessCoach-App',
-	#package : 'ChessCoach-App'
+	#category : 'Mamotreto-Core',
+	#package : 'Mamotreto-Core'
 }
 
 { #category : 'accessing' }
-ChessCoachSettingsChanged >> key [
+MMSettingsChanged >> key [
 
 	^ key
 ]
 
 { #category : 'accessing' }
-ChessCoachSettingsChanged >> key: aString [
+MMSettingsChanged >> key: aString [
 
 	key := aString
 ]

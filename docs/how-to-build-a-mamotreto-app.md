@@ -33,6 +33,10 @@ the board is what is big on the left, with its own controls.
   disabled until it applies and then enabled, or it is not on the page at all.
   Add the pane's actions once with `addAction:`, and enable or disable them as
   the selection changes.
+- **What cannot be taken back is red.** Closing issues, stopping running work
+  and their confirmations use `MMWidgets dangerButton:icon:do:`; the main
+  action of a view that can be undone or is harmless stays green
+  (`primaryButton:icon:do:`).
 - **A link is a link, and a button is a button.**
   - An external destination, such as a GitHub page or a CI run, is a link
     (`MMWidgets link:to:`).

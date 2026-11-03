@@ -162,7 +162,7 @@ MMWindow >> closeButtonDo: aBlock [
 
 { #category : 'closing' }
 MMWindow >> closeRequestedIn: aSpace [
-	"The user closed the window: close it, unless background jobs would be stopped; then ask first, in a banner below the title bar"
+	"The user closed the window: close it, unless background jobs would be stopped; then ask first, in a banner below the title bar. Stopping them cannot be taken back, so that button is red."
 
 	| count |
 	count := session unfinishedTaskCount.
@@ -186,10 +186,10 @@ MMWindow >> closeRequestedIn: aSpace [
 						  clickAction: [
 							  (self childWithId: #closeBanner) removeFromParent ];
 						  yourself);
-				 addChild: (ToButton new
-						  labelText: 'Close and stop them';
-						  clickAction: [ aSpace close ];
-						  yourself);
+				 addChild: (MMWidgets
+						  dangerButton: 'Close and stop them'
+						  icon: 'outlined_close'
+						  do: [ aSpace close ]);
 				 yourself)
 		at: 2
 ]

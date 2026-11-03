@@ -87,6 +87,17 @@ MMWidgets class >> credits [
 ]
 
 { #category : 'building' }
+MMWidgets class >> dangerButton: aString icon: anIconName do: aBlock [
+	"An action that cannot be taken back, such as closing issues or stopping running work: a filled red button with an icon"
+
+	^ self
+		  filledButton: aString
+		  icon: anIconName
+		  colour: (Color fromHexString: '#cf222e')
+		  do: aBlock
+]
+
+{ #category : 'building' }
 MMWidgets class >> dropdown: someAssociations [
 	"A dropdown of label -> value associations with the first one selected. Its list stops at the bottom of the window and scrolls."
 
@@ -101,6 +112,34 @@ MMWidgets class >> dropdown: someAssociations [
 	select popupDataAccessor addAll: someAssociations.
 	select selecter selectIndex: 1.
 	^ select
+]
+
+{ #category : 'building' }
+MMWidgets class >> filledButton: aString icon: anIconName colour: aColor do: aBlock [
+	"A filled button with an icon. The raw themes ignore the #primary and #danger stamps, so the button's own tokens give it its colours."
+
+	| button |
+	button := ToButton new
+		          labelText: aString;
+		          icon:
+			          ((ToMaterialDesignIconProvider iconNamed: anIconName)
+				           extent: 20 @ 20;
+				           yourself);
+		          clickAction: aBlock;
+		          padding: (BlInsets
+				           top: 8
+				           left: 16
+				           bottom: 8
+				           right: 16);
+		          yourself.
+	button
+		addTokenNamed: #'color-bg-container' withValue: aColor;
+		addTokenNamed: #'color-border' withValue: aColor;
+		addTokenNamed: #'color-text' withValue: Color white;
+		addTokenNamed: #'color-primary' withValue: Color white;
+		addTokenNamed: #'color-primary-hover' withValue: Color white;
+		addTokenNamed: #'color-primary-pressed' withValue: Color white.
+	^ button
 ]
 
 { #category : 'sizes' }
@@ -369,31 +408,13 @@ MMWidgets class >> pharoLogo [
 
 { #category : 'building' }
 MMWidgets class >> primaryButton: aString icon: anIconName do: aBlock [
-	"The main action of a view: a filled button with an icon. The raw themes ignore the #primary stamp, so the button's own tokens give it the primary colours."
+	"The main action of a view: a filled green button with an icon"
 
-	| button primary |
-	button := ToButton new
-		          labelText: aString;
-		          icon:
-			          ((ToMaterialDesignIconProvider iconNamed: anIconName)
-				           extent: 20 @ 20;
-				           yourself);
-		          clickAction: aBlock;
-		          padding: (BlInsets
-				           top: 8
-				           left: 16
-				           bottom: 8
-				           right: 16);
-		          yourself.
-	primary := Color fromHexString: '#2f6b45'.
-	button
-		addTokenNamed: #'color-bg-container' withValue: primary;
-		addTokenNamed: #'color-border' withValue: primary;
-		addTokenNamed: #'color-text' withValue: Color white;
-		addTokenNamed: #'color-primary' withValue: Color white;
-		addTokenNamed: #'color-primary-hover' withValue: Color white;
-		addTokenNamed: #'color-primary-pressed' withValue: Color white.
-	^ button
+	^ self
+		  filledButton: aString
+		  icon: anIconName
+		  colour: (Color fromHexString: '#2f6b45')
+		  do: aBlock
 ]
 
 { #category : 'building' }

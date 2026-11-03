@@ -1,5 +1,6 @@
 "
-I run the app's periodic background checks (new games, updates) in one process at background priority. Each task runs when I start and then every interval. I live with the app window: it starts me when it opens and stops me when it closes.
+I am the app's only background process. When I wake up I run the periodic checks that are due (new games, updates), each when I start and then every interval, then the work given to whenWokenDo:, such as a task manager's queued jobs. Then I sleep until the next check is due or someone signals my wakeup semaphore.
+I live with the app window: its session starts me when it opens and stops me when it closes. Nothing else in the app forks.
 A task's errors go to errorBlock, so one failing check never stops the others.
 "
 Class {
@@ -8,7 +9,9 @@ Class {
 	#instVars : [
 		'tasks',
 		'process',
-		'errorBlock'
+		'errorBlock',
+		'wakeup',
+		'workBlock'
 	],
 	#category : 'Mamotreto-Core',
 	#package : 'Mamotreto-Core'
@@ -29,7 +32,9 @@ MMScheduler >> initialize [
 
 	super initialize.
 	tasks := OrderedCollection new.
-	errorBlock := [ :error |  ]
+	errorBlock := [ :error |  ].
+	wakeup := Semaphore new.
+	workBlock := [ ]
 ]
 
 { #category : 'accessing' }
@@ -42,6 +47,20 @@ MMScheduler >> intervals [
 MMScheduler >> isRunning [
 
 	^ process notNil and: [ process isTerminated not ]
+]
+
+{ #category : 'running' }
+MMScheduler >> millisecondsUntilNextTaskAt: aDateAndTime [
+	"How long to sleep: until the next task is due, at least a second and at most a minute, so that a changed clock is noticed"
+
+	| next |
+	next := tasks
+		        inject: aDateAndTime + 1 minute
+		        into: [ :soonest :task |
+			        (task at: 3)
+				        ifNil: [ soonest ]
+				        ifNotNil: [ :due | soonest min: due ] ].
+	^ ((next - aDateAndTime) asMilliSeconds max: 1000) min: 60000
 ]
 
 { #category : 'accessing' }
@@ -64,15 +83,18 @@ MMScheduler >> runDueTasksAt: aDateAndTime [
 
 { #category : 'running' }
 MMScheduler >> start [
-	"Check for due tasks every few seconds in a background process"
+	"Run in the app's only background process: the due tasks, then the work given to whenWokenDo:, then sleep until the next task is due or wakeup is signalled"
 
 	self isRunning ifTrue: [ ^ self ].
 	process := [
 		           [
 			           self runDueTasksAt: DateAndTime now.
-			           (Delay forSeconds: 5) wait ] repeat ]
+			           workBlock value.
+			           wakeup waitTimeoutMilliseconds:
+				           (self millisecondsUntilNextTaskAt: DateAndTime now) ]
+			           repeat ]
 		           forkAt: Processor userBackgroundPriority
-		           named: 'Mamotreto scheduler'
+		           named: 'Mamotreto worker'
 ]
 
 { #category : 'running' }
@@ -80,4 +102,18 @@ MMScheduler >> stop [
 
 	process ifNotNil: [ process terminate ].
 	process := nil
+]
+
+{ #category : 'accessing' }
+MMScheduler >> wakeup [
+	"Signalled when there is work to run now"
+
+	^ wakeup
+]
+
+{ #category : 'accessing' }
+MMScheduler >> whenWokenDo: aBlock [
+	"After the due tasks, my process runs aBlock, such as a task manager's queued jobs. Signal wakeup to have it run at once."
+
+	workBlock := aBlock
 ]

@@ -767,20 +767,55 @@ SettingsElement >> texts [
 
 { #category : 'building' }
 SettingsElement >> thresholdsSection [
+	"The evaluation zones are in centipawns, from the mover's side"
 
 	^ ChessCoachWidgets
 		  section: 'Moment thresholds'
 		  help:
-		  'How sensitive each way of finding moments is. The Help page explains them. Changes apply to new analyses.'
+		  'How sensitive each way of finding moments is. Evaluation zones, in centipawns from the mover''s side: equal up to the first limit, better or worse up to the second, winning or losing up to the third, decisive beyond. The Help page explains how moves are classified from them. Changes apply to new analyses.'
 		  rows: {
-				  (self numberRow: 'Inaccuracy: win % lost' key: 'momentInaccuracyDrop' from: 1 to: 50 by: 1).
-				  (self numberRow: 'Mistake: win % lost' key: 'momentMistakeDrop' from: 1 to: 70 by: 1).
-				  (self numberRow: 'Blunder: win % lost' key: 'momentBlunderDrop' from: 1 to: 90 by: 1).
-				  (self numberRow: 'Only move: win % over the next move' key: 'momentOnlyMoveGap' from: 5 to: 60 by: 1).
-				  (self numberRow: 'Long think: at least (seconds)' key: 'momentLongThinkSeconds' from: 1 to: 120 by: 1).
-				  (self numberRow: 'Long think: times your average' key: 'momentLongThinkFactor' from: 1 to: 10 by: 1).
-				  (self numberRow: 'Opening: score below the best (%)' key: 'momentOpeningScoreGap' from: 1 to: 30 by: 1).
-				  (self numberRow: 'Opening: games a move needs' key: 'momentOpeningMinimumGames' from: 10 to: 500 by: 10) }
+				  (self
+					   numberRow: 'Equal zone up to (centipawns)'
+					   key: 'zoneEqualCentipawns'
+					   from: 10
+					   to: 90
+					   by: 10).
+				  (self
+					   numberRow: 'Better/worse zone up to (centipawns)'
+					   key: 'zoneWinningCentipawns'
+					   from: 100
+					   to: 400
+					   by: 10).
+				  (self
+					   numberRow: 'Winning/losing zone up to (centipawns)'
+					   key: 'zoneDecisiveCentipawns'
+					   from: 450
+					   to: 1000
+					   by: 50).
+				  (self
+					   numberRow: 'Long think: at least (seconds)'
+					   key: 'momentLongThinkSeconds'
+					   from: 1
+					   to: 120
+					   by: 1).
+				  (self
+					   numberRow: 'Long think: times your average'
+					   key: 'momentLongThinkFactor'
+					   from: 1
+					   to: 10
+					   by: 1).
+				  (self
+					   numberRow: 'Opening: score below the best (%)'
+					   key: 'momentOpeningScoreGap'
+					   from: 1
+					   to: 30
+					   by: 1).
+				  (self
+					   numberRow: 'Opening: games a move needs'
+					   key: 'momentOpeningMinimumGames'
+					   from: 10
+					   to: 500
+					   by: 10) }
 ]
 
 { #category : 'updating' }

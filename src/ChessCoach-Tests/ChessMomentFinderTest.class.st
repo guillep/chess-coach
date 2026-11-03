@@ -6,6 +6,41 @@ Class {
 }
 
 { #category : 'helpers' }
+ChessMomentFinderTest >> analysisOf: aPGN best: aUCIMove second: anotherUCIMove atPly: aPly [
+	"Every position of aPGN with one equal line, except the one before aPly: aUCIMove keeps 0.00 and anotherUCIMove gives the mover -1.50 (a mistake)"
+
+	| game |
+	game := PGNParser new parse: aPGN.
+	^ GameAnalysis
+		  depth: 18
+		  plies: ((0 to: game moves size) collect: [ :ply |
+					   | position |
+					   position := game positionAfterPly: ply.
+					   PlyAnalysis
+						   ply: ply
+						   fen: position fen
+						   lines: (ply = (aPly - 1)
+								    ifTrue: [
+										    {
+											    (EngineLine
+												     moves: { aUCIMove }
+												     centipawns: 0
+												     sideToMove: position turn).
+											    (EngineLine
+												     moves: { anotherUCIMove }
+												     centipawns: -150
+												     sideToMove: position turn) } ]
+								    ifFalse: [
+										    position hasLegalMove
+											    ifTrue: [
+													    { (EngineLine
+														     moves: { position legalUCIMoves first }
+														     centipawns: 0
+														     sideToMove: position turn) } ]
+											    ifFalse: [ #(  ) ] ]) ])
+]
+
+{ #category : 'helpers' }
 ChessMomentFinderTest >> analysisWithWhiteCentipawns: lineScores [
 	"lineScores holds, per position from ply 0, the engine lines' scores in centipawns from White's point of view.
 	A score written as a string such as '#-3' is a mate in 3 for Black ('#3' for White).
@@ -81,6 +116,19 @@ ChessMomentFinderTest >> testGameAnalysisRoundTripsThroughJSON [
 ]
 
 { #category : 'tests' }
+ChessMomentFinderTest >> testLongThinkSaysHowLong [
+	"3+2: White uses 5, 5, 60 and 5 s"
+
+	| game |
+	game := PGNParser new parse: '[TimeControl "180+2"]
+
+1. e4 { [%clk 0:02:57] } e5 { [%clk 0:02:58] } 2. Nf3 { [%clk 0:02:54] } Nc6 { [%clk 0:02:56] } 3. Bc4 { [%clk 0:01:56] } Nf6 { [%clk 0:02:54] } 4. d3 { [%clk 0:01:53] } Be7 { [%clk 0:02:52] }'.
+	self
+		assert: ((LongThinkFinder on: game) longThinkTextAt: 5)
+		equals: 'You spent 60 s here, 3× your average of 19 s'
+]
+
+{ #category : 'tests' }
 ChessMomentFinderTest >> testLongThinksComeFromTheClocks [
 	"3+2: White uses 5, 5, 60 and 5 s; Black 4 s per move"
 
@@ -152,7 +200,30 @@ ChessMomentFinderTest >> testOnlyMoveMissed [
 ]
 
 { #category : 'tests' }
+ChessMomentFinderTest >> testPlainRecapturesAreNotOnlyMoves [
+	"1. e4 d5 2. exd5 Qxd5: only the queen gets the pawn back, nothing to talk about. 3. d4 exd4 4. Nxd4: the knight and the queen can both take back, so choosing matters"
+
+	| plain choice |
+	plain := (OnlyMoveFinder on: (self
+			           analysisOf: '1. e4 d5 2. exd5 Qxd5'
+			           best: 'd8d5'
+			           second: 'a7a6'
+			           atPly: 4)) moments.
+	self assert: plain isEmpty.
+	choice := (OnlyMoveFinder on: (self
+			            analysisOf: '1. e4 e5 2. Nf3 Nc6 3. d4 exd4 4. Nxd4'
+			            best: 'f3d4'
+			            second: 'd1d4'
+			            atPly: 7)) moments.
+	self
+		assert: (choice collect: [ :each | each ply ]) asArray
+		equals: #( 7 ).
+	self assert: (choice first kinds includes: #onlyMoveFound)
+]
+
+{ #category : 'tests' }
 ChessMomentFinderTest >> testSmallDropsAreIgnoredAndBlackDropsCount [
+	"White's 0.20 drop stays in the equal zone; Black's 1.50 drop takes it from equal to worse: a mistake"
 
 	| moments |
 	moments := (EvaluationJumpFinder on:
@@ -161,7 +232,7 @@ ChessMomentFinderTest >> testSmallDropsAreIgnoredAndBlackDropsCount [
 	self assert: moments size equals: 1.
 	self assert: moments first ply equals: 2.
 	self assert: moments first color equals: #black.
-	self assert: (moments first kinds includes: #inaccuracy)
+	self assert: (moments first kinds includes: #mistake)
 ]
 
 { #category : 'tests' }
@@ -171,5 +242,23 @@ ChessMomentFinderTest >> testStayingInAForcedMateIsNotAMoment [
 	moments := (EvaluationJumpFinder on:
 		            (self analysisWithWhiteCentipawns:
 			             #( #( '#-3' ) #( '#-2' ) #( '#-2' ) ))) moments.
+	self assert: moments isEmpty
+]
+
+{ #category : 'tests' }
+ChessMomentFinderTest >> testTheOnlyLegalMoveIsNotAnOnlyMoment [
+	"After 3... Qxe4+ the white king's only legal move is to take the queen"
+
+	| game moments |
+	game := PGNParser new parse:
+		        '1. e4 e5 2. Ke2 Qh4 3. Ke3 Qxe4+ 4. Kxe4'.
+	self
+		assert: (game positionAfterPly: 6) legalUCIMoves asArray
+		equals: #( 'e3e4' ).
+	moments := (OnlyMoveFinder on: (self
+			             analysisOf: '1. e4 e5 2. Ke2 Qh4 3. Ke3 Qxe4+ 4. Kxe4'
+			             best: 'e3e4'
+			             second: 'e3d3'
+			             atPly: 7)) moments.
 	self assert: moments isEmpty
 ]

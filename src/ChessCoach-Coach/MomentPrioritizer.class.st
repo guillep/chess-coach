@@ -30,32 +30,26 @@ MomentPrioritizer >> byImportance: someMoments [
 		   (self scoreOf: a) > (self scoreOf: b) ])
 ]
 
-{ #category : 'private' }
-MomentPrioritizer >> crossedOutcome: aWinPercent to: anotherWinPercent [
-	"Whether the move turned a win into a non-win, or a non-loss into a loss"
-
-	^ (aWinPercent >= 70 and: [ anotherWinPercent < 70 ]) or: [
-		  aWinPercent > 30 and: [ anotherWinPercent <= 30 ] ]
-]
-
 { #category : 'scoring' }
 MomentPrioritizer >> scoreOf: aMoment [
+	"Blunders first, then mistakes (a missed only move counts as one), then inaccuracies; within a kind, the larger drop in pawns first (capped at 10 pawns, so that a mate doesn't hide everything else). Opening choices and found only moves score at least as a small drop."
 
-	| before after mover drop score |
+	| before after mover drop severity score |
+	severity := aMoment kinds inject: 0 into: [ :max :kind |
+			            max max:
+				            (#( #inaccuracy #mistake #blunder ) indexOf:
+					             (kind = #onlyMoveMissed
+						              ifTrue: [ #mistake ]
+						              ifFalse: [ kind ])) ].
 	before := analysis atPly: aMoment ply - 1.
 	after := analysis atPly: aMoment ply.
-	(before lines isEmpty or: [ after lines isEmpty ]) ifTrue: [ ^ 0 ].
 	mover := aMoment color.
-	drop := (before winPercentFor: mover) - (after winPercentFor: mover)
-		        max: 0.
-	score := drop.
-	((aMoment kinds includes: #onlyMoveMissed) and: [
-		 before lines size > 1 ]) ifTrue: [
-			score := score + ((before lines first winPercentFor: mover)
-			          - (before lines second winPercentFor: mover)) ].
-	(self
-		 crossedOutcome: (before winPercentFor: mover)
-		 to: (after winPercentFor: mover)) ifTrue: [ score := score + 20 ].
+	drop := (before lines isEmpty or: [ after lines isEmpty ])
+		        ifTrue: [ 0 ]
+		        ifFalse: [
+				        ((before bestLine pawnsFor: mover)
+				         - (after bestLine pawnsFor: mover) max: 0) min: 10 ].
+	score := severity * 100 + (drop * 9).
 	(aMoment kinds includesAny: #( #openingChoice #onlyMoveFound ))
 		ifTrue: [ score := score max: 10 ].
 	^ score

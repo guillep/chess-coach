@@ -383,11 +383,12 @@ CoachReview >> isOverTime [
 
 { #category : 'testing' }
 CoachReview >> isSuccess: aMomentReview [
-	"Nothing to tag as a mistake: a found only move, or, with the engine, a move that lost less than 5 win-% points (the best move, or one as good)"
+	"Nothing to tag as a mistake: a found only move or, with the engine, a move the evaluation zones didn't classify (no inaccuracy, mistake, blunder or missed only move). Without Stockfish, my own marks can still be tagged."
 
 	aMomentReview isSuccess ifTrue: [ ^ true ].
 	self hasEngine ifFalse: [ ^ false ].
-	^ (self winDropAt: aMomentReview ply for: aMomentReview color) < 5
+	^ (aMomentReview kinds includesAny:
+		   #( #inaccuracy #mistake #blunder #onlyMoveMissed )) not
 ]
 
 { #category : 'report' }
@@ -523,7 +524,7 @@ CoachReview >> number: anInteger [
 
 { #category : 'private - questions' }
 CoachReview >> openingQuestionsFor: aMoment [
-	"A long think first asks what took so long, whatever else the moment is"
+	"A long think first asks what took so long, saying how long, whatever else the moment is"
 
 	| questions |
 	questions := self questionsAboutMoveOf: aMoment.
@@ -531,8 +532,9 @@ CoachReview >> openingQuestionsFor: aMoment [
 	^ { (CoachQuestion
 		   kind: #whyLongThink
 		   text:
-		   'You thought for a long time here. Why did it take so long?') }
-	  , questions
+			   (((LongThinkFinder on: game) longThinkTextAt: aMoment ply)
+				    ifNil: [ 'You thought for a long time here' ])
+			   , '. Why did it take so long?') } , questions
 ]
 
 { #category : 'timing' }

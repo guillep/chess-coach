@@ -17,19 +17,28 @@ Class {
 HelpElement >> heuristicsText [
 	"With the current thresholds, which Settings change"
 
+	| pawns equal winning decisive |
+	pawns := [ :key |
+	         (session settings at: key) / 100.0
+		         printShowingDecimalPlaces: 1 ].
+	equal := pawns value: 'zoneEqualCentipawns'.
+	winning := pawns value: 'zoneWinningCentipawns'.
+	decisive := pawns value: 'zoneDecisiveCentipawns'.
 	^ {
-		  ('Evaluation drops compare the winning chances before and after your move, according to Stockfish. Losing {1} points of win percentage is an inaccuracy, {2} a mistake and {3} a blunder. Allowing a forced mate is always a blunder.' format: {
-				   (self threshold: 'momentInaccuracyDrop').
-				   (self threshold: 'momentMistakeDrop').
-				   (self threshold: 'momentBlunderDrop') }).
-		  ('Only moves are positions where the best move beats the second by at least {1} points of win percentage while something is at stake. The moment says whether you found it.' format: {
-				   (self threshold: 'momentOnlyMoveGap') }).
-		  ('Long thinks are moves that took at least {1} seconds and {2} times your average in that game. Games without clocks have none.' format: {
-				   (self threshold: 'momentLongThinkSeconds').
-				   (self threshold: 'momentLongThinkFactor') }).
-		  ('Opening choices compare your move with the Lichess database at your rating and time control. A move is a moment when it scores {1} points or more below the best move, or is rarely played while others are common. Moves need {2} games to count, and the comparison stops when a position has fewer.' format: {
-				   (self threshold: 'momentOpeningScoreGap').
-				   (self threshold: 'momentOpeningMinimumGames') }).
+		  ('Evaluation drops look at the zone of the evaluation before and after your move, from your side, according to Stockfish: equal (between -{1} and +{1} pawns), better or worse (up to {2}), winning or losing (up to {3}), decisive (beyond {3}, or a forced mate). Dropping two zones or more is a blunder; one zone in the middle (winning to better, better to equal, equal to worse, worse to losing) a mistake; one zone at an extreme (decisive to winning, losing to decisive against) an inaccuracy. Losing twice the equality limit or more without changing zone is an inaccuracy too, except when it stays decisive. A zone change counts only when the move lost at least {1} pawns. Allowing a forced mate is always a blunder.'
+			   format: {
+					   equal.
+					   winning.
+					   decisive }).
+		  'Only moves are positions where every move but the best would have been a mistake or worse. Forced moves and plain recaptures (getting back the material just taken when nothing else does) are left out. The moment says whether you found it.'.
+		  ('Long thinks are moves that took at least {1} seconds and {2} times your average in that game. Games without clocks have none.'
+			   format: {
+					   (self threshold: 'momentLongThinkSeconds').
+					   (self threshold: 'momentLongThinkFactor') }).
+		  ('Opening choices compare your move with the Lichess database at your rating and time control. A move is a moment when it scores {1} points or more below the best move, or is rarely played while others are common. Moves need {2} games to count, and the comparison stops when a position has fewer.'
+			   format: {
+					   (self threshold: 'momentOpeningScoreGap').
+					   (self threshold: 'momentOpeningMinimumGames') }).
 		  'Each of these can be turned off or tuned in Settings, under Analysis.' }
 ]
 

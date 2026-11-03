@@ -59,6 +59,21 @@ ChessPositionTest >> testInitialPosition [
 ]
 
 { #category : 'tests' }
+ChessPositionTest >> testLegalMovesAndMaterial [
+
+	| position |
+	position := ChessPosition initial.
+	self assert: position legalUCIMoves size equals: 20.
+	self assert: (position materialBalanceFor: #white) equals: 0.
+	position := position moves: #( 'e4' 'd5' 'exd5' ).
+	self assert: (position materialBalanceFor: #white) equals: 1.
+	self assert: (position materialBalanceFor: #black) equals: -1.
+	self
+		assert: ((position moveUCI: 'd8d5') materialBalanceFor: #black)
+		equals: 0
+]
+
+{ #category : 'tests' }
 ChessPositionTest >> testMoveAnswersNewPosition [
 
 	| initial next |

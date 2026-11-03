@@ -31,31 +31,27 @@ EvaluationJumpFinder >> allowsMate: mover before: before after: after [
 		  (before bestLine isMateFor: opponent) not ]
 ]
 
-{ #category : 'private' }
-EvaluationJumpFinder >> kindForDrop: aNumber [
-
-	aNumber >= (self threshold: 'momentBlunderDrop') ifTrue: [ ^ #blunder ].
-	aNumber >= (self threshold: 'momentMistakeDrop') ifTrue: [ ^ #mistake ].
-	aNumber >= (self threshold: 'momentInaccuracyDrop') ifTrue: [ ^ #inaccuracy ].
-	^ nil
-]
-
 { #category : 'finding' }
 EvaluationJumpFinder >> moments [
+	"Moves that dropped the mover's evaluation across zones (see EvaluationZones); a move that allowed a forced mate is a blunder"
 
+	| zones |
+	zones := self zones.
 	^ (1 to: analysis moveCount)
 		  inject: OrderedCollection new
 		  into: [ :moments :ply |
-				  | before after mover drop |
+				  | before after mover |
 				  before := analysis atPly: ply - 1.
 				  after := analysis atPly: ply.
 				  (before lines notEmpty and: [ after lines notEmpty ]) ifTrue: [
 						  mover := before sideToMove.
-						  drop := (before winPercentFor: mover)
-						          - (after winPercentFor: mover).
 						  ((self allowsMate: mover before: before after: after)
 							   ifTrue: [ #blunder ]
-							   ifFalse: [ self kindForDrop: drop ]) ifNotNil: [ :kind |
+							   ifFalse: [
+							   zones
+								   kindFromLine: before bestLine
+								   to: after bestLine
+								   for: mover ]) ifNotNil: [ :kind |
 								  moments add: (ChessMoment
 										   ply: ply
 										   color: mover
@@ -67,13 +63,18 @@ EvaluationJumpFinder >> moments [
 
 { #category : 'private' }
 EvaluationJumpFinder >> noteBefore: before after: after for: aColor [
+	"'Evaluation went from +0.50 (equal) to -1.50 (worse); best was d4', in pawns from the mover's side"
 
-	^ 'Win chance went from {1}% to {2}% ({3} → {4}); best was {5}'
+	| format zones names |
+	format := EvaluationFormat pawns.
+	zones := self zones.
+	names := EvaluationZones zoneNames.
+	^ 'Evaluation went from {1} ({2}) to {3} ({4}); best was {5}'
 		  format: {
-				  ((before winPercentFor: aColor) printShowingDecimalPlaces: 0).
-				  ((after winPercentFor: aColor) printShowingDecimalPlaces: 0).
-				  before bestLine scoreString.
-				  after bestLine scoreString.
+				  (format line: before bestLine for: aColor).
+				  (names at: (zones zoneOf: (before bestLine pawnsFor: aColor))).
+				  (format line: after bestLine for: aColor).
+				  (names at: (zones zoneOf: (after bestLine pawnsFor: aColor))).
 				  (before sanOf: before bestLine firstMove) }
 ]
 

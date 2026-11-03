@@ -13,13 +13,12 @@ Class {
 
 { #category : 'accessing' }
 MomentFinder class >> defaultThresholds [
-	"Setting key -> default"
+	"Setting key -> default. The evaluation zones are in centipawns, from the mover's side (see EvaluationZones)."
 
 	^ Dictionary new
-		  at: 'momentInaccuracyDrop' put: 10;
-		  at: 'momentMistakeDrop' put: 20;
-		  at: 'momentBlunderDrop' put: 30;
-		  at: 'momentOnlyMoveGap' put: 20;
+		  at: 'zoneEqualCentipawns' put: 60;
+		  at: 'zoneWinningCentipawns' put: 200;
+		  at: 'zoneDecisiveCentipawns' put: 500;
 		  at: 'momentLongThinkSeconds' put: 10;
 		  at: 'momentLongThinkFactor' put: 3;
 		  at: 'momentOpeningScoreGap' put: 5;
@@ -39,4 +38,14 @@ MomentFinder >> threshold: aKey [
 MomentFinder >> thresholds: aDictionary [
 
 	thresholds := aDictionary
+]
+
+{ #category : 'accessing' }
+MomentFinder >> zones [
+	"The evaluation zones of my thresholds"
+
+	^ EvaluationZones thresholds:
+		  (#( 'zoneEqualCentipawns' 'zoneWinningCentipawns'
+		      'zoneDecisiveCentipawns' ) collect: [ :each |
+			   each -> (self threshold: each) ]) asDictionary
 ]

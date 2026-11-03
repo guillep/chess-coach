@@ -312,14 +312,14 @@ ChessCoachAppElementTest >> testHelpIconOpensItsTooltipOnClick [
 ChessCoachAppElementTest >> testHelpShowsTheCurrentThresholds [
 
 	| help |
-	session settings at: 'momentBlunderDrop' put: 42.
+	session settings at: 'zoneDecisiveCentipawns' put: 420.
 	app helpElement session: session.
 	help := app helpElement.
-	self assert: (help heuristicsText first includesSubstring: '42').
+	self assert: (help heuristicsText first includesSubstring: '4.2').
 	self assert: (help mistakeTypesText anySatisfy: [ :each |
 			 each beginsWith: 'Perception' ]).
-	self assert: help mistakeTypesText size
-		> MistakeTaxonomy default tags size
+	self assert:
+		help mistakeTypesText size > MistakeTaxonomy default tags size
 ]
 
 { #category : 'tests' }

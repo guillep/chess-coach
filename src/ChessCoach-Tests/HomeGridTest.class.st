@@ -75,12 +75,11 @@ HomeGridTest >> testThresholdsComeFromTheFinder [
 
 	| finder |
 	finder := EvaluationJumpFinder new.
-	self assert: (finder kindForDrop: 15) equals: #inaccuracy.
+	self assert: (finder zones kindFrom: 0 to: -1) equals: #mistake.
 	finder thresholds: (Dictionary new
-			 at: 'momentInaccuracyDrop' put: 16;
+			 at: 'zoneEqualCentipawns' put: 120;
 			 yourself).
-	self assert: (finder kindForDrop: 15) isNil.
-	self assert: (finder kindForDrop: 30) equals: #blunder
+	self assert: (finder zones kindFrom: 0 to: -1) isNil
 ]
 
 { #category : 'tests' }

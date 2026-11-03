@@ -9,9 +9,8 @@ Class {
 MomentPrioritizerTest >> testByImportance [
 
 	| analysis moments ordered prioritizer |
-	"Engine lines per position, White's centipawns. Ply 1: White 55% -> 41%, no line crossed (14).
-	Ply 4: Black 59% -> 25%, crosses 30% (34 + 20). Ply 5: White misses the only move, 75% -> 41%,
-	crosses 70% (34 + gap 34 + 20)."
+	"Engine lines per position, White's centipawns. Ply 1: a mistake, White +0.50 -> -1.00 (200 + 1.5 pawns x 9).
+	Ply 4: an opening choice that lost nothing (at least 10). Ply 5: White misses the only move, +3.00 -> -1.00, counted as a mistake (200 + 4 x 9). My marks come first."
 	analysis := GameAnalysis
 		            depth: 18
 		            plies:
@@ -55,14 +54,11 @@ MomentPrioritizerTest >> testByImportance [
 			            source: #engine
 			            note: nil) }.
 	prioritizer := MomentPrioritizer on: analysis.
-	self assert:
-		((prioritizer scoreOf: moments first) between: 13 and: 15).
-	self assert:
-		((prioritizer scoreOf: moments third) between: 53 and: 55).
-	self assert:
-		((prioritizer scoreOf: moments fourth) between: 87 and: 90).
+	self assert: (prioritizer scoreOf: moments first) equals: 213.5.
+	self assert: (prioritizer scoreOf: moments third) equals: 36.
+	self assert: (prioritizer scoreOf: moments fourth) equals: 236.
 	ordered := prioritizer byImportance: moments.
 	self
 		assert: (ordered collect: [ :each | each ply ]) asArray
-		equals: #( 2 5 4 1 )
+		equals: #( 2 5 1 4 )
 ]

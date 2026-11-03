@@ -421,6 +421,46 @@ ChessPosition >> lastMoveUCI [
 	^ lastMoveUCI
 ]
 
+{ #category : 'testing' }
+ChessPosition >> legalUCIMoves [
+	"Every legal move of the side to move, in UCI; promotions only to a queen"
+
+	| squares |
+	squares := (1 to: 8) flatCollect: [ :file |
+		           (1 to: 8) collect: [ :rank |
+			           self squareAtFile: file rank: rank ] ].
+	^ (pieces keys select: [ :from |
+		   (self colorOf: (pieces at: from)) = turn ]) asArray flatCollect: [
+			  :from |
+			  (squares collect: [ :to |
+					   ((pieces at: from) first asUppercase = $P and: [
+						    (self rankOf: to) = 1 or: [ (self rankOf: to) = 8 ] ])
+						   ifTrue: [ from , to , 'q' ]
+						   ifFalse: [ from , to ] ]) select: [ :uci |
+				  self isLegalUCI: uci ] ]
+]
+
+{ #category : 'accessing' }
+ChessPosition >> materialBalanceFor: aColor [
+	"aColor's material minus its opponent's, classical values (pawn 1, knight and bishop 3, rook 5, queen 9)"
+
+	| values |
+	values := Dictionary new
+		          at: $P put: 1;
+		          at: $N put: 3;
+		          at: $B put: 3;
+		          at: $R put: 5;
+		          at: $Q put: 9;
+		          at: $K put: 0;
+		          yourself.
+	^ pieces inject: 0 into: [ :sum :piece |
+			  | value |
+			  value := values at: piece first asUppercase.
+			  (self colorOf: piece) = aColor
+				  ifTrue: [ sum + value ]
+				  ifFalse: [ sum - value ] ]
+]
+
 { #category : 'moving' }
 ChessPosition >> move: aSAN [
 
@@ -471,6 +511,13 @@ ChessPosition >> movePieceFrom: from to: to promotion: aLetterOrNil [
 		                ifNil: [ '' ]
 		                ifNotNil: [ aLetterOrNil asLowercase ]).
 	self endTurn
+]
+
+{ #category : 'moving' }
+ChessPosition >> moveUCI: aUCIMove [
+	"The position after aUCIMove, which must be legal; the receiver is not modified"
+
+	^ self move: (self sanForUCI: aUCIMove)
 ]
 
 { #category : 'moving' }

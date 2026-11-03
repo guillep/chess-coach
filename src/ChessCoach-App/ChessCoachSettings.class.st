@@ -33,9 +33,9 @@ ChessCoachSettings class >> defaults [
 
 { #category : 'constants' }
 ChessCoachSettings class >> formatVersion [
-	"2 added the moment thresholds, 3 the evaluation unit"
+	"2 added the moment thresholds, 3 the evaluation unit, 4 replaced the win-% drops by the evaluation zones (centipawns); the old drop keys are ignored"
 
-	^ 3
+	^ 4
 ]
 
 { #category : 'accessing' }

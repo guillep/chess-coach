@@ -20,6 +20,34 @@ LongThinkFinder class >> on: aGame [
 ]
 
 { #category : 'finding' }
+LongThinkFinder >> averageSecondsOf: aPly [
+	"The mover's average seconds per move in this game, for the side that played aPly"
+
+	| seconds own |
+	seconds := self secondsPerPly.
+	own := (seconds keys select: [ :ply | ply \\ 2 = (aPly \\ 2) ])
+		       collect: [ :ply | seconds at: ply ].
+	own ifEmpty: [ ^ 0 ].
+	^ (own inject: 0 into: [ :sum :each | sum + each ]) / own size
+]
+
+{ #category : 'finding' }
+LongThinkFinder >> longThinkTextAt: aPly [
+	"'You spent 42 s here, 5× your average of 8 s', or nil without a clock"
+
+	| used average |
+	used := self secondsPerPly at: aPly ifAbsent: [ ^ nil ].
+	average := self averageSecondsOf: aPly.
+	^ average > 0
+		  ifTrue: [
+				  'You spent {1} s here, {2}× your average of {3} s' format: {
+						  used rounded.
+						  (used / average) rounded.
+						  average rounded } ]
+		  ifFalse: [ 'You spent {1} s here' format: { used rounded } ]
+]
+
+{ #category : 'finding' }
 LongThinkFinder >> moments [
 
 	| seconds averages |

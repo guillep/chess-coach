@@ -26,11 +26,11 @@ ChessCoachSettingsTest >> testAnOlderFileGetsTheThresholdDefaults [
 		stream nextPutAll: '{"formatVersion":1,"depth":20}' ].
 	settings := ChessCoachSettings onFile: file.
 	self assert: (settings at: 'depth') equals: 20.
-	self assert: (settings at: 'momentBlunderDrop') equals: 30.
+	self assert: (settings at: 'zoneEqualCentipawns') equals: 60.
 	settings at: 'depth' put: 21.
 	self
 		assert: ((STONJSON fromString: file contents) at: 'formatVersion')
-		equals: 3
+		equals: ChessCoachSettings formatVersion
 ]
 
 { #category : 'tests' }

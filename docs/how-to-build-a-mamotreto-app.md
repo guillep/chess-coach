@@ -21,6 +21,9 @@ Most pages list things and act on them. Build them on `MMListPage`:
 - **Confirmations replace the tabs in the pane**, for example "Close 2 items?".
   They keep the same actions above. `showInPane:` shows one, and `refreshPane`
   brings the tabs back.
+- **Whatever may not fit scrolls.** The pane's tabs and confirmations scroll
+  (`MMListPage` does it), and so does the body of a page that is not a list,
+  such as Settings (`MMWidgets scrollable:`). Only the page title stays put.
 - **Buttons that change the selection itself go above the list**, not in the
   pane. Select all and Clear selection are examples.
 

@@ -58,6 +58,16 @@ MMExampleWindowTest >> testGreetButtonRunsTheService [
 ]
 
 { #category : 'tests' }
+MMExampleWindowTest >> testLinksAreButtons [
+	"A label with a click handler does not look nor behave as something to click"
+
+	| link |
+	link := MMWidgets link: 'Pharo' to: 'https://pharo.org'.
+	self assert: (link isKindOf: ToButton).
+	self assert: link labelText asString equals: 'Pharo'
+]
+
+{ #category : 'tests' }
 MMExampleWindowTest >> testShowPage [
 
 	window showPage: #Look.

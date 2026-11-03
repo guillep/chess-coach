@@ -187,18 +187,23 @@ MMWidgets class >> iconColor: aColor [
 
 { #category : 'building' }
 MMWidgets class >> link: aString to: anUrl [
-	"A label that opens anUrl; a label, not a button, so it fits the status bar"
+	"A button that looks like a link: the text in the link colour, without background, border or padding, so it fits in a line of text. It is a button, not a label with a click handler, so it is focusable and reacts like one. Toplo has no link type of button (upstream list), hence the tokens."
 
-	| label |
-	label := ToLabel new
-		         text: (aString asRopedText
-				          foreground: (Color fromHexString: '#c98a4b');
-				          yourself);
-		         yourself.
-	label
-		addEventHandlerOn: BlClickEvent
-		do: [ :event | WebBrowser openOn: anUrl ].
-	^ label
+	| button colour |
+	colour := Color fromHexString: '#c98a4b'.
+	button := ToButton new
+		          labelText: aString;
+		          clickAction: [ WebBrowser openOn: anUrl ];
+		          padding: BlInsets empty;
+		          yourself.
+	button
+		addTokenNamed: #'color-bg-container' withValue: Color transparent;
+		addTokenNamed: #'color-border' withValue: Color transparent;
+		addTokenNamed: #'color-text' withValue: colour;
+		addTokenNamed: #'color-primary' withValue: colour;
+		addTokenNamed: #'color-primary-hover' withValue: colour darker;
+		addTokenNamed: #'color-primary-pressed' withValue: colour darker.
+	^ button
 ]
 
 { #category : 'sizes' }

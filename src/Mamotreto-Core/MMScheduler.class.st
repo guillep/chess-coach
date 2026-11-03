@@ -3,19 +3,19 @@ I run the app's periodic background checks (new games, updates) in one process a
 A task's errors go to errorBlock, so one failing check never stops the others.
 "
 Class {
-	#name : 'ChessCoachScheduler',
+	#name : 'MMScheduler',
 	#superclass : 'Object',
 	#instVars : [
 		'tasks',
 		'process',
 		'errorBlock'
 	],
-	#category : 'ChessCoach-App',
-	#package : 'ChessCoach-App'
+	#category : 'Mamotreto-Core',
+	#package : 'Mamotreto-Core'
 }
 
 { #category : 'accessing' }
-ChessCoachScheduler >> every: aDuration do: aBlock [
+MMScheduler >> every: aDuration do: aBlock [
 	"Run aBlock when I start, then every aDuration. A task is { interval. block. next run time }"
 
 	tasks add: {
@@ -25,7 +25,7 @@ ChessCoachScheduler >> every: aDuration do: aBlock [
 ]
 
 { #category : 'initialization' }
-ChessCoachScheduler >> initialize [
+MMScheduler >> initialize [
 
 	super initialize.
 	tasks := OrderedCollection new.
@@ -33,25 +33,25 @@ ChessCoachScheduler >> initialize [
 ]
 
 { #category : 'accessing' }
-ChessCoachScheduler >> intervals [
+MMScheduler >> intervals [
 
 	^ tasks collect: [ :task | task first ]
 ]
 
 { #category : 'testing' }
-ChessCoachScheduler >> isRunning [
+MMScheduler >> isRunning [
 
 	^ process notNil and: [ process isTerminated not ]
 ]
 
 { #category : 'accessing' }
-ChessCoachScheduler >> onErrorDo: aBlock [
+MMScheduler >> onErrorDo: aBlock [
 
 	errorBlock := aBlock
 ]
 
 { #category : 'running' }
-ChessCoachScheduler >> runDueTasksAt: aDateAndTime [
+MMScheduler >> runDueTasksAt: aDateAndTime [
 	"Run every task never run or due at aDateAndTime, and plan its next run"
 
 	tasks do: [ :task |
@@ -63,7 +63,7 @@ ChessCoachScheduler >> runDueTasksAt: aDateAndTime [
 ]
 
 { #category : 'running' }
-ChessCoachScheduler >> start [
+MMScheduler >> start [
 	"Check for due tasks every few seconds in a background process"
 
 	self isRunning ifTrue: [ ^ self ].
@@ -72,11 +72,11 @@ ChessCoachScheduler >> start [
 			           self runDueTasksAt: DateAndTime now.
 			           (Delay forSeconds: 5) wait ] repeat ]
 		           forkAt: Processor userBackgroundPriority
-		           named: 'Chess Coach scheduler'
+		           named: 'Mamotreto scheduler'
 ]
 
 { #category : 'running' }
-ChessCoachScheduler >> stop [
+MMScheduler >> stop [
 
 	process ifNotNil: [ process terminate ].
 	process := nil

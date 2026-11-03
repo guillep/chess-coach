@@ -1,32 +1,32 @@
 Class {
-	#name : 'ChessCoachSchedulerTest',
+	#name : 'MMSchedulerTest',
 	#superclass : 'TestCase',
 	#instVars : [
 		'scheduler',
 		'runs'
 	],
-	#category : 'ChessCoach-Tests',
-	#package : 'ChessCoach-Tests'
+	#category : 'Mamotreto-Tests',
+	#package : 'Mamotreto-Tests'
 }
 
 { #category : 'running' }
-ChessCoachSchedulerTest >> setUp [
+MMSchedulerTest >> setUp [
 
 	super setUp.
 	runs := 0.
-	scheduler := ChessCoachScheduler new.
+	scheduler := MMScheduler new.
 	scheduler every: 30 minutes do: [ runs := runs + 1 ]
 ]
 
 { #category : 'running' }
-ChessCoachSchedulerTest >> tearDown [
+MMSchedulerTest >> tearDown [
 
 	scheduler stop.
 	super tearDown
 ]
 
 { #category : 'tests' }
-ChessCoachSchedulerTest >> testAFailingTaskDoesNotStopTheOthers [
+MMSchedulerTest >> testAFailingTaskDoesNotStopTheOthers [
 
 	| errors |
 	errors := OrderedCollection new.
@@ -39,7 +39,7 @@ ChessCoachSchedulerTest >> testAFailingTaskDoesNotStopTheOthers [
 ]
 
 { #category : 'tests' }
-ChessCoachSchedulerTest >> testATaskRunsAtOnceThenEveryInterval [
+MMSchedulerTest >> testATaskRunsAtOnceThenEveryInterval [
 
 	| start |
 	start := DateAndTime now.
@@ -52,7 +52,7 @@ ChessCoachSchedulerTest >> testATaskRunsAtOnceThenEveryInterval [
 ]
 
 { #category : 'tests' }
-ChessCoachSchedulerTest >> testStartRunsTheTasksInTheBackgroundUntilStopped [
+MMSchedulerTest >> testStartRunsTheTasksInTheBackgroundUntilStopped [
 
 	scheduler start.
 	self assert: scheduler isRunning.

@@ -1134,7 +1134,7 @@ ChessCoachSession >> startScheduledChecks [
 	"Check for new games now and every so many minutes (a setting), and for updates now and every 6 hours, until shutDown. Unexpected errors go to errors.log"
 
 	scheduler ifNotNil: [ scheduler stop ].
-	scheduler := ChessCoachScheduler new.
+	scheduler := MMScheduler new.
 	scheduler onErrorDo: [ :error | self logError: error ].
 	scheduler
 		every: self settings gamesCheckMinutes minutes

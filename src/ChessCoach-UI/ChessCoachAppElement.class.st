@@ -129,7 +129,7 @@ ChessCoachAppElement >> applyAppTheme [
 	tint := Color fromHexString: (dark
 			         ifTrue: [ '#f6ead2' ]
 			         ifFalse: [ '#12281b' ]).
-	ChessCoachWidgets iconColor: tint.
+	MMWidgets iconColor: tint.
 	{
 		self.
 		dashboard.
@@ -483,15 +483,9 @@ ChessCoachAppElement >> newFilterSelect: someAssociations [
 	"A dropdown of label -> value, the first selected, that reloads the table"
 
 	| select |
-	select := ToSingleSelectElement new
+	select := (MMWidgets dropdown: someAssociations)
 		          width: 190;
 		          yourself.
-	select popupListElement nodeBuilder: [ :node :assoc :holder |
-		node addChild: (ToLabel text: assoc key) ].
-	select dataViewBuilder: [ :view :assoc |
-		view addChild: (ToLabel text: assoc key) ].
-	select popupDataAccessor addAll: someAssociations.
-	select selecter selectIndex: 1.
 	select
 		addEventHandlerOn: ToSelectChangedEvent
 		do: [ :event | session ifNotNil: [ self updateFromSession ] ].

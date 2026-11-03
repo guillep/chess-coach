@@ -83,7 +83,7 @@ HomeElement >> cardOf: aWidget [
 		column addChild: titleField.
 		(aWidget optionRowsOn: self) do: [ :each | column addChild: each ] ].
 	rows do: [ :each | column addChild: each ].
-	group := ChessCoachGroupElement new.
+	group := MMGroupElement new.
 	group title: aWidget title help: nil.
 	group rows addChild: (ChessCoachWidgets scrollable: column).
 	group vMatchParent.

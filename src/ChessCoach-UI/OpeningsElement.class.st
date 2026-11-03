@@ -205,21 +205,11 @@ OpeningsElement >> newRowOf: anOpeningTree [
 
 { #category : 'building' }
 OpeningsElement >> newSelect: someAssociations [
-	"A dropdown of label -> value associations with the first one selected. Its list stops at the bottom of the window and scrolls."
+	"A dropdown of label -> value associations with the first one selected, as wide as its place"
 
-	| select |
-	select := ToSingleSelectElement new
-		          hMatchParent;
-		          yourself.
-	select manager maxHeightPolicy:
-		ToSelectPopupMatchParentMaxHeightPolicy new.
-	select popupListElement nodeBuilder: [ :node :assoc :holder |
-		node addChild: (ToLabel text: assoc key) ].
-	select dataViewBuilder: [ :view :assoc |
-		view addChild: (ToLabel text: assoc key) ].
-	select popupDataAccessor addAll: someAssociations.
-	select selecter selectIndex: 1.
-	^ select
+	^ (MMWidgets dropdown: someAssociations)
+		  hMatchParent;
+		  yourself
 ]
 
 { #category : 'actions' }

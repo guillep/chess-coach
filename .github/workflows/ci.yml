@@ -23,7 +23,7 @@ jobs:
 
       - name: Run the tests on the built image
         working-directory: packaging/build/work
-        run: pharo-vm/Pharo.app/Contents/MacOS/Pharo --headless Pharo.image test --fail-on-failure "ChessCoach-Tests"
+        run: pharo-vm/Pharo.app/Contents/MacOS/Pharo --headless Pharo.image test --fail-on-failure "ChessCoach-Tests" "Mamotreto-Tests"
 
       - name: Archive the app
         run: ditto -c -k --keepParent "packaging/build/Chessmate.app" Chessmate.zip

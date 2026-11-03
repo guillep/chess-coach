@@ -109,7 +109,7 @@ HelpElement >> update [
 	zone removeChildren.
 	self topics doWithIndex: [ :topic :index |
 		| group |
-		group := ChessCoachGroupElement new.
+		group := MMGroupElement new.
 		group title: topic key help: nil.
 		group beCollapsible.
 		topic value do: [ :each |

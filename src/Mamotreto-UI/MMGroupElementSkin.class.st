@@ -2,43 +2,43 @@
 The accordion's skin without its arrow: a group doesn't close.
 "
 Class {
-	#name : 'ChessCoachGroupElementSkin',
+	#name : 'MMGroupElementSkin',
 	#superclass : 'ToAccordionElementSkin',
-	#category : 'ChessCoach-UI-Widgets',
-	#package : 'ChessCoach-UI',
+	#category : 'Mamotreto-UI-Widgets',
+	#package : 'Mamotreto-UI',
 	#tag : 'Widgets'
 }
 
 { #category : 'event handling' }
-ChessCoachGroupElementSkin >> checkedSkinEvent: anEvent [
+MMGroupElementSkin >> checkedSkinEvent: anEvent [
 
 	super checkedSkinEvent: anEvent.
 	anEvent elementDo: [ :e | self removeArrowOf: e ]
 ]
 
 { #category : 'private' }
-ChessCoachGroupElementSkin >> collapseHeader: aHeader [
+MMGroupElementSkin >> collapseHeader: aHeader [
 	"No arrow to turn, unless it is collapsible"
 
 	aHeader parent isCollapsible ifTrue: [ super collapseHeader: aHeader ]
 ]
 
 { #category : 'private' }
-ChessCoachGroupElementSkin >> expandHeader: aHeader [
+MMGroupElementSkin >> expandHeader: aHeader [
 	"No arrow to turn, unless it is collapsible"
 
 	aHeader parent isCollapsible ifTrue: [ super expandHeader: aHeader ]
 ]
 
 { #category : 'event handling' }
-ChessCoachGroupElementSkin >> installSkinEvent: anEvent [
+MMGroupElementSkin >> installSkinEvent: anEvent [
 
 	super installSkinEvent: anEvent.
 	anEvent elementDo: [ :e | self removeArrowOf: e ]
 ]
 
 { #category : 'private' }
-ChessCoachGroupElementSkin >> removeArrowOf: aGroup [
+MMGroupElementSkin >> removeArrowOf: aGroup [
 
 	aGroup isCollapsible ifTrue: [ ^ self ].
 	aGroup header icon: (BlElement new
@@ -47,7 +47,7 @@ ChessCoachGroupElementSkin >> removeArrowOf: aGroup [
 ]
 
 { #category : 'event handling' }
-ChessCoachGroupElementSkin >> uncheckedSkinEvent: anEvent [
+MMGroupElementSkin >> uncheckedSkinEvent: anEvent [
 
 	super uncheckedSkinEvent: anEvent.
 	anEvent elementDo: [ :e | self removeArrowOf: e ]

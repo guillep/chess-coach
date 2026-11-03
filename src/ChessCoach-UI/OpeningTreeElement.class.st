@@ -40,7 +40,7 @@ OpeningTreeElement >> accordion: aTitle build: aBlock [
 	"A collapsible group, kept open or closed across positions. aBlock adds its rows to panel, which points to them meanwhile."
 
 	| group page |
-	group := ChessCoachGroupElement new.
+	group := MMGroupElement new.
 	group title: aTitle help: nil.
 	group beCollapsible.
 	page := panel.

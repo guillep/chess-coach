@@ -497,11 +497,12 @@ CoachReview >> mistakeRecordFor: aMomentReview [
 
 { #category : 'mistakes' }
 CoachReview >> mistakeRecords [
-	"One record per reviewed moment that was not a success (see isSuccess:)"
+	"One record per reviewed moment that was not a success (see isSuccess:) nor dismissed"
 
 	^ reviews
 		  select: [ :each |
-		  each isReviewed and: [ (self isSuccess: each) not ] ]
+				  each isReviewed and: [
+					  each isDismissed not and: [ (self isSuccess: each) not ] ] ]
 		  thenCollect: [ :each | self mistakeRecordFor: each ]
 ]
 
@@ -514,10 +515,12 @@ CoachReview >> moments [
 
 { #category : 'moments' }
 CoachReview >> nextMomentAfter: aPly [
-	"The first moment after aPly not reviewed yet, or nil when none is left"
+	"The first moment after aPly not reviewed or dismissed yet, or nil when none is left"
 
 	^ reviews
-		  detect: [ :each | each ply > aPly and: [ each isReviewed not ] ]
+		  detect: [ :each |
+				  each ply > aPly and: [
+					  each isReviewed not and: [ each isDismissed not ] ] ]
 		  ifNone: [ nil ]
 ]
 
@@ -848,6 +851,18 @@ CoachReview >> timeBox [
 CoachReview >> timeBox: minutes [
 
 	timeBox := minutes
+]
+
+{ #category : 'moments' }
+CoachReview >> toggleDismissed: aMomentReview [
+	"Skip a moment I don't want to talk about, or bring it back. A dismissed moment being asked about is left."
+
+	aMomentReview isDismissed
+		ifTrue: [ aMomentReview restore ]
+		ifFalse: [
+				current == aMomentReview ifTrue: [ self leaveMoment ].
+				aMomentReview dismiss ].
+	self changed
 ]
 
 { #category : 'labels' }

@@ -253,15 +253,22 @@ CoachElement >> buildMarking [
 
 { #category : 'building' }
 CoachElement >> buildMoment [
+	"A moment not being asked about: its reveal when reviewed, or what can be done with it. While asking, the answer zone. Skipping is offered in both."
 
 	| question |
 	(self isActive: shownMoment) ifFalse: [
 			shownMoment isReviewed ifTrue: [ ^ self buildReveal ].
-			currentZone addChild: (self paragraph: (shownMoment isStarted
-						  ifTrue: [ 'You started this moment but did not finish it.' ]
-						  ifFalse: [ 'Not reviewed yet.' ])).
+			currentZone addChild: (self paragraph: (shownMoment isDismissed
+						  ifTrue: [ 'You skipped this moment.' ]
+						  ifFalse: [
+								  shownMoment isStarted
+									  ifTrue: [ 'You started this moment but did not finish it.' ]
+									  ifFalse: [ 'Not reviewed yet.' ] ])).
 			^ currentZone addChild: (self row: {
-						   (self button: 'Review this moment' do: [ self reviewShown ]).
+						   ((self button: 'Review this moment' do: [ self reviewShown ])
+							    enabled: shownMoment isDismissed not;
+							    yourself).
+						   self dismissButton.
 						   (self button: 'Back to list' do: [ self backToList ]) }) ].
 	review isOverTime ifTrue: [
 		currentZone addChild: (self paragraph: 'Time box reached.') ].
@@ -276,7 +283,8 @@ CoachElement >> buildMoment [
 				currentZone addChild: (self paragraph: message) ] ].
 	currentZone addChild: (self row: {
 				 (self button: 'Stop' do: [ self stop ]).
-				 (self button: 'Pause' do: [ self pause ]) })
+				 (self button: 'Pause' do: [ self pause ]).
+				 self dismissButton })
 ]
 
 { #category : 'building' }
@@ -684,6 +692,18 @@ CoachElement >> describeMoves: someUCIMoves in: aCoachQuestion [
 			             ifFalse: [ shownMoment ply - 1 ]).
 	^ ', ' join:
 		  (someUCIMoves collect: [ :each | position sanForUCI: each ])
+]
+
+{ #category : 'building' }
+CoachElement >> dismissButton [
+	"Always there for a moment: skip it (the heuristic chose it, but it isn't worth talking about) or bring it back"
+
+	^ self
+		  button: (shownMoment isDismissed
+				   ifTrue: [ 'Bring it back' ]
+				   ifFalse: [ 'Skip this moment' ])
+		  icon: 'outlined_block'
+		  do: [ self toggleDismissShown ]
 ]
 
 { #category : 'actions' }
@@ -1254,8 +1274,9 @@ CoachElement >> startNextAfter: aPly [
 
 { #category : 'private' }
 CoachElement >> stateIconNameOf: aMomentReview [
-	"Reviewed, started or still to do"
+	"Dismissed, reviewed, started or still to do"
 
+	aMomentReview isDismissed ifTrue: [ ^ 'outlined_block' ].
 	aMomentReview isReviewed ifTrue: [ ^ 'outlined_checkcircle' ].
 	aMomentReview isStarted ifTrue: [ ^ 'outlined_timelapse' ].
 	^ 'outlined_radiobuttonunchecked'
@@ -1317,6 +1338,18 @@ CoachElement >> titleActions [
 			   tooltip:
 			   'Close the coach; the review is saved and continues next time'
 			   do: [ self pause ]) }
+]
+
+{ #category : 'actions' }
+CoachElement >> toggleDismissShown [
+	"Skip the shown moment, or bring it back. While walking through the moments, skipping goes on to the next one."
+
+	| skipped |
+	skipped := shownMoment isDismissed not.
+	review toggleDismissed: shownMoment.
+	markedMoves := OrderedCollection new.
+	(skipped and: [ walking ]) ifTrue: [ ^ self nextMoment ].
+	self refresh
 ]
 
 { #category : 'actions' }

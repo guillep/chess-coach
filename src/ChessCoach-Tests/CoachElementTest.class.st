@@ -322,6 +322,24 @@ CoachElementTest >> testShiftReturnAnswers [
 ]
 
 { #category : 'tests' }
+CoachElementTest >> testSkippingAMoment [
+
+	| moment |
+	moment := review moments last.
+	coach showMoment: moment.
+	scripter pulse.
+	self assert: (self zoneTexts includes: 'Skip this moment').
+	coach toggleDismissShown.
+	scripter pulse.
+	self assert: (self zoneTexts includes: 'You skipped this moment.').
+	self assert: (self zoneTexts includes: 'Bring it back').
+	self assert: (coach stateIconNameOf: moment) equals: 'outlined_block'.
+	coach toggleDismissShown.
+	scripter pulse.
+	self assert: (self zoneTexts includes: 'Not reviewed yet.')
+]
+
+{ #category : 'tests' }
 CoachElementTest >> testTheListShowsTheFinalPosition [
 
 	self assert: coach mode equals: #list.

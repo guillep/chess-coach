@@ -252,6 +252,27 @@ CoachReviewTest >> testDiscardedBadCandidatesAreNotQuestioned [
 ]
 
 { #category : 'tests' }
+CoachReviewTest >> testDismissingAMoment [
+
+	| review moment restored |
+	review := self newReview.
+	moment := review moments last.
+	review start: moment.
+	review answerMoves: #( 'h7h6' ).
+	review toggleDismissed: moment.
+	self assert: review currentMoment isNil.
+	self assert: moment isDismissed.
+	self deny: moment isReviewed.
+	self assert: (review nextMomentAfter: 3) isNil.
+	self assert: review mistakeRecords isEmpty.
+	restored := CoachMomentReview fromDictionary: moment asDictionary.
+	self assert: restored isDismissed.
+	review toggleDismissed: moment.
+	self deny: moment isDismissed.
+	self assert: (review nextMomentAfter: 3) equals: moment
+]
+
+{ #category : 'tests' }
 CoachReviewTest >> testFoundOnlyMoveIsNotAMistake [
 
 	| review |

@@ -158,6 +158,15 @@ CoachMomentReview >> currentQuestion [
 	^ pending first
 ]
 
+{ #category : 'dialogue' }
+CoachMomentReview >> dismiss [
+	"I don't want to talk about this moment: the coach skips it and it is not a mistake record. Saved as the kind #dismissed, so that older files read it as a kind and newer ones keep it."
+
+	(kinds includes: #dismissed) ifFalse: [
+		kinds := kinds asArray copyWith: #dismissed ].
+	pending removeAll
+]
+
 { #category : 'labels' }
 CoachMomentReview >> dropTag: aTagId [
 
@@ -169,6 +178,12 @@ CoachMomentReview >> isClassifying [
 	"Whether some written answer still waits for the classifier"
 
 	^ answers anySatisfy: [ :each | each isClassified not ]
+]
+
+{ #category : 'testing' }
+CoachMomentReview >> isDismissed [
+
+	^ kinds includes: #dismissed
 ]
 
 { #category : 'testing' }
@@ -186,9 +201,10 @@ CoachMomentReview >> isRevealed [
 
 { #category : 'testing' }
 CoachMomentReview >> isReviewed [
-	"Every question about this moment has been answered"
+	"Every question about this moment has been answered, and I didn't dismiss it"
 
-	^ self isStarted and: [ self isRevealed ]
+	^ self isDismissed not and: [
+		  self isStarted and: [ self isRevealed ] ]
 ]
 
 { #category : 'testing' }
@@ -270,6 +286,17 @@ CoachMomentReview >> proposeLabels: someMistakeLabels [
 						(existing isConfirmed not and: [
 							 label confidence > existing confidence ]) ifTrue: [
 							labels at: (labels indexOf: existing) put: label ] ] ]
+]
+
+{ #category : 'dialogue' }
+CoachMomentReview >> restore [
+	"Bring a dismissed moment back, to review it from the start: answers given before it was dismissed are dropped"
+
+	kinds := (kinds reject: [ :each | each = #dismissed ]) asArray.
+	pending removeAll.
+	answers removeAll.
+	candidateWinPercents removeAll.
+	labels removeAll
 ]
 
 { #category : 'accessing' }

@@ -4,10 +4,36 @@ I declare an app on the Mamotreto shell. A subclass answers its name, its pages,
 Class {
 	#name : 'MMApp',
 	#superclass : 'Object',
+	#classInstVars : [
+		'dataLocation'
+	],
 	#category : 'Mamotreto-UI-App',
 	#package : 'Mamotreto-UI',
 	#tag : 'App'
 }
+
+{ #category : 'building' }
+MMApp class >> dataIn: anOrigin named: aName [
+	"Set at build time: keep the app's files in the folder aName of a FileLocator origin (#home, #documents...), resolved for each user when the app runs"
+
+	dataLocation := {
+		                anOrigin.
+		                aName }
+]
+
+{ #category : 'building' }
+MMApp class >> dataLocation [
+	"The origin and folder name set at build time, or nil for the app's default"
+
+	^ dataLocation
+]
+
+{ #category : 'building' }
+MMApp class >> resetDataLocation [
+	"Go back to the app's default data directory"
+
+	dataLocation := nil
+]
 
 { #category : 'declaring' }
 MMApp >> baselineName [
@@ -17,7 +43,17 @@ MMApp >> baselineName [
 
 { #category : 'declaring' }
 MMApp >> dataDirectory [
-	"Where the session keeps the app's files: ~/.<name>"
+	"Where the session keeps the app's files: the location set at build time, else the app's default"
+
+	^ self class dataLocation
+		  ifNil: [ self defaultDataDirectory ]
+		  ifNotNil: [ :location |
+		  (FileLocator origin: location first) / location last ]
+]
+
+{ #category : 'declaring' }
+MMApp >> defaultDataDirectory [
+	"~/.<name>, unless a build sets another location"
 
 	^ FileLocator home / ('.' , self name asLowercase)
 ]

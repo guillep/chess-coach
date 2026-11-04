@@ -10,7 +10,7 @@ Class {
 }
 
 { #category : 'declaring' }
-ChessmateApp >> dataDirectory [
+ChessmateApp >> defaultDataDirectory [
 	"Older than the shell's ~/.chessmate convention"
 
 	^ FileLocator home / '.chess-coach'

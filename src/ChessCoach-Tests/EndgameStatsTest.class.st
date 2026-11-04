@@ -23,6 +23,41 @@ EndgameStatsTest >> rookEndgameStats [
 ]
 
 { #category : 'tests' }
+EndgameStatsTest >> testADoubleClickOnAGamePlaysItThrough [
+
+	| session game stats page holder opened |
+	session := (LichessAPIClientStub withGames: 1) newSessionOn:
+		           FileSystem memory root.
+	session login.
+	session loadMoreGames.
+	game := session games first.
+	stats := EndgameStats maxPieces: 4.
+	(stats instVarNamed: #occurrences)
+		at: 'R vs R'
+		put: (OrderedCollection with: (EndgameOccurrence
+					  gameId: game gameId
+					  ply: 60
+					  myPawns: 1
+					  theirPawns: 1
+					  points: 1 / 2
+					  evaluation: 0.1)).
+	page := EndgamesPage new.
+	page session: session runner: [ :aBlock |  ].
+	page whenGameChosenDo: [ :entry :ply | opened := entry -> ply ].
+	page stats: stats for: 4.
+	page select: 'R vs R'.
+	holder := BlElement new.
+	page fillGames: holder.
+	(page instVarNamed: #gamesTable) list selecter selectIndex: 1.
+	(page instVarNamed: #gamesTable) list dispatchEvent:
+		(ToListStrongSelectionEvent new
+			 indexes: #( 1 );
+			 yourself).
+	self assert: opened key gameId equals: game gameId.
+	self assert: opened value equals: 60
+]
+
+{ #category : 'tests' }
 EndgameStatsTest >> testAnUnreadableGameIsSkippedNotFatal [
 	"Faouzi's hard quit when counting endgames: one game that fails no longer stops the count (nor the app)"
 

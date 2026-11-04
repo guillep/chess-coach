@@ -74,7 +74,7 @@ EndgamesPage >> dropdown: someAssociations key: aSettingKey width: aWidth then: 
 
 { #category : 'building' }
 EndgamesPage >> fillGames: aHolder [
-	"A table of the selected configuration's games; selecting one enables Play through"
+	"A table of the selected configuration's games; selecting one enables Play through, and a double click plays it through"
 
 	| zones format |
 	selected ifNil: [
@@ -116,6 +116,9 @@ EndgamesPage >> fillGames: aHolder [
 				openButton enabled: (gamesTable list selectionModel firstIndex
 						 ifNil: [ false ]
 						 ifNotNil: [ :index | index > 0 ]) ].
+	gamesTable list
+		addEventHandlerOn: ToListStrongSelectionEvent
+		do: [ :event | self openSelectedGame ].
 	aHolder addChild: gamesTable
 ]
 

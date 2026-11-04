@@ -173,28 +173,23 @@ CoachElement >> buildList [
 
 	self buildTimeBox.
 	self section: 'Moments' build: [
-			review moments do: [ :each |
-					currentZone addChild: (self
-							 button:
-								 (self describeMoment: each)
-							 icon: (self stateIconNameOf: each)
-							 do: [ self showMoment: each ]) ].
+			currentZone addChild: self newMomentTable.
 			self leftOutText ifNotNil: [ :text |
 				currentZone addChild: (self paragraph: text) ].
 			currentZone addChild:
 				(self paragraph: ('Marking {1} · moments {2}' format: {
 							  (self minutes: review markingSeconds).
 							  (self minutes: review reviewingSeconds) })) ].
-	currentZone addChild:
-		(self row: (((review nextMomentAfter: 0) notNil and: [ review isOverTime not ])
+	currentZone addChild: (self row:
+			 (((review nextMomentAfter: 0) notNil and: [ review isOverTime not ])
 				  ifTrue: [
-					  { (self
-						   button: 'Continue review'
-						   icon: 'outlined_playarrow'
-						   do: [ self continueReview ]) } ]
+						  { (self
+							   button: 'Continue review'
+							   icon: 'outlined_playarrow'
+							   do: [ self continueReview ]) } ]
 				  ifFalse: [ #(  ) ]) , {
-					 (self button: 'Summary' do: [ self showSummary ]).
-					 (self button: 'Back' do: [ exitBlock value ]) })
+				 (self button: 'Summary' do: [ self showSummary ]).
+				 (self button: 'Back' do: [ exitBlock value ]) })
 ]
 
 { #category : 'building' }
@@ -1047,6 +1042,62 @@ CoachElement >> myColor [
 		  ifFalse: [ #white ]
 ]
 
+{ #category : 'building' }
+CoachElement >> newMomentTable [
+	"The moments as a table (a list is a list, never a column of buttons): state, move, the move played, its kinds and the drop. Every column sorts; selecting a row opens that moment."
+
+	| table moments |
+	moments := review moments asArray.
+	table := MMTableElement new
+		         hMatchParent;
+		         height: (moments size * 32 + 44 min: 360);
+		         yourself.
+	table columns: {
+			((ToTableColumn new
+				  key: 'state';
+				  title: '';
+				  width: 36;
+				  dataIndex: [ :each | each ];
+				  cellBuilder: [ :cell :each :holder |
+						  cell addChild:
+								  ((ChessCoachWidgets
+									    icon: (self stateIconNameOf: each)
+									    extent: 16 @ 16)
+									   tooltipText: (self stateTextOf: each);
+									   yourself) ])
+				 sorterBlock: [ :each |
+						 #( 'outlined_radiobuttonunchecked'
+						    'outlined_timelapse' 'outlined_checkcircle'
+						    'outlined_block' ) indexOf: (self stateIconNameOf: each) ];
+				 yourself).
+			(MMTableElement
+				 column: 'Move'
+				 width: 60
+				 value: [ :each | each ply + 1 // 2 ]).
+			(MMTableElement
+				 column: 'Played'
+				 width: 80
+				 value: [ :each | (game moves at: each ply) san ]).
+			(MMTableElement column: 'Kind' width: 200 value: [ :each |
+					 ', ' join: (each kinds asArray collect: [ :kind |
+							  ChessCoachWidgets humanize: kind ]) ]).
+			((MMTableElement
+				  column: 'Drop'
+				  width: 80
+				  value: [ :each | (self dropTextOf: each) ifNil: [ '—' ] ])
+				 sorterBlock: [ :each | (self dropTextOf: each) ifNil: [ '' ] ];
+				 yourself) }.
+	table beSingleSelection.
+	table list dataAccessor addAll: moments.
+	table list
+		addEventHandlerOn: ToListPrimarySelectionChangedEvent
+		do: [ :event |
+				table list selectionModel firstIndex ifNotNil: [ :index |
+						index > 0 ifTrue: [
+							self showMoment: (table list dataAccessor at: index) ] ] ].
+	^ table
+]
+
 { #category : 'actions' }
 CoachElement >> nextMoment [
 
@@ -1350,6 +1401,16 @@ CoachElement >> stateIconNameOf: aMomentReview [
 	aMomentReview isReviewed ifTrue: [ ^ 'outlined_checkcircle' ].
 	aMomentReview isStarted ifTrue: [ ^ 'outlined_timelapse' ].
 	^ 'outlined_radiobuttonunchecked'
+]
+
+{ #category : 'private' }
+CoachElement >> stateTextOf: aMomentReview [
+	"The tooltip of the state icon"
+
+	aMomentReview isDismissed ifTrue: [ ^ 'Dismissed' ].
+	aMomentReview isReviewed ifTrue: [ ^ 'Reviewed' ].
+	aMomentReview isStarted ifTrue: [ ^ 'Started' ].
+	^ 'To review'
 ]
 
 { #category : 'actions' }

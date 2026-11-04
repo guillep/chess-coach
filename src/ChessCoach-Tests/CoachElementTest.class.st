@@ -46,6 +46,19 @@ CoachElementTest >> historyTexts [
 		  thenCollect: [ :each | each text asString ]
 ]
 
+{ #category : 'helpers' }
+CoachElementTest >> momentRows [
+	"The moments listed in the table of the current zone, described as a line each"
+
+	| table |
+	coach currentZone allChildrenBreadthFirstDo: [ :each |
+			(table isNil and: [ each isKindOf: MMTableElement ]) ifTrue: [
+				table := each ] ].
+	table ifNil: [ ^ #(  ) ].
+	^ (1 to: table list dataAccessor size) collect: [ :index |
+		  coach describeMoment: (table list dataAccessor at: index) ]
+]
+
 { #category : 'running' }
 CoachElementTest >> setUp [
 
@@ -70,9 +83,9 @@ CoachElementTest >> testAWholeMoment [
 
 	self assert: coach mode equals: #list.
 	self assert:
-		(self zoneTexts includes: 'Move 2 (Nf3) · only move found · −0.00').
+		(self momentRows includes: 'Move 2 (Nf3) · only move found · −0.00').
 	self assert:
-		(self zoneTexts includes: 'Move 4 (Ng5) · mistake · −2.00').
+		(self momentRows includes: 'Move 4 (Ng5) · mistake · −2.00').
 	self
 		assert: (coach stateIconNameOf: review moments last)
 		equals: 'outlined_radiobuttonunchecked'.
@@ -244,7 +257,7 @@ CoachElementTest >> testListShowsPastMomentsAndReviewsOneMoment [
 	self assert: coach mode equals: #list.
 	self assert: review currentMoment isNil.
 	self assert:
-		(self zoneTexts includes: 'Move 4 (Ng5) · mistake · −2.00').
+		(self momentRows includes: 'Move 4 (Ng5) · mistake · −2.00').
 	self
 		assert: (coach stateIconNameOf: moment)
 		equals: 'outlined_timelapse'.
@@ -344,6 +357,25 @@ CoachElementTest >> testReportAProblem [
 				 'note.txt'.
 				 (entry gameId , '.pgn').
 				 'current-review-1.json' })
+]
+
+{ #category : 'tests' }
+CoachElementTest >> testSelectingAMomentRowOpensIt [
+	"The moments are a table, not a column of buttons; selecting a row opens that moment"
+
+	| table |
+	coach currentZone allChildrenBreadthFirstDo: [ :each |
+			(table isNil and: [ each isKindOf: MMTableElement ]) ifTrue: [
+				table := each ] ].
+	self assert: table notNil.
+	self deny: (coach currentZone children anySatisfy: [ :each |
+				 (each isKindOf: ToButton) and: [
+					 each labelText asString beginsWith: 'Move ' ] ]).
+	table list selecter selectIndex: 2.
+	scripter pulse.
+	self assert: coach mode equals: #moment.
+	self assert:
+		(coach header text asString includesSubstring: 'move 4 (Ng5)')
 ]
 
 { #category : 'tests' }

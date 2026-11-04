@@ -118,6 +118,17 @@ EndgameStatsTest >> testFewerPiecesNeverCountMoreGames [
 ]
 
 { #category : 'tests' }
+EndgameStatsTest >> testTablesAreSingleSelectionForTheClickHandler [
+	"Toplo handles a click as single selection only when the list's selection mode says so; otherwise a click on a selected row (a double click) runs later in another process and changes the list outside the UI process"
+
+	| table |
+	table := MMTableElement new.
+	table beSingleSelection.
+	self deny: table list isMultipleSelection.
+	self deny: table selecter isMultipleSelection
+]
+
+{ #category : 'tests' }
 EndgameStatsTest >> testThePageShowsAConfiguration [
 
 	| session page |

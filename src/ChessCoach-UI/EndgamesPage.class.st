@@ -1,7 +1,6 @@
 "
-The Endgames page, a Mamotreto list page: a table of the endgame configurations of my games (my pieces against my opponent's, kings and pawns not counted), sortable by every column, filtered by two dropdowns (how many pieces make an endgame, and whether a configuration has upsets), both remembered in the settings. Saved is how many of the games I entered at 'worse' or below I didn't lose; Converted how many I entered at 'better' or above I won; Upsets is both surprises together.
+The Endgames page, a Mamotreto list page: a table of the endgame configurations of my games (my pieces against my opponent's, kings and pawns not counted), sortable by every column, filtered by two dropdowns (how many pieces make an endgame, and whether a configuration has upsets), both remembered in the settings. Score % is my score in its games (a draw is half a point). Saved is how many of the games I entered at 'worse' or below I didn't lose; Converted how many I entered at 'better' or above I won. Upsets counts the surprises both ways: the saved games (for me) plus the games I entered better and didn't win (against me).
 The pane shows the selected configuration: an Overview tab (results by pawns) and a Games tab (a table of its games). Play through, on top of the pane, opens the selected game at the move where it entered the endgame.
-Counting goes through every game, in the background, the first time the page is shown and when the number of pieces changes.
 "
 Class {
 	#name : 'EndgamesPage',
@@ -109,7 +108,7 @@ EndgamesPage >> fillGames: aHolder [
 				 column: 'Upset'
 				 width: 70
 				 value: [ :each | ((each upsetIn: zones) ifNil: [ '' ]) asString ]) }.
-	gamesTable selecter beSingleSelection.
+	gamesTable beSingleSelection.
 	gamesTable list dataAccessor addAll: selected occurrences.
 	gamesTable list
 		addEventHandlerOn: ToListPrimarySelectionChangedEvent
@@ -197,7 +196,7 @@ EndgamesPage >> newTable [
 				 column: 'Upsets'
 				 width: 65
 				 value: [ :row | row upsetsIn: self zones ]) }.
-	newTable selecter beSingleSelection.
+	newTable beSingleSelection.
 	newTable list
 		addEventHandlerOn: ToListPrimarySelectionChangedEvent
 		do: [ :event | self selectionChanged ].

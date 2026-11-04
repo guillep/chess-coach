@@ -25,6 +25,13 @@ MMTableElement class >> column: aTitle width: aNumber value: aBlock [
 		  yourself
 ]
 
+{ #category : 'selection' }
+MMTableElement >> beSingleSelection [
+	"One row at a time. Set on the list's primary selection mode, not only on its selecter: Toplo asks the mode whether a list is multiple, and for a multiple one it delays a click on a selected row into another process (to tell it from a double click), which then changes the list outside the UI process"
+
+	self list primarySelectionMode multiple: false
+]
+
 { #category : 'initialization' }
 MMTableElement >> initialize [
 	"After each header layout, restore the column widths lost while the table was hidden, in a task so the layout isn't changed while it runs"

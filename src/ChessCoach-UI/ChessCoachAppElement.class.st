@@ -362,7 +362,7 @@ ChessCoachAppElement >> newGameTable [
 	gameList
 		addEventHandlerOn: ToListPrimarySelectionChangedEvent
 		do: [ :event | self listSelectionChanged ].
-	gameTable selecter beSingleSelection.
+	gameTable beSingleSelection.
 	^ gameTable
 ]
 

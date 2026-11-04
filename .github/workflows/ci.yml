@@ -18,6 +18,10 @@ jobs:
         with:
           fetch-depth: 0
 
+      # PharoApplicationGenerator's launcher compiles against SDL2's headers
+      - name: Install SDL2
+        run: brew install sdl2
+
       # The tests run on the image that gets packaged, so no zip comes out of a failing build
       - name: Test and build the app
         env:

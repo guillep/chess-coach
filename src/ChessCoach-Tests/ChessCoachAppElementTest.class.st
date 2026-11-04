@@ -975,6 +975,17 @@ ChessCoachAppElementTest >> testTheGameTableKeepsItsColumnsWhenFirstShownFromAno
 ]
 
 { #category : 'tests' }
+ChessCoachAppElementTest >> testTheLogoNeedsNoRepository [
+	"The packaged app has no Iceberg repository: the logo comes from the code"
+
+	self assert: (ChessCoachWidgets logoForm: 32) extent equals: 32 @ 32.
+	#( #logoForm: #embeddedLogoPng ) do: [ :selector |
+			self deny:
+				((ChessCoachWidgets class >> selector) sourceCode
+					 includesSubstring: 'IceRepository') ]
+]
+
+{ #category : 'tests' }
 ChessCoachAppElementTest >> testTimeControlDropdownSaysWhatItFilters [
 
 	app showPage: #Games.

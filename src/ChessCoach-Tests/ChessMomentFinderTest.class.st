@@ -74,6 +74,21 @@ ChessMomentFinderTest >> analysisWithWhiteCentipawns: lineScores [
 ]
 
 { #category : 'tests' }
+ChessMomentFinderTest >> testABetterMoveThanTheRecaptureIsAnOnlyMove [
+	"1. e4 d5 2. exd5: Qxd5 takes the pawn back, but when the best move is something else (a zwischenzug), finding it matters"
+
+	| moments |
+	moments := (OnlyMoveFinder on: (self
+			             analysisOf: '1. e4 d5 2. exd5 Nf6'
+			             best: 'g8f6'
+			             second: 'd8d5'
+			             atPly: 4)) moments.
+	self
+		assert: (moments collect: [ :each | each ply ]) asArray
+		equals: #( 4 )
+]
+
+{ #category : 'tests' }
 ChessMomentFinderTest >> testAllowingAForcedMateIsABlunder [
 	"-2.50 is 28.5% for White: allowing mate is only a 28 point drop, still a blunder"
 

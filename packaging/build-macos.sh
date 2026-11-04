@@ -2,6 +2,7 @@
 # Builds packaging/work/build/Chessmate.app and packaging/Chessmate-macOS.zip
 # (the release asset the updater downloads) with PharoApplicationGenerator.
 # Usage: packaging/build-macos.sh   (RUN_TESTS=1 to run the tests on the image)
+set -euo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
 source "$HERE/common.sh"
 

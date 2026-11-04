@@ -1,0 +1,2 @@
+# Cygwin on the Windows CI runs the build scripts: keep them LF
+*.sh text eol=lf

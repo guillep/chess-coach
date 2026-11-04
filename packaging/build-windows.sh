@@ -2,6 +2,7 @@
 # Builds packaging/Chessmate-Windows.zip with PharoApplicationGenerator.
 # Runs in Cygwin with cmake, clang, make, wget and unzip (see .github/workflows/ci.yml).
 # Usage: packaging/build-windows.sh
+set -euo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
 source "$HERE/common.sh"
 

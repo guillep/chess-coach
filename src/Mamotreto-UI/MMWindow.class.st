@@ -129,10 +129,18 @@ MMWindow >> applyAppTheme [
 ]
 
 { #category : 'background work' }
-MMWindow >> backgroundRunner: aBlock [
-	"aBlock receives the work block to run; tests pass [ :work | work value ]"
+MMWindow >> backgroundRunner [
+	"The guarded runner the pages use"
 
-	backgroundRunner := aBlock
+	^ backgroundRunner
+]
+
+{ #category : 'background work' }
+MMWindow >> backgroundRunner: aBlock [
+	"aBlock receives the work block to run; tests pass [ :work | work value ]. Every page gets this runner, and every block it runs is guarded (see runGuarded:), so that no page can leave an error unhandled in a background process."
+
+	backgroundRunner := [ :work |
+	                    aBlock value: [ self runGuarded: work ] ]
 ]
 
 { #category : 'accessing' }
@@ -218,8 +226,9 @@ MMWindow >> initialize [
 	"A title bar with the bell, and left of it Updates available while the shown page is outdated; below it the pages in a tab pane with the tabs in a left column, and a status line, set apart by lines. I have no margin: the pages have their own."
 
 	super initialize.
-	backgroundRunner := [ :aBlock |
-	                    aBlock forkAt: Processor userBackgroundPriority ].
+	backgroundRunner := [ :work |
+	                    [ self runGuarded: work ] forkAt:
+		                    Processor userBackgroundPriority ].
 	refreshBlock := [ ].
 	self layout: BlLinearLayout vertical.
 	self matchParent.
@@ -528,6 +537,24 @@ MMWindow >> refreshShownPage [
 
 	updatesButton visibility: BlVisibility gone.
 	refreshBlock value
+]
+
+{ #category : 'background work' }
+MMWindow >> runGuarded: aBlock [
+	"Run background work so that a failure never escapes its process: in a packaged app an unhandled error in a background process quits the app. Expected errors (see isExpectedError:) are shown in the status line; any other error is shown too and appended to errors.log."
+
+	[ aBlock value ]
+		on: Error
+		do: [ :error |
+				(self isExpectedError: error) ifFalse: [
+					session ifNotNil: [ session logError: error ] ].
+				self inUIDo: [
+						statusLabel text: ((self isExpectedError: error)
+								 ifTrue: [ error messageText ]
+								 ifFalse: [
+										 'Something went wrong: ' , error class name , ': '
+										 , (error messageText ifNil: [ '' ]) asString
+										 , ' (details in errors.log)' ]) ] ]
 ]
 
 { #category : 'background work' }

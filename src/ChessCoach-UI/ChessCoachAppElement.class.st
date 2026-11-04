@@ -107,11 +107,11 @@ ChessCoachAppElement >> applyPieceSet [
 
 { #category : 'accessing' }
 ChessCoachAppElement >> backgroundRunner: aBlock [
-	"aBlock receives the work block to run; tests pass [ :work | work value ]"
+	"aBlock receives the work block to run; tests pass [ :work | work value ]. The pages get the guarded runner (see MMWindow>>runGuarded:)."
 
 	super backgroundRunner: aBlock.
-	settingsElement backgroundRunner: aBlock.
-	openings backgroundRunner: aBlock
+	settingsElement backgroundRunner: backgroundRunner.
+	openings backgroundRunner: backgroundRunner
 ]
 
 { #category : 'accessing' }
@@ -137,8 +137,8 @@ ChessCoachAppElement >> dependencyLabel [
 ChessCoachAppElement >> endgamesElement [
 	"The Endgames page, built once and kept in my userData (no new slot while windows are open); it gets the session in session:. A game opens played through at the move where it entered the endgame."
 
-	^ self userData at: #endgames ifAbsentPut: [
-			  EndgamesElement new
+	^ self userData at: #endgamesPage ifAbsentPut: [
+			  EndgamesPage new
 				  whenGameChosenDo: [ :entry :ply |
 					  (self playThrough: entry) moveList selectMoveAt: ply ];
 				  yourself ]

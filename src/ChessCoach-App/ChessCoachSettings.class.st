@@ -38,15 +38,16 @@ ChessCoachSettings class >> defaults [
 		  at: 'openingsDatabaseSpeed' put: nil;
 		  at: 'openingsRating' put: nil;
 		  at: 'endgameMaxPieces' put: 4;
+		  at: 'endgameUpsetFilter' put: 'all';
 		  addAll: MomentFinder defaultThresholds;
 		  yourself
 ]
 
 { #category : 'constants' }
 ChessCoachSettings class >> formatVersion [
-	"2 added the moment thresholds, 3 the evaluation unit, 4 replaced the win-% drops by the evaluation zones (centipawns; the old drop keys are ignored), 5 the coach's database and engine lines, 6 the remembered choices of the Stats and Openings pages, 7 the endgame size"
+	"2 added the moment thresholds, 3 the evaluation unit, 4 replaced the win-% drops by the evaluation zones (centipawns; the old drop keys are ignored), 5 the coach's database and engine lines, 6 the remembered choices of the Stats and Openings pages, 7 the endgame size, 8 the endgame upset filter"
 
-	^ 7
+	^ 8
 ]
 
 { #category : 'accessing' }

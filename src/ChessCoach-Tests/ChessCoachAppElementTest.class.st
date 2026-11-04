@@ -154,6 +154,16 @@ ChessCoachAppElementTest >> testArrowKeysMoveTheGameSelection [
 	self assert: app selectedEntry equals: app games first
 ]
 
+{ #category : 'tests - failures' }
+ChessCoachAppElementTest >> testBackgroundFailuresNeverEscapeTheirProcess [
+	"In the packaged app an unhandled error in a background process quits the app: every block the pages run in the background is guarded, logged and shown"
+
+	self shouldnt: [ app backgroundRunner value: [ 1 / 0 ] ] raise: Error.
+	scripter pulse.
+	self assert:
+		(session errorLog contents includesSubstring: 'ZeroDivide')
+]
+
 { #category : 'tests' }
 ChessCoachAppElementTest >> testBoardSettingsReachTheOpenOpeningTree [
 
@@ -516,6 +526,26 @@ ChessCoachAppElementTest >> testNewAnalysisMarksThenReviewsAndIsListed [
 		equals: 'No analysis yet.'
 ]
 
+{ #category : 'tests - failures' }
+ChessCoachAppElementTest >> testOllamaTestFailureIsShownNotFatal [
+	"Faouzi's hard quit: a failing Test (here, a reply that isn't JSON) used a non-local return inside the background block"
+
+	| settings |
+	session classifier: (AnswerClassifier
+			 client: (OllamaClientStub new replyContent: 'not json')
+			 taxonomy: MistakeTaxonomy default).
+	scripter space extent: 1200 @ 1800.
+	app showPage: #Settings.
+	scripter pulse.
+	settings := app settingsElement.
+	settings showSection: 'Analysis'.
+	scripter pulse.
+	self shouldnt: [ settings testModel ] raise: Error.
+	scripter pulse.
+	self assert:
+		(settings texts anySatisfy: [ :each | each beginsWith: 'Error: ' ])
+]
+
 { #category : 'tests' }
 ChessCoachAppElementTest >> testOnlyReviewedGamesAreQueuedForAnalysis [
 
@@ -617,6 +647,28 @@ ChessCoachAppElementTest >> testSelectingARowOpensTheGameView [
 	self assert: (info first beginsWith: 'White: ').
 	self assert: (info second beginsWith: 'Black: ').
 	self assert: info last equals: 'Stockfish: not analysed yet'
+]
+
+{ #category : 'tests - failures' }
+ChessCoachAppElementTest >> testSettingsBackgroundFailureInARealProcess [
+	"The failure Faouzi hit: in a forked process (as in the packaged app) a non-local return from the background block, after its method returned, is a BlockCannotReturn nobody handles"
+
+	| settings escaped done label |
+	done := Semaphore new.
+	settings := app settingsElement.
+	settings backgroundRunner: [ :work |
+			[
+				[ work value ]
+					on: Error
+					do: [ :error | escaped := error ].
+				done signal ] fork ].
+	label := ToLabel new.
+	settings
+		inBackground: [ 1 / 0 ]
+		then: [ :result |  ]
+		showingErrorsIn: label.
+	self assert: (done waitTimeoutMilliseconds: 5000) not.
+	self assert: escaped isNil
 ]
 
 { #category : 'tests' }

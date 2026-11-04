@@ -7,7 +7,8 @@ Class {
 	#superclass : 'Object',
 	#instVars : [
 		'maxPieces',
-		'occurrences'
+		'occurrences',
+		'skipped'
 	],
 	#category : 'ChessCoach-Analysis',
 	#package : 'ChessCoach-Analysis'
@@ -117,9 +118,31 @@ EndgameStats >> evaluationAt: aPly in: aGameAnalysisOrNil for: aColor [
 	^ plyAnalysis bestLine pawnsFor: aColor
 ]
 
+{ #category : 'accessing' }
+EndgameStats >> rows [
+	"One EndgameConfiguration per configuration, the most frequent first"
+
+	^ self configurations associations collect: [ :each |
+		  EndgameConfiguration name: each key occurrences: each value ]
+]
+
 { #category : 'initialization' }
 EndgameStats >> setMaxPieces: aNumber [
 
 	maxPieces := aNumber.
 	occurrences := Dictionary new
+]
+
+{ #category : 'accessing' }
+EndgameStats >> skipped [
+	"How many games couldn't be read"
+
+	^ skipped ifNil: [ 0 ]
+]
+
+{ #category : 'accessing' }
+EndgameStats >> skipped: aNumber [
+	"How many games couldn't be read (their errors are in errors.log)"
+
+	skipped := aNumber
 ]

@@ -335,19 +335,20 @@ SettingsElement >> heuristicRow: aLabel key: aKey [
 
 { #category : 'private' }
 SettingsElement >> inBackground: aBlock then: aUIBlock showingErrorsIn: aStatusLabel [
-	"Run aBlock off the UI thread and give its result to aUIBlock in the UI. This is the UI boundary: a failure (Stockfish missing, Ollama or Chess.com unreachable) is shown in aStatusLabel instead of being lost in a background process."
+	"Run aBlock off the UI thread and give its result to aUIBlock in the UI. This is the UI boundary: a failure (Stockfish missing, Ollama or Chess.com unreachable) is shown in aStatusLabel instead of being lost in a background process. No non-local return here: the block runs in another process, after this method has returned."
 
 	backgroundRunner value: [
-			| result |
+			| result failure |
 			result := [ aBlock value ]
 				          on: Error
 				          do: [ :error |
-						          self enqueueTask: (BlTaskAction new action: [
-								           aStatusLabel text:
-									           'Error: ' , error messageText asString ]).
-						          ^ nil ].
-			self enqueueTask:
-				(BlTaskAction new action: [ aUIBlock cull: result ]) ]
+						          failure := error.
+						          nil ].
+			self enqueueTask: (BlTaskAction new action: [
+						 failure ifNil: [ aUIBlock cull: result ] ifNotNil: [
+								 aStatusLabel text: 'Error: '
+									 ,
+									 (failure messageText ifNil: [ failure class name ]) asString ] ]) ]
 ]
 
 { #category : 'accessing' }

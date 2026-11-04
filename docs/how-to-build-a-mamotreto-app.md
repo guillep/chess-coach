@@ -12,6 +12,10 @@ Most pages list things and act on them. Build them on `MMListPage`:
 - **The list is on the left, and it is big.** The filters go above it, as
   dropdowns, and flow onto more lines when they don't fit. The list or table
   takes all the room left.
+- **A list is a list, never a column of buttons.** Use a list widget, or a
+  table (`MMTableElement`) when each row has several fields; give the table a
+  sortable column for every number someone may want to rank by, and a filter
+  dropdown for the subsets worth seeing alone.
 - **The pane is on the right, with a fixed width** (`MMListPage paneWidth`, 340 px).
   It shows what is selected, and nothing else.
 - **The pane's actions are on top.** They act on the selection: Bulk close,

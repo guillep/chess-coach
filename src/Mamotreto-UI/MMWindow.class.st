@@ -86,11 +86,11 @@ MMWindow class >> session: aSession [
 ]
 
 { #category : 'updating' }
-MMWindow class >> updateOpenAppTo: aRevision [
-	"For testing updates, from a Playground: <the app's window class> updateOpenAppTo: 'abc1234'. aRevision is a tag, branch or commit hash."
+MMWindow class >> updateOpenAppTo: aTagName [
+	"For testing updates of a packaged app: <the app's window class> updateOpenAppTo: 'v1.2.3'"
 
 	(self allInstances detect: [ :each | each isAttachedToSceneGraph ])
-		updateAppTo: aRevision
+		updateAppTo: aTagName
 ]
 
 { #category : 'accessing' }
@@ -673,8 +673,8 @@ MMWindow >> updateApp [
 		            fitContent;
 		            yourself.
 	question
-		addChild: (ToLabel text:
-					 'Install ' , tag , '? The window will close and reopen.');
+		addChild:
+			(ToLabel text: 'Install ' , tag , '? The app will restart.');
 		addChild: (MMWidgets
 				 primaryButton: 'Update'
 				 icon: 'filled_arrowforward'
@@ -687,23 +687,21 @@ MMWindow >> updateApp [
 ]
 
 { #category : 'updates' }
-MMWindow >> updateAppTo: aRevision [
-	"Close the window, install aRevision (a tag, branch or commit hash) at a priority above Bloc's loop (a safe point), and open a new window, also when it failed."
+MMWindow >> updateAppTo: aTagName [
+	"Close the window and install the release aTagName at a priority above Bloc's loop (a safe point). The app quits and the new version opens; if the update fails, reopen the window and say so."
 
 	| aSession space |
 	aSession := session.
 	space := self space.
 	space close.
 	[
-		aSession updater updateTo: aRevision thenDo: [ :error |
-				error ifNotNil: [
-						aSession logError: error.
-						aSession notifications post: (MMNotification
-								 key: 'error-Update'
-								 kind: #error
-								 title: 'Update failed'
-								 text:
-								 (error messageText ifNil: [ error class name ]) asString) ].
+		aSession updater updateTo: aTagName ifFailed: [ :error |
+				aSession logError: error.
+				aSession notifications post: (MMNotification
+						 key: 'error-Update'
+						 kind: #error
+						 title: 'Update failed'
+						 text: (error messageText ifNil: [ error class name ]) asString).
 				self class openApp: app on: aSession ] ] forkAt:
 		Processor userInterruptPriority
 ]

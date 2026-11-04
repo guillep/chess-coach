@@ -1,5 +1,5 @@
 "
-I replace the updater's git and image steps with data, and log them.
+I am an MMUpdater without network, files or processes: I answer a given running tag and release tags, log the steps of an update instead of doing them, and can fail the download.
 "
 Class {
 	#name : 'MMUpdaterStub',
@@ -7,23 +7,17 @@ Class {
 	#instVars : [
 		'current',
 		'tags',
-		'log',
-		'failure'
+		'failure',
+		'log'
 	],
 	#category : 'Mamotreto-Tests',
 	#package : 'Mamotreto-Tests'
 }
 
-{ #category : 'private - io' }
-MMUpdaterStub >> checkOut: aTagName [
-
-	failure ifNotNil: [ self error: failure ].
-	log add: aTagName
-]
-
 { #category : 'accessing' }
 MMUpdaterStub >> current: aTag tags: someTags failure: anErrorMessageOrNil [
 
+	self setGitHubRepository: 'owner/app'.
 	current := aTag.
 	tags := someTags.
 	failure := anErrorMessageOrNil.
@@ -31,15 +25,23 @@ MMUpdaterStub >> current: aTag tags: someTags failure: anErrorMessageOrNil [
 ]
 
 { #category : 'private - io' }
-MMUpdaterStub >> currentTag [
+MMUpdaterStub >> currentVersion [
 
-	^ current
+	^ current ifNotNil: [ current allButFirst ]
 ]
 
 { #category : 'private - io' }
-MMUpdaterStub >> loadBaseline [
+MMUpdaterStub >> download: aTagName [
 
-	log add: #baseline
+	failure ifNotNil: [ self error: failure ].
+	log add: aTagName.
+	^ #zip
+]
+
+{ #category : 'private - io' }
+MMUpdaterStub >> install: aNewBundle [
+
+	log add: aNewBundle
 ]
 
 { #category : 'accessing' }
@@ -49,13 +51,20 @@ MMUpdaterStub >> log [
 ]
 
 { #category : 'private - io' }
+MMUpdaterStub >> quit [
+
+	log add: #quit
+]
+
+{ #category : 'private - io' }
 MMUpdaterStub >> releaseTags [
 
 	^ tags
 ]
 
 { #category : 'private - io' }
-MMUpdaterStub >> saveImage [
+MMUpdaterStub >> unpack: aZip [
 
-	log add: #saved
+	log add: aZip.
+	^ #bundle
 ]

@@ -27,6 +27,10 @@ BaselineOfChessCoach >> baseline: spec [
 					spec repository:
 						'github://pharo-contributions/OSSubprocess:v2.0.1/repository' ].
 
+			spec baseline: 'ApplicationGenerator' with: [
+					spec repository:
+						'github://tesonep/PharoApplicationGenerator:v1.0.0/src' ].
+
 			spec package: 'Mamotreto-Core'.
 
 			spec
@@ -34,12 +38,17 @@ BaselineOfChessCoach >> baseline: spec [
 				with: [ spec requires: #( 'Mamotreto-Core' 'Bloc' 'Toplo' ) ].
 
 			spec
+				package: 'Mamotreto-Packaging'
+				with: [ spec requires: #( 'Mamotreto-UI' 'ApplicationGenerator' ) ].
+
+			spec
 				package: 'Mamotreto-Example'
 				with: [ spec requires: #( 'Mamotreto-Core' 'Mamotreto-UI' ) ].
 
 			spec package: 'Mamotreto-Tests' with: [
 					spec requires:
-						#( 'Mamotreto-Core' 'Mamotreto-UI' 'Mamotreto-Example' ) ].
+						#( 'Mamotreto-Core' 'Mamotreto-UI' 'Mamotreto-Packaging'
+						   'Mamotreto-Example' ) ].
 
 			spec package: 'ChessCoach-Core'.
 

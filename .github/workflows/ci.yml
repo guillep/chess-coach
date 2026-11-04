@@ -10,28 +10,24 @@ permissions:
   contents: write
 
 jobs:
-  test-and-build:
+  macos:
     runs-on: macos-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Build the app
-        run: packaging/build-app.sh "$GITHUB_SHA"
-
-      - name: Run the tests on the built image
-        working-directory: packaging/build/work
-        run: pharo-vm/Pharo.app/Contents/MacOS/Pharo --headless Pharo.image test --fail-on-failure "ChessCoach-Tests" "Mamotreto-Tests"
-
-      - name: Archive the app
-        run: ditto -c -k --keepParent "packaging/build/Chessmate.app" Chessmate.zip
+      # The tests run on the image that gets packaged, so no zip comes out of a failing build
+      - name: Test and build the app
+        env:
+          RUN_TESTS: 1
+        run: packaging/build-macos.sh
 
       - uses: actions/upload-artifact@v4
         with:
-          name: Chessmate
-          path: Chessmate.zip
+          name: Chessmate-macOS
+          path: packaging/Chessmate-macOS.zip
 
       - name: Attach the app to the release
         if: startsWith(github.ref, 'refs/tags/v')
@@ -40,4 +36,39 @@ jobs:
         run: |
           gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 \
             || gh release create "$GITHUB_REF_NAME" --title "Chessmate $GITHUB_REF_NAME" --generate-notes
-          gh release upload "$GITHUB_REF_NAME" Chessmate.zip --clobber
+          gh release upload "$GITHUB_REF_NAME" packaging/Chessmate-macOS.zip --clobber
+
+  windows:
+    # After macOS, which runs the tests and creates the release
+    needs: macos
+    runs-on: windows-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Cygwin
+        uses: cygwin/cygwin-install-action@v4
+        with:
+          packages: cmake mingw64-x86_64-clang zip unzip wget curl make git libtool libSDL2-devel
+
+      - name: Build the app
+        shell: C:\cygwin\bin\bash.exe --login -eo pipefail -o igncr '{0}'
+        env:
+          CHERE_INVOKING: 1
+        run: |
+          git config --global --add safe.directory "$(pwd)"
+          packaging/build-windows.sh
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Chessmate-Windows
+          path: packaging/Chessmate-Windows.zip
+
+      - name: Attach the app to the release
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "$GITHUB_REF_NAME" packaging/Chessmate-Windows.zip --clobber

@@ -41,6 +41,12 @@ ChessCoachSession class >> default [
 	^ self onDirectory: FileLocator home / '.chess-coach'
 ]
 
+{ #category : 'app' }
+ChessCoachSession class >> gitHubRepository [
+
+	^ 'guillep/chess-coach'
+]
+
 { #category : 'instance creation' }
 ChessCoachSession class >> importer: aLichessGameImporter [
 

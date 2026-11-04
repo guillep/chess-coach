@@ -25,6 +25,13 @@ MMSession class >> baselineName [
 	^ self subclassResponsibility
 ]
 
+{ #category : 'app' }
+MMSession class >> gitHubRepository [
+	"The GitHub repository (owner/name) whose releases update the packaged app, or nil when it is not released"
+
+	^ nil
+]
+
 { #category : 'instance creation' }
 MMSession class >> onDirectory: aFileReference [
 	"A session keeping its data in aFileReference; tests pass a memory file system"
@@ -47,9 +54,10 @@ MMSession >> announcer [
 
 { #category : 'updates' }
 MMSession >> appVersion [
-	"The version of the app's repository in the style of git describe: nearest tag, commits since it and the commit. Without a tag, only the commit."
+	"The packaged app's version; in a development image, the version of the app's repository in the style of git describe: nearest tag, commits since it and the commit. Without a tag, only the commit."
 
 	| repository head distance |
+	self updater currentTag ifNotNil: [ :tag | ^ tag ].
 	repository := IceRepository registry
 		              detect: [ :each | each name = self repositoryName ]
 		              ifNone: [ ^ 'Repository version not found' ].
@@ -217,9 +225,7 @@ MMSession >> unfinishedTaskCount [
 MMSession >> updater [
 
 	^ updater ifNil: [
-			  updater := MMUpdater
-				             repositoryNamed: self repositoryName
-				             baseline: self baselineName ]
+		  updater := MMUpdater gitHubRepository: self class gitHubRepository ]
 ]
 
 { #category : 'updates' }

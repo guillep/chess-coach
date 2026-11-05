@@ -218,7 +218,7 @@ MMUpdater >> unpack: aZip [
 
 { #category : 'updating' }
 MMUpdater >> updateTo: aTagName ifFailed: aBlock [
-	"Download and unpack the release, start the swap and quit: the new version opens by itself. If anything fails before quitting, evaluate aBlock with the error and keep running. Off the UI thread; the window must be closed first."
+	"Download and unpack the release, start the swap and quit: the new version opens by itself. If anything fails before quitting, evaluate aBlock with the error and keep running. Run it on the background worker."
 
 	[ self install: (self unpack: (self download: aTagName)) ]
 		on: Error

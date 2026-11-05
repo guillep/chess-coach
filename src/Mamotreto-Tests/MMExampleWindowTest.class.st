@@ -43,6 +43,23 @@ MMExampleWindowTest >> setUp [
 ]
 
 { #category : 'tests' }
+MMExampleWindowTest >> testAFailedUpdateIsNotifiedAndTheWindowStaysOpen [
+
+	| updater |
+	updater := MMUpdaterStub new
+		           current: 'v1.0.0' tags: #(  ) failure: 'no network';
+		           yourself.
+	session updater: updater.
+	window updateAppTo: 'v1.1.0'.
+	scripter pulse.
+	self assert: window isAttachedToSceneGraph.
+	self deny: (updater log includes: #quit).
+	self
+		assert: session notifications visible first title
+		equals: 'Update failed'
+]
+
+{ #category : 'tests' }
 MMExampleWindowTest >> testGreetButtonRunsTheService [
 
 	| button |
@@ -161,4 +178,18 @@ MMExampleWindowTest >> testTheThemeFollowsTheSetting [
 	self
 		assert: window background paint color
 		equals: (MMExampleApp new palette at: #lightBackground)
+]
+
+{ #category : 'tests' }
+MMExampleWindowTest >> testUpdateKeepsTheWindowOpenAndQuitsOnceInstalled [
+
+	| updater |
+	updater := MMUpdaterStub new
+		           current: 'v1.0.0' tags: #(  ) failure: nil;
+		           yourself.
+	session updater: updater.
+	window updateAppTo: 'v1.1.0'.
+	scripter pulse.
+	self assert: window isAttachedToSceneGraph.
+	self assert: updater log last equals: #quit
 ]

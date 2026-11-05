@@ -715,22 +715,18 @@ MMWindow >> updateApp [
 
 { #category : 'updates' }
 MMWindow >> updateAppTo: aTagName [
-	"Close the window and install the release aTagName at a priority above Bloc's loop (a safe point). The app quits and the new version opens; if the update fails, reopen the window and say so."
+	"Install the release aTagName on the background worker, with the window open. The updater quits once the swap is started and the new version opens by itself; if the update fails, say so and keep running."
 
-	| aSession space |
-	aSession := session.
-	space := self space.
-	space close.
-	[
-		aSession updater updateTo: aTagName ifFailed: [ :error |
-				aSession logError: error.
-				aSession notifications post: (MMNotification
-						 key: 'error-Update'
-						 kind: #error
-						 title: 'Update failed'
-						 text: (error messageText ifNil: [ error class name ]) asString).
-				self class openApp: app on: aSession ] ] forkAt:
-		Processor userInterruptPriority
+	self runInBackground: [
+			session updater updateTo: aTagName ifFailed: [ :error |
+					session logError: error.
+					self inUIDo: [
+							session notifications post: (MMNotification
+									 key: 'error-Update'
+									 kind: #error
+									 title: 'Update failed'
+									 text:
+									 (error messageText ifNil: [ error class name ]) asString) ] ] ]
 ]
 
 { #category : 'notifications' }

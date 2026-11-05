@@ -50,15 +50,12 @@ EvaluationFormat >> dropFrom: aLineBefore to: aLineAfter for: aColor [
 
 { #category : 'formatting' }
 EvaluationFormat >> line: anEngineLine for: aColor [
-	"anEngineLine's score from aColor's side"
+	"anEngineLine's score like chess sites show it: pawns and mates from White's side (positive is good for White), or aColor's chance of winning"
 
 	unit = 'winPercent' ifTrue: [
 		^ self percent: (anEngineLine winPercentFor: aColor) ].
-	anEngineLine mate ifNotNil: [ :mate |
-			^ '#' , (aColor = #white
-				   ifTrue: [ mate ]
-				   ifFalse: [ mate negated ]) printString ].
-	^ self pawns: (anEngineLine pawnsFor: aColor)
+	anEngineLine mate ifNotNil: [ :mate | ^ '#' , mate printString ].
+	^ self pawns: (anEngineLine pawnsFor: #white)
 ]
 
 { #category : 'private' }
@@ -93,4 +90,16 @@ EvaluationFormat >> winPercent: aNumber [
 
 	unit = 'winPercent' ifTrue: [ ^ self percent: aNumber ].
 	^ self pawns: (EngineLine pawnsForWinPercent: aNumber)
+]
+
+{ #category : 'formatting' }
+EvaluationFormat >> winPercent: aNumber for: aColor [
+	"aColor's winning chance (0-100), stored without its line: as such, or as pawns from White's side like chess sites"
+
+	| pawns |
+	unit = 'winPercent' ifTrue: [ ^ self percent: aNumber ].
+	pawns := EngineLine pawnsForWinPercent: aNumber.
+	^ self pawns: (aColor = #white
+			   ifTrue: [ pawns ]
+			   ifFalse: [ pawns negated ])
 ]

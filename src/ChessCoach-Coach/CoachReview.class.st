@@ -588,7 +588,7 @@ CoachReview >> plySeconds [
 
 { #category : 'private - questions' }
 CoachReview >> questionsAboutMoveOf: aMoment [
-	"A bad move first asks me to find what punishes it (one reply on the board): realising why it was bad comes before explaining it. Then why I played it, and last the candidates I discarded, to find a better move I discarded wrongly. A good move I thought long about, or marked, asks why and what I expected. No reply question when my move left no reply."
+	"A bad move first asks me to find what punishes it (one reply on the board): realising why it was bad comes before explaining it. Then why I played it, and last the candidates I discarded, to find a better move I discarded wrongly. A good move I thought long about, or marked, asks why and what I expected. An opening choice already names the better scoring moves, so it asks only why and what I expected. No reply question when my move left no reply."
 
 	| played |
 	played := (game moves at: aMoment ply) san.
@@ -609,15 +609,10 @@ CoachReview >> questionsAboutMoveOf: aMoment [
 			  , (self expectedReplyQuestionsFor: aMoment) ].
 	((aMoment kinds includes: #openingChoice) and: [
 		 aMoment notes notEmpty ]) ifTrue: [
-			^ {
-				  (CoachQuestion
-					   kind: #why
-					   text:
-					   aMoment notes first , '. Why did you play ' , played , '?').
-				  (CoachQuestion
-					   kind: #candidates
-					   text:
-					   'Which other moves did you consider here? Mark them on the board.') }
+			^ { (CoachQuestion
+				   kind: #why
+				   text:
+				   aMoment notes first , '. Why did you play ' , played , '?') }
 			  , (self expectedReplyQuestionsFor: aMoment) ].
 	(aMoment kinds includes: #onlyMoveFound) ifTrue: [
 			^ { (CoachQuestion

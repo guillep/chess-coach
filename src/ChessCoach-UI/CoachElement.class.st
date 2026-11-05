@@ -122,7 +122,7 @@ CoachElement >> buildBoardAnswer [
 
 { #category : 'building' }
 CoachElement >> buildEngineRevealOf: reveal before: before after: after [
-	"The evaluation before and after my move, a table comparing the engine's moves, mine, my candidates and the database's, the engine line, the line after my move to compare with it, and the reply I missed or found. Evaluations in the unit of the settings, from my side."
+	"The evaluation before and after my move, a table comparing the engine's moves, mine, my candidates and the database's, the engine line, the line after my move to compare with it, and the reply I missed or found. Evaluations in the unit of the settings: pawns from White's side like chess sites, or my chance of winning."
 
 	| line myLine format color |
 	format := session settings evaluationFormat.
@@ -130,10 +130,10 @@ CoachElement >> buildEngineRevealOf: reveal before: before after: after [
 	line := (review analysis atPly: shownMoment ply - 1) bestLine.
 	currentZone addChild: ((self paragraph:
 				  ('Evaluation: {1} before your move, {2} after it' format: {
-							   (format winPercent: (reveal at: 'winBefore')).
-							   (format winPercent: (reveal at: 'winAfter')) }))
+							   (format winPercent: (reveal at: 'winBefore') for: color).
+							   (format winPercent: (reveal at: 'winAfter') for: color) }))
 			 tooltipString:
-				 'From your side, in the unit chosen in the settings (pawns, or the chance of winning from the Lichess formula: +1.00 is about 59%, +3.00 about 75%).';
+				 'In the unit chosen in the settings: pawns from White''s side, positive is good for White (+1.00 is about a 59% chance of winning for White), or your chance of winning from the Lichess formula.';
 			 yourself).
 	currentZone addChild: (MoveComparisonTable
 			 session: session

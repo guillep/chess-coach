@@ -49,7 +49,7 @@ MoveComparisonTable >> canUseDatabase [
 
 { #category : 'building' }
 MoveComparisonTable >> cellsFor: aUCIMove role: aString [
-	"Move, role, evaluation, zone, database games, mover's win/draw/loss"
+	"Move, role, evaluation (White's side, like chess sites), zone (the mover's), database games, mover's win/draw/loss"
 
 	| format zones line pawns evaluation entry games |
 	format := session settings evaluationFormat.
@@ -62,7 +62,7 @@ MoveComparisonTable >> cellsFor: aUCIMove role: aString [
 				pawns := line pawnsFor: self mover ]
 		ifNil: [
 				(candidates at: aUCIMove ifAbsent: [ nil ]) ifNotNil: [ :win |
-						evaluation := format winPercent: win.
+						evaluation := format winPercent: win for: self mover.
 						pawns := EngineLine pawnsForWinPercent: win ] ].
 	entry := self databaseEntryFor: aUCIMove.
 	games := entry ifNotNil: [

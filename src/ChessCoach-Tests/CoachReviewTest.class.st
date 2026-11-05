@@ -428,9 +428,13 @@ CoachReviewTest >> testNoExpectedReplyAfterMate [
 
 { #category : 'tests' }
 CoachReviewTest >> testOpeningMomentKeepsWhyItWasChosenAndAsksAboutIt [
+	"The note already names the better scoring moves: no question about other candidates"
 
 	| moment restored questions |
-	moment := CoachMomentReview ply: 1 color: #white kinds: #( #openingChoice ).
+	moment := CoachMomentReview
+		          ply: 1
+		          color: #white
+		          kinds: #( #openingChoice ).
 	moment notes: #( 'You played e4 (40%); better scoring: d4 (55%)' ).
 	restored := CoachMomentReview fromDictionary: moment asDictionary.
 	self assert: restored notes first equals: moment notes first.
@@ -438,8 +442,10 @@ CoachReviewTest >> testOpeningMomentKeepsWhyItWasChosenAndAsksAboutIt [
 				  removeKey: 'notes';
 				  yourself)) notes isEmpty.
 	questions := self newReview questionsAboutMoveOf: moment.
-	self assert: (questions first text includesSubstring: 'better scoring').
-	self assert: questions second kind equals: #candidates
+	self assert:
+		(questions first text includesSubstring: 'better scoring').
+	self deny:
+		(questions anySatisfy: [ :each | each kind = #candidates ])
 ]
 
 { #category : 'tests' }

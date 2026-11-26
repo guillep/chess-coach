@@ -95,14 +95,14 @@ ChessCoachWidgets class >> embeddedLogoPng [
 ]
 
 { #category : 'building' }
-ChessCoachWidgets class >> exportButtonsForBoard: aChessBoardElement game: aGame [
-	"Copy the position shown on aChessBoardElement as FEN, and aGame as PGN"
+ChessCoachWidgets class >> exportButtonsForPosition: aPositionBlock game: aGame [
+	"Copy the position aPositionBlock answers as FEN, and aGame as PGN. A block, because the position on screen changes, and so can the board that shows it."
 
 	^ {
 		  (self
 			   copyButton: 'FEN'
 			   tooltip: 'Copy the position on the board (FEN)'
-			   text: [ aChessBoardElement chessPosition fen ]).
+			   text: [ aPositionBlock value fen ]).
 		  (self
 			   copyButton: 'PGN'
 			   tooltip: 'Copy the whole game (PGN)'

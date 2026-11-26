@@ -234,7 +234,7 @@ ChessCoachAppElementTest >> testCoachAndPlayThroughOpenInClosableTabs [
 	scripter settle.
 	self assert: app navigation items size equals: 9.
 	app navigation removeItem: coachTab.
-	scripter pulse.
+	scripter settle.
 	self assert: app coach isNil.
 	self assert: app navigation items size equals: 8
 ]

@@ -600,8 +600,8 @@ ChessCoachAppElement >> playThrough: aGameIndexEntry [
 						                    self openAnalysisBoardAt:
 							                    playThrough boardElement chessPosition ];
 						                    yourself) } , (ChessCoachWidgets
-						                    exportButtonsForBoard:
-						                    playThrough boardElement
+						                    exportButtonsForPosition: [
+						                    playThrough boardElement chessPosition ]
 						                    game: game)
 					                   ,
 					                   { (self closeButtonDo: [

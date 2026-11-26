@@ -201,6 +201,38 @@ CoachElementTest >> testCopyFENAndPGN [
 ]
 
 { #category : 'tests' }
+CoachElementTest >> testCopyFENWhileMarkingCopiesTheReplayBoard [
+
+	| fixture marking markingCoach fenButton saved |
+	fixture := CoachReviewTest new.
+	fixture setUp.
+	saved := Clipboard clipboardText.
+	[
+		marking := fixture newReviewMarking.
+		markingCoach := CoachElement new.
+		markingCoach
+			session: ((LichessAPIClientStub withGames: 0) newSessionOn: FileSystem memory root)
+			entry: nil
+			review: marking.
+		fenButton := markingCoach titleActions first.
+		space extent: 1100 @ 760.
+		space root addChildren: { markingCoach. fenButton }.
+		markingCoach replay moveList selectMoveAt: 3.
+		space settle.
+		self assert: markingCoach mode equals: #marking.
+		self
+			deny: markingCoach replay boardElement chessPosition fen
+			equals: markingCoach board chessPosition fen.
+		fenButton eventSimulator click.
+		self
+			assert: Clipboard clipboardText asString
+			equals: markingCoach replay boardElement chessPosition fen ]
+		ensure: [
+			Clipboard clipboardText: saved.
+			fixture tearDown ]
+]
+
+{ #category : 'tests' }
 CoachElementTest >> testListShowsPastMomentsAndReviewsOneMoment [
 
 	| moment |

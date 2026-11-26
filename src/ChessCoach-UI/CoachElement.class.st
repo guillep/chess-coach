@@ -1369,6 +1369,15 @@ CoachElement >> showSummary [
 ]
 
 { #category : 'accessing' }
+CoachElement >> shownBoard [
+	"The board on screen: the marking replay's during the marking pass, mine otherwise (see updateLeftPane)"
+
+	^ mode = #marking
+		  ifTrue: [ replay boardElement ]
+		  ifFalse: [ board ]
+]
+
+{ #category : 'accessing' }
 CoachElement >> shownMoment [
 
 	^ shownMoment
@@ -1456,7 +1465,9 @@ CoachElement >> submitText [
 CoachElement >> titleActions [
 	"For the title of the page: copy the position (FEN) or the game (PGN), report a problem and close, which pauses the review"
 
-	^ (ChessCoachWidgets exportButtonsForBoard: board game: game) , {
+	^ (ChessCoachWidgets
+		   exportButtonsForPosition: [ self shownBoard chessPosition ]
+		   game: game) , {
 		  (self
 			   iconButton: 'outlined_bugreport'
 			   tooltip:

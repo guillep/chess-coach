@@ -39,7 +39,7 @@ MMExampleWindowTest >> setUp [
 	scripter := BlDevScripter new.
 	scripter element: window.
 	scripter space extent: 1000 @ 700.
-	scripter pulse
+	scripter settle
 ]
 
 { #category : 'tests' }
@@ -51,12 +51,10 @@ MMExampleWindowTest >> testAFailedUpdateIsNotifiedAndTheWindowStaysOpen [
 		           yourself.
 	session updater: updater.
 	window updateAppTo: 'v1.1.0'.
-	scripter pulse.
+	scripter settle.
 	self assert: window isAttachedToSceneGraph.
 	self deny: (updater log includes: #quit).
-	self
-		assert: session notifications visible first title
-		equals: 'Update failed'
+	self assert: session notifications visible first title equals: 'Update failed'
 ]
 
 { #category : 'tests' }
@@ -64,14 +62,12 @@ MMExampleWindowTest >> testGreetButtonRunsTheService [
 
 	| button |
 	window showPage: #Greetings.
-	scripter pulse.
+	scripter settle.
 	button := self buttonLabelled: 'Greet'.
-	scripter testClick onChildFromBlock: [ :root | button ].
+	scripter click onChildFromBlock: [ :root | button ].
 	scripter syncContinue.
 	scripter pulse.
-	self
-		assert: session notifications visible first title
-		equals: 'Hello'
+	self assert: session notifications visible first title equals: 'Hello'
 ]
 
 { #category : 'tests' }
@@ -98,7 +94,7 @@ MMExampleWindowTest >> testManyNotificationsScrollInsteadOfLeavingTheScreen [
 	panelScripter := BlDevScripter new.
 	panelScripter element: panel.
 	panelScripter space extent: 400 @ 2000.
-	panelScripter pulse.
+	panelScripter settle.
 	self assert: panel height > 300.
 	self assert: panel height <= (700 * 0.7 + 80).
 	self assert: (panel childWithId: #clearNotifications) isEnabled
@@ -108,10 +104,10 @@ MMExampleWindowTest >> testManyNotificationsScrollInsteadOfLeavingTheScreen [
 MMExampleWindowTest >> testShowPage [
 
 	window showPage: #Look.
-	scripter pulse.
+	scripter settle.
 	self assert: window navigation selecter selectedIndex equals: 2.
 	window showPage: #Greetings.
-	scripter pulse.
+	scripter settle.
 	self assert: window navigation selecter selectedIndex equals: 1
 ]
 
@@ -147,11 +143,9 @@ MMExampleWindowTest >> testTheServiceIsNotifiedUnderTheBell [
 
 	self deny: window bellBadge visibility isVisible.
 	session greet.
-	scripter pulse.
+	scripter settle.
 	self assert: window bellBadge visibility isVisible.
-	self
-		assert: session notifications visible first title
-		equals: 'Hello'
+	self assert: session notifications visible first title equals: 'Hello'
 ]
 
 { #category : 'tests' }
@@ -169,15 +163,11 @@ MMExampleWindowTest >> testTheServiceIsScheduledWithTheUpdates [
 MMExampleWindowTest >> testTheThemeFollowsTheSetting [
 
 	session settings at: 'appTheme' put: 'Dark'.
-	scripter pulse.
-	self
-		assert: window background paint color
-		equals: (MMExampleApp new palette at: #darkBackground).
+	scripter settle.
+	self assert: window background paint color equals: (MMExampleApp new palette at: #darkBackground).
 	session settings at: 'appTheme' put: 'Light'.
-	scripter pulse.
-	self
-		assert: window background paint color
-		equals: (MMExampleApp new palette at: #lightBackground)
+	scripter settle.
+	self assert: window background paint color equals: (MMExampleApp new palette at: #lightBackground)
 ]
 
 { #category : 'tests' }
@@ -189,7 +179,7 @@ MMExampleWindowTest >> testUpdateKeepsTheWindowOpenAndQuitsOnceInstalled [
 		           yourself.
 	session updater: updater.
 	window updateAppTo: 'v1.1.0'.
-	scripter pulse.
+	scripter settle.
 	self assert: window isAttachedToSceneGraph.
 	self assert: updater log last equals: #quit
 ]

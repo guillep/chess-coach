@@ -24,16 +24,12 @@ MMListPageTest >> setUp [
 			 id: #act;
 			 labelText: 'Act';
 			 yourself).
-	page addTab: 'Overview' building: [ :holder |
-		holder addChild: (ToLabel text: 'Overview of ' , selection) ].
-	page
-		addTab: 'More'
-		building: [ :holder |
-		holder addChild: (ToLabel text: 'More on ' , selection) ].
+	page addTab: 'Overview' building: [ :holder | holder addChild: (ToLabel text: 'Overview of ' , selection) ].
+	page addTab: 'More' building: [ :holder | holder addChild: (ToLabel text: 'More on ' , selection) ].
 	scripter := BlDevScripter new.
 	scripter element: page.
 	scripter space extent: 1000 @ 700.
-	scripter pulse
+	scripter settle
 ]
 
 { #category : 'helpers' }
@@ -53,10 +49,10 @@ MMListPageTest >> testTheTabsFollowTheSelectionAndAConfirmationTakesTheirPlace [
 	self assert: (self shownTexts includes: 'Overview of nothing').
 	selection := 'PR 5'.
 	page refreshPane.
-	scripter pulse.
+	scripter settle.
 	self assert: (self shownTexts includes: 'Overview of PR 5').
 	page showTab: 'More'.
-	scripter pulse.
+	scripter settle.
 	self assert: (self shownTexts includes: 'More on PR 5').
 	page showInPane: (ToLabel text: 'Really?').
 	scripter pulse.

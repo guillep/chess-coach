@@ -35,7 +35,7 @@ HomeElementTest >> click: aPrefix [
 { #category : 'support' }
 HomeElementTest >> pulse [
 
-	3 timesRepeat: [ space pulse ]
+	3 timesRepeat: [ space settle ]
 ]
 
 { #category : 'running' }

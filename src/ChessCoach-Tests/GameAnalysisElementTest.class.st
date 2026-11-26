@@ -112,16 +112,14 @@ GameAnalysisElementTest >> testSelectedMoveStaysInView [
 	space := BlSpace new.
 	space extent: 700 @ 300.
 	space root addChild: view.
-	space pulse.
+	space settle.
 	view moveList selectMoveAt: 80.
-	space pulse.
-	space pulse.
+	space settle.
+	space settle.
 	scroller := view moveList parent.
-	[ scroller isKindOf: BlScrollableElement ] whileFalse: [
-		scroller := scroller parent ].
+	[ scroller isKindOf: BlScrollableElement ] whileFalse: [ scroller := scroller parent ].
 	selected := view moveList selectedMoveElement.
-	self assert:
-		selected boundsInSpace bottom <= (scroller boundsInSpace bottom + 1)
+	self assert: selected boundsInSpace bottom <= (scroller boundsInSpace bottom + 1)
 ]
 
 { #category : 'tests' }

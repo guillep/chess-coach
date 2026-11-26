@@ -13,7 +13,7 @@ ChessBoardElementTest >> testAnArrowFollowsADrag [
 	scripter := BlDevScripter new.
 	scripter element: board.
 	scripter space extent: 400 @ 400.
-	scripter pulse.
+	scripter settle.
 	board pressedOn: 'e2'.
 	board enteredOn: 'e4'.
 	self assert: board arrowLayer childrenCount equals: 1.

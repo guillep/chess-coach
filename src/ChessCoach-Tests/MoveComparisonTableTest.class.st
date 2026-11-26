@@ -44,8 +44,7 @@ MoveComparisonTableTest >> testLaysOutInASpace [
 	| fixture session table space |
 	fixture := CoachReviewTest new.
 	fixture setUp.
-	session := (LichessAPIClientStub withGames: 0) newSessionOn:
-		           FileSystem memory root.
+	session := (LichessAPIClientStub withGames: 0) newSessionOn: FileSystem memory root.
 	table := MoveComparisonTable
 		         session: session
 		         game: fixture game
@@ -61,7 +60,7 @@ MoveComparisonTableTest >> testLaysOutInASpace [
 			 vFitContent;
 			 addChild: table;
 			 yourself).
-	space pulse.
+	space settle.
 	self assert: table width > 0
 ]
 

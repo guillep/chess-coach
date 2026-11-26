@@ -16,10 +16,9 @@ Class {
 { #category : 'helpers' }
 ChessBoardInteractionTest >> clickOn: aSquare [
 
-	scripter testClick onChildFromBlock: [ :root |
-		board squareElementAt: aSquare ].
+	scripter click onChildFromBlock: [ :root | board squareElementAt: aSquare ].
 	scripter syncContinue.
-	scripter pulse
+	scripter settle
 ]
 
 { #category : 'running' }
@@ -33,7 +32,7 @@ ChessBoardInteractionTest >> setUp [
 	scripter := BlDevScripter new.
 	scripter element: board.
 	scripter space extent: 400 @ 400.
-	scripter pulse
+	scripter settle
 ]
 
 { #category : 'tests' }
@@ -43,15 +42,11 @@ ChessBoardInteractionTest >> testArrowsAreDrawnAboveTheBoardWithoutBlockingInput
 	board arrows: {
 			(ChessArrow uci: 'e2e4' style: #played).
 			(ChessArrow uci: 'g1f3' style: #subject) }.
-	scripter pulse.
-	self
-		assert: (board arrows collect: [ :each | each uci ]) asArray
-		equals: #( 'e2e4' 'g1f3' ).
+	scripter settle.
+	self assert: (board arrows collect: [ :each | each uci ]) asArray equals: #( 'e2e4' 'g1f3' ).
 	layerChildren := board children last children.
 	self assert: layerChildren size equals: 2.
-	self
-		assert: (layerChildren first geometry vertices at: 4)
-		equals: (board centerOf: 'e4') asFloatPoint.
+	self assert: (layerChildren first geometry vertices at: 4) equals: (board centerOf: 'e4') asFloatPoint.
 	self clickOn: 'e2'.
 	self assert: board selectedSquare equals: 'e2'
 ]
@@ -104,14 +99,10 @@ ChessBoardInteractionTest >> testDragMarksAMove [
 ChessBoardInteractionTest >> testOrientationAndPromotion [
 
 	board orientation: #black.
-	scripter pulse.
-	self
-		assert: (board squareElementAt: 'h1') bounds inSpace bounds origin
-		equals: 0 @ 0.
-	self assert: ((board squareElementAt: 'e2') children includes:
-			 (board pieceElements at: 'e2')).
-	board chessPosition:
-		(ChessPosition fromFEN: '4k3/P7/8/8/8/8/8/4K3 w - - 0 1').
+	scripter settle.
+	self assert: (board squareElementAt: 'h1') bounds inSpace bounds origin equals: 0 @ 0.
+	self assert: ((board squareElementAt: 'e2') children includes: (board pieceElements at: 'e2')).
+	board chessPosition: (ChessPosition fromFEN: '4k3/P7/8/8/8/8/8/4K3 w - - 0 1').
 	self clickOn: 'a7'.
 	self clickOn: 'a8'.
 	self assert: marked asArray equals: #( 'a7a8q' )

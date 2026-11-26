@@ -16,7 +16,7 @@ ChessCoachAppElementTest >> choose: aButton [
 	"Click a toggle whose text changes once chosen, so it can't be looked up again"
 
 	BlSpace simulateClickOn: aButton.
-	scripter pulse
+	scripter settle
 ]
 
 { #category : 'support' }
@@ -26,17 +26,16 @@ ChessCoachAppElementTest >> choose: aString in: aSelect [
 	| option |
 	BlSpace simulateMouseDownOn: aSelect.
 	3 timesRepeat: [
-		scripter pulse.
-		(Delay forMilliseconds: 50) wait ].
+			scripter settle.
+			(Delay forMilliseconds: 50) wait ].
 	BlSpace simulateMouseUpOn: aSelect.
-	scripter pulse.
+	scripter settle.
 	option := nil.
 	aSelect popupListElement allChildrenBreadthFirstDo: [ :each |
-		(each isKindOf: ToLabel) ifTrue: [
-			each text asString = aString ifTrue: [ option := each ] ] ].
+		(each isKindOf: ToLabel) ifTrue: [ each text asString = aString ifTrue: [ option := each ] ] ].
 	self assert: option notNil description: 'option listed'.
 	BlSpace simulateClickOn: option.
-	scripter pulse
+	scripter settle
 ]
 
 { #category : 'helpers' }
@@ -46,10 +45,10 @@ ChessCoachAppElementTest >> click: anElement [
 	#( #Settings #Games ) do: [ :page |
 			anElement isAttachedToSceneGraph ifFalse: [
 					app showPage: page.
-					scripter pulse ] ].
-	scripter testClick onChildFromBlock: [ :root | anElement ].
+					scripter settle ] ].
+	scripter click onChildFromBlock: [ :root | anElement ].
 	scripter syncContinue.
-	scripter pulse
+	scripter settle
 ]
 
 { #category : 'helpers' }
@@ -79,7 +78,7 @@ ChessCoachAppElementTest >> scripterOn: anAppElement [
 	aScripter := BlDevScripter new.
 	aScripter element: anAppElement.
 	aScripter space extent: 1200 @ 700.
-	aScripter pulse.
+	aScripter settle.
 	^ aScripter
 ]
 
@@ -94,8 +93,8 @@ ChessCoachAppElementTest >> setUp [
 	app := self newAppElement.
 	scripter := self scripterOn: app.
 	app showPage: #Games.
-	scripter pulse.
-	scripter pulse
+	scripter settle.
+	scripter settle
 ]
 
 { #category : 'tests' }
@@ -104,14 +103,14 @@ ChessCoachAppElementTest >> testAnalysisBoardOpensInAClosableTabAndPausesTheQueu
 	| board |
 	session analyser: (GameAnalyser engine: StockfishEngineStub new).
 	board := app openAnalysisBoardAt: ChessPosition initial.
-	scripter pulse.
+	scripter settle.
 	self assert: board isAttachedToSceneGraph.
 	self assert: session analysisQueue isPaused.
 	board play: 'e2e4'.
-	scripter pulse.
+	scripter settle.
 	self assert: (board chessPosition pieceAt: 'e4') equals: 'P'.
 	app closeTab: (app userData at: #analysisTab).
-	scripter pulse.
+	scripter settle.
 	self deny: session analysisQueue isPaused.
 	self deny: (app userData includesKey: #analysisTab)
 ]
@@ -122,13 +121,13 @@ ChessCoachAppElementTest >> testAppTheme [
 	| settings |
 	scripter space extent: 1200 @ 1200.
 	app showPage: #Settings.
-	scripter pulse.
+	scripter settle.
 	settings := app settingsElement.
 	settings showSection: 'Appearance'.
-	scripter pulse.
+	scripter settle.
 	self deny: (app space root localTheme isKindOf: ToRawDarkTheme).
 	self click: (settings buttonLabeled: 'Dark').
-	scripter pulse.
+	scripter settle.
 	self assert: session settings appTheme equals: 'Dark'.
 	self assert: (settings texts includes: '✓ Dark').
 	self assert: (app space root localTheme isKindOf: ToRawDarkTheme).
@@ -144,7 +143,7 @@ ChessCoachAppElementTest >> testArrowKeysMoveTheGameSelection [
 	self click: app loginButton.
 	self click: app loadMoreButton.
 	app selectGameAt: 1.
-	scripter pulse.
+	scripter settle.
 	app gameList requestFocus.
 	scripter keyClick: KeyboardKey down.
 	scripter syncContinue.
@@ -159,9 +158,8 @@ ChessCoachAppElementTest >> testBackgroundFailuresNeverEscapeTheirProcess [
 	"In the packaged app an unhandled error in a background process quits the app: every block the pages run in the background is guarded, logged and shown"
 
 	self shouldnt: [ app backgroundRunner value: [ 1 / 0 ] ] raise: Error.
-	scripter pulse.
-	self assert:
-		(session errorLog contents includesSubstring: 'ZeroDivide')
+	scripter settle.
+	self assert: (session errorLog contents includesSubstring: 'ZeroDivide')
 ]
 
 { #category : 'tests' }
@@ -172,9 +170,9 @@ ChessCoachAppElementTest >> testBoardSettingsReachTheOpenOpeningTree [
 	self click: app loadMoreButton.
 	session explorer: LichessExplorerClientStub new.
 	element := app openOpeningTree: app openings newTree.
-	scripter pulse.
+	scripter settle.
 	session settings at: 'boardTheme' put: 'Blue'.
-	scripter pulse.
+	scripter settle.
 	self assert: element board theme equals: 'Blue'
 ]
 
@@ -185,10 +183,10 @@ ChessCoachAppElementTest >> testClickingTheDropdownsFiltersTheGames [
 	session login.
 	session loadMoreGames.
 	app showPage: #Games.
-	scripter pulse.
+	scripter settle.
 	games := app games.
 	session saveReview: (session newReviewFor: games first).
-	scripter pulse.
+	scripter settle.
 	self choose: 'In progress' in: app reviewSelect.
 	self assert: app games size equals: 1.
 	(Delay forMilliseconds: 600) wait.
@@ -202,11 +200,11 @@ ChessCoachAppElementTest >> testClosingTheShownGamePageGoesBackToGames [
 	self click: app loginButton.
 	self click: app loadMoreButton.
 	app selectGameAt: 1.
-	scripter pulse.
+	scripter settle.
 	app playThrough: app selectedEntry.
-	scripter pulse.
+	scripter settle.
 	app closeTab: app playThroughTab.
-	scripter pulse.
+	scripter settle.
 	self assert: app gameView isAttachedToSceneGraph
 ]
 
@@ -217,18 +215,17 @@ ChessCoachAppElementTest >> testCoachAndPlayThroughOpenInClosableTabs [
 	self click: app loginButton.
 	self click: app loadMoreButton.
 	app selectGameAt: 1.
-	scripter pulse.
+	scripter settle.
 	app gameView newAnalysis.
-	scripter pulse.
+	scripter settle.
 	coach := app coach.
 	self assert: coach isAttachedToSceneGraph.
 	self
 		assert: (app navigation items asArray collect: [ :each | each id ])
-		equals:
-		#( #Home #Stats #Games #Openings #Endgames #Settings #Help #Coach ).
+		equals: #( #Home #Stats #Games #Openings #Endgames #Settings #Help #Coach ).
 	coachTab := app navigation items asArray last.
 	app showPage: #Stats.
-	scripter pulse.
+	scripter settle.
 	self assert: (coach review instVarNamed: #pausedAt) notNil.
 	app showTab: coachTab.
 	scripter pulse.
@@ -249,10 +246,10 @@ ChessCoachAppElementTest >> testEndgamesPage [
 	self click: app loginButton.
 	self click: app loadMoreButton.
 	app showPage: #Endgames.
-	scripter pulse.
+	scripter settle.
 	endgames := app endgamesElement.
 	self assert: endgames isAttachedToSceneGraph.
-	scripter pulse.
+	scripter settle.
 	self assert: endgames stats notNil.
 	self assert: endgames maxPieces equals: 4
 ]
@@ -265,14 +262,12 @@ ChessCoachAppElementTest >> testEveryPageTitleIsAtTheSamePlace [
 	places := #( #Stats #Games #Settings ) collect: [ :page |
 			          | title |
 			          app showPage: page.
-			          scripter pulse.
-			          scripter pulse.
+			          scripter settle.
+			          scripter settle.
 			          app space root allChildrenBreadthFirstDo: [ :each |
 					          ((each isKindOf: ToLabel) and: [
-							           each text asString = page asString and: [
-								           each isAttachedToSceneGraph and: [
-									           (self isInATab: each) not ] ] ]) ifTrue: [
-						          title := each ] ].
+						           each text asString = page asString and: [ each isAttachedToSceneGraph and: [ (self isInATab: each) not ] ] ])
+						          ifTrue: [ title := each ] ].
 			          title bounds inSpace topLeft ].
 	self assert: places asSet size = 1 description: places printString
 ]
@@ -283,15 +278,15 @@ ChessCoachAppElementTest >> testGamesFilterByReviewState [
 	| games |
 	session login.
 	session loadMoreGames.
-	scripter pulse.
+	scripter settle.
 	games := app games.
 	session saveReview: (session newReviewFor: games first).
-	scripter pulse.
+	scripter settle.
 	self assert: (app isReviewed: games first).
 	self assert: (app reviewStateOf: games first) equals: 'inProgress'.
 	self deny: (app isReviewed: games second).
 	app filterByReview: 'unreviewed'.
-	scripter pulse.
+	scripter settle.
 	self assert: app games size equals: games size - 1.
 	app filterByReview: 'inProgress'.
 	scripter pulse.
@@ -309,12 +304,12 @@ ChessCoachAppElementTest >> testGamesListedWhileOnStatsShowLater [
 	"As at startup with reviews: the list is filled while the app is on Stats, then the Games page is opened"
 
 	app showPage: #Stats.
-	scripter pulse.
+	scripter settle.
 	self click: app loginButton.
 	self click: app loadMoreButton.
-	scripter pulse.
+	scripter settle.
 	app showPage: #Games.
-	scripter pulse.
+	scripter settle.
 	app selectGameAt: 1.
 	scripter pulse.
 	self deny: scripter space hasLayoutError.
@@ -326,9 +321,8 @@ ChessCoachAppElementTest >> testHelpGroupsAreNotCollapsible [
 
 	| groups |
 	app showPage: #Help.
-	scripter pulse.
-	groups := app helpElement allChildrenBreadthFirstSelect: [ :each |
-		          each isKindOf: MMGroupElement ].
+	scripter settle.
+	groups := app helpElement allChildrenBreadthFirstSelect: [ :each | each isKindOf: MMGroupElement ].
 	self assert: groups notEmpty.
 	self deny: (groups anySatisfy: [ :each | each isCollapsible ])
 ]
@@ -344,10 +338,10 @@ ChessCoachAppElementTest >> testHelpIconOpensItsTooltipOnClick [
 			 padding: (BlInsets all: 30);
 			 addChild: icon;
 			 yourself).
-	helpScripter pulse.
-	helpScripter testClick onChildFromBlock: [ :root | icon ].
+	helpScripter settle.
+	helpScripter click onChildFromBlock: [ :root | icon ].
 	helpScripter syncContinue.
-	helpScripter pulse.
+	helpScripter settle.
 	self assert: icon currentTooltipWindow notNil.
 	self assert: icon currentTooltipWindow isOpened
 ]
@@ -390,12 +384,12 @@ ChessCoachAppElementTest >> testLichessUsernameInSettings [
 
 	| settings |
 	app showPage: #Settings.
-	scripter pulse.
+	scripter settle.
 	settings := app settingsElement.
 	self deny: app loadMoreButton isEnabled.
 	settings lichessField text: 'alice'.
 	settings validateLichess.
-	scripter pulse.
+	scripter settle.
 	self assert: session username equals: 'alice'.
 	self deny: session isLoggedIn.
 	self assert: (settings texts includes: 'OK: alice').
@@ -452,22 +446,18 @@ ChessCoachAppElementTest >> testLogoutKeepsGamesListed [
 ChessCoachAppElementTest >> testNavigation [
 
 	| games stats header |
-	self
-		assert: app gamesPage isAttachedToSceneGraph
-		description: 'starts on Games without reviews'.
+	self assert: app gamesPage isAttachedToSceneGraph description: 'starts on Games without reviews'.
 	self deny: app dashboard isAttachedToSceneGraph.
 	header := app navigation header.
 	self assert: header bounds inSpace left equals: 0.
-	self
-		assert: header height > header width
-		description: 'tabs in a column on the left'.
+	self assert: header height > header width description: 'tabs in a column on the left'.
 	app showPage: #Stats.
-	scripter pulse.
+	scripter settle.
 	self assert: app dashboard isAttachedToSceneGraph.
 	self deny: app gamesPage isAttachedToSceneGraph.
 	games := app gamesPage.
 	app showPage: #Games.
-	scripter pulse.
+	scripter settle.
 	self assert: app gamesPage == games description: 'pages are kept'.
 	stats := app pageButton: #Stats.
 	self assert: stats labelText asString equals: 'Stats'
@@ -482,29 +472,24 @@ ChessCoachAppElementTest >> testNewAnalysisMarksThenReviewsAndIsListed [
 	engine := StockfishEngineStub new.
 	session analyser: (GameAnalyser engine: engine).
 	session explorer: LichessExplorerClientStub new.
-	session classifier: (AnswerClassifier
-			 client: (OllamaClientStub new replyContent: '{"tags":[]}')
-			 taxonomy: MistakeTaxonomy default).
-	queue := AnalysisQueue
-		         session: session
-		         analyser: (GameAnalyser engine: engine).
+	session classifier:
+		(AnswerClassifier client: (OllamaClientStub new replyContent: '{"tags":[]}') taxonomy: MistakeTaxonomy default).
+	queue := AnalysisQueue session: session analyser: (GameAnalyser engine: engine).
 	session analysisQueue: queue.
 	app selectGameAt: 2.
-	scripter pulse.
+	scripter settle.
 	app gameView newAnalysis.
-	scripter pulse.
+	scripter settle.
 	coach := app coach.
 	self assert: coach mode equals: #marking.
-	self
-		assert: queue pendingGameIds first
-		equals: app games second gameId.
+	self assert: queue pendingGameIds first equals: app games second gameId.
 	coach showPly: 1.
 	coach noteField text: 'felt wrong'.
 	coach markShown.
 	review := coach review.
 	self assert: (review isMarked: 1).
 	coach doneMarking.
-	scripter pulse.
+	scripter settle.
 	self assert: coach mode equals: #moment.
 	self assert: coach shownMoment ply equals: 1.
 	self assert: coach shownMoment isMarked.
@@ -515,15 +500,11 @@ ChessCoachAppElementTest >> testNewAnalysisMarksThenReviewsAndIsListed [
 	scripter pulse.
 	self assert: app coach isNil.
 	self assert: app gameView isAttachedToSceneGraph.
-	self assert:
-		(app gameView reviewsZone children first children first labelText
-			 asString beginsWith: 'Analysis 1 · ').
+	self assert: (app gameView reviewsZone children first children first labelText asString beginsWith: 'Analysis 1 · ').
 	session deleteReview: review.
 	app gameView updateReviews.
 	self assert: (session reviewsFor: app selectedEntry) isEmpty.
-	self
-		assert: app gameView reviewsZone children first text asString
-		equals: 'No analysis yet.'
+	self assert: app gameView reviewsZone children first text asString equals: 'No analysis yet.'
 ]
 
 { #category : 'tests - failures' }
@@ -531,19 +512,16 @@ ChessCoachAppElementTest >> testOllamaTestFailureIsShownNotFatal [
 	"Faouzi's hard quit: a failing Test (here, a reply that isn't JSON) used a non-local return inside the background block"
 
 	| settings |
-	session classifier: (AnswerClassifier
-			 client: (OllamaClientStub new replyContent: 'not json')
-			 taxonomy: MistakeTaxonomy default).
+	session classifier: (AnswerClassifier client: (OllamaClientStub new replyContent: 'not json') taxonomy: MistakeTaxonomy default).
 	scripter space extent: 1200 @ 1800.
 	app showPage: #Settings.
-	scripter pulse.
+	scripter settle.
 	settings := app settingsElement.
 	settings showSection: 'Analysis'.
-	scripter pulse.
+	scripter settle.
 	self shouldnt: [ settings testModel ] raise: Error.
-	scripter pulse.
-	self assert:
-		(settings texts anySatisfy: [ :each | each beginsWith: 'Error: ' ])
+	scripter settle.
+	self assert: (settings texts anySatisfy: [ :each | each beginsWith: 'Error: ' ])
 ]
 
 { #category : 'tests' }
@@ -552,20 +530,16 @@ ChessCoachAppElementTest >> testOnlyReviewedGamesAreQueuedForAnalysis [
 	| queue |
 	self click: app loginButton.
 	self click: app loadMoreButton.
-	queue := AnalysisQueue
-		         session: session
-		         analyser: (GameAnalyser engine: StockfishEngineStub new).
+	queue := AnalysisQueue session: session analyser: (GameAnalyser engine: StockfishEngineStub new).
 	session analysisQueue: queue.
 	app startBackgroundAnalysis.
 	app updateFromSession.
 	self assert: queue pendingGameIds isEmpty.
 	app selectGameAt: 2.
-	scripter pulse.
+	scripter settle.
 	app gameView newAnalysis.
-	scripter pulse.
-	self
-		assert: queue pendingGameIds asArray
-		equals: { app games second gameId }.
+	scripter settle.
+	self assert: queue pendingGameIds asArray equals: { app games second gameId }.
 	queue stop
 ]
 
@@ -577,13 +551,13 @@ ChessCoachAppElementTest >> testOpeningsBuildAnOpeningTree [
 	self click: app loadMoreButton.
 	session explorer: LichessExplorerClientStub new.
 	app showPage: #Openings.
-	scripter pulse.
+	scripter settle.
 	self assert: app openings isAttachedToSceneGraph.
 	tree := app openings newTree.
 	self assert: tree ratings equals: #(  ).
 	element := app openOpeningTree: tree.
-	scripter pulse.
-	scripter pulse.
+	scripter settle.
+	scripter settle.
 	self assert: element isAttachedToSceneGraph.
 	self assert: element message equals: nil.
 	self assert: tree builtOn notNil.
@@ -598,7 +572,7 @@ ChessCoachAppElementTest >> testOpeningsDropdownListsItsOptions [
 			          ('One' -> 1).
 			          ('Two' -> 2) }.
 	scripter space root addChild: select popupListElement.
-	scripter pulse.
+	scripter settle.
 	self assert: select popupListElement isAttachedToSceneGraph.
 	self assert: select selectedDataItem value equals: 1
 ]
@@ -609,25 +583,17 @@ ChessCoachAppElementTest >> testRowsShowTheAnalysisState [
 	| queue first |
 	self click: app loginButton.
 	self click: app loadMoreButton.
-	queue := AnalysisQueue
-		         session: session
-		         analyser: (GameAnalyser engine: StockfishEngineStub new).
+	queue := AnalysisQueue session: session analyser: (GameAnalyser engine: StockfishEngineStub new).
 	session analysisQueue: queue.
 	queue enqueueUnanalysed.
-	scripter pulse.
+	scripter settle.
 	first := app games first.
-	self
-		assert: (app analysisIconNameFor: first)
-		equals: 'outlined_hourglassempty'.
-	self assert:
-		(app analysisLabel text asString includesSubstring: '20 games left').
+	self assert: (app analysisIconNameFor: first) equals: 'outlined_hourglassempty'.
+	self assert: (app analysisLabel text asString includesSubstring: '20 games left').
 	queue runNext.
-	scripter pulse.
-	self
-		assert: (app analysisIconNameFor: first)
-		equals: 'outlined_checkcircle'.
-	self assert:
-		(app analysisLabel text asString includesSubstring: '19 games left')
+	scripter settle.
+	self assert: (app analysisIconNameFor: first) equals: 'outlined_checkcircle'.
+	self assert: (app analysisLabel text asString includesSubstring: '19 games left')
 ]
 
 { #category : 'tests' }
@@ -636,13 +602,11 @@ ChessCoachAppElementTest >> testSelectingARowOpensTheGameView [
 	| info |
 	self click: app loginButton.
 	self click: app loadMoreButton.
-	scripter pulse.
+	scripter settle.
 	self click: app gameRows first.
 	self assert: app gameView isAttachedToSceneGraph.
 	self assert: app selectedEntry == app games first.
-	self
-		assert: app gameView reviewsZone children first text asString
-		equals: 'No analysis yet.'.
+	self assert: app gameView reviewsZone children first text asString equals: 'No analysis yet.'.
 	info := app gameView infoLines.
 	self assert: (info first beginsWith: 'White: ').
 	self assert: (info second beginsWith: 'Black: ').
@@ -676,28 +640,25 @@ ChessCoachAppElementTest >> testSettingsPage [
 
 	| settings chessCom |
 	chessCom := ChessComAPIClientStub new.
-	chessCom
-		at: 'https://api.chess.com/pub/player/bob'
-		answer: (Dictionary new
-				 at: 'username' put: 'bob';
-				 yourself).
+	chessCom at: 'https://api.chess.com/pub/player/bob' answer: (Dictionary new
+			 at: 'username' put: 'bob';
+			 yourself).
 	session chessComAPIClient: chessCom.
 	session analyser: (GameAnalyser engine: StockfishEngineStub new).
 	session classifier: (AnswerClassifier
-			 client: (OllamaClientStub new replyContent:
-					  '{"tags":[{"tag":"missed-opponent-threat","confidence":0.9}]}')
+			 client: (OllamaClientStub new replyContent: '{"tags":[{"tag":"missed-opponent-threat","confidence":0.9}]}')
 			 taxonomy: MistakeTaxonomy default).
 	"The whole page fits without scrolling"
 	scripter space extent: 1200 @ 1800.
 	app showPage: #Settings.
-	scripter pulse.
+	scripter settle.
 	settings := app settingsElement.
 	self assert: settings isAttachedToSceneGraph.
 	settings showSection: 'Analysis'.
-	scripter pulse.
+	scripter settle.
 	self assert: (settings texts includes: 'Depth: 18').
 	settings showSection: 'Accounts'.
-	scripter pulse.
+	scripter settle.
 	self click: (settings buttonLabeled: '+').
 	self assert: session settings gamesPerLoad equals: 30.
 	self assert: (settings texts includes: 'Games per Load more: 30').
@@ -705,8 +666,7 @@ ChessCoachAppElementTest >> testSettingsPage [
 	scripter pulse.
 	self click: (settings buttonLabeled: 'Livius').
 	self assert: session settings pieceSet equals: 'Livius'.
-	self assert:
-		(settings previewBoard pieceSet isKindOf: LiviusPieceSet).
+	self assert: (settings previewBoard pieceSet isKindOf: LiviusPieceSet).
 	self click: (settings buttonLabeled: 'Blue').
 	self assert: session settings boardTheme equals: 'Blue'.
 	self assert: settings previewBoard theme equals: 'Blue'.
@@ -714,8 +674,7 @@ ChessCoachAppElementTest >> testSettingsPage [
 	scripter pulse.
 	settings chessComField text: 'nobody'.
 	self click: (settings buttonLabeled: 'Validate').
-	self assert:
-		(settings texts includes: 'Not found: no such Chess.com player').
+	self assert: (settings texts includes: 'Not found: no such Chess.com player').
 	self assert: session chessComUsername isNil.
 	settings chessComField text: 'Bob'.
 	"A second click on the same button right away would count as a double click"
@@ -732,8 +691,7 @@ ChessCoachAppElementTest >> testSettingsPage [
 	self assert: (settings texts includes: '2 models installed').
 	self choose: (settings buttonLabeled: 'llama3.1:8b').
 	self assert: session settings ollamaModel equals: 'llama3.1:8b'.
-	self assert:
-		(settings texts includes: 'Validated only with qwen2.5:7b-instruct').
+	self assert: (settings texts includes: 'Validated only with qwen2.5:7b-instruct').
 	settings showSection: 'Analysis'.
 	scripter pulse.
 	self click: (settings buttonLabeled: '✓ Long thinks').
@@ -745,20 +703,16 @@ ChessCoachAppElementTest >> testSettingsShowTheAttribution [
 
 	| texts |
 	app showPage: #Settings.
-	scripter pulse.
+	scripter settle.
 	app settingsElement showSection: 'About'.
-	scripter pulse.
+	scripter settle.
 	texts := OrderedCollection new.
 	app settingsElement allChildrenBreadthFirstDo: [ :each |
-		(each isKindOf: ToLabel) ifTrue: [ texts add: each text asString ].
-		(each isKindOf: ToButton) ifTrue: [
-			each label ifNotNil: [ :label | texts add: label text asString ] ] ].
-	self assert: (texts anySatisfy: [ :each |
-			 each includesSubstring: 'Done with Pharo' ]).
-	self assert: (texts anySatisfy: [ :each |
-			 each includesSubstring: 'Copyright © 2026 Guille Polito' ]).
-	self assert: (texts anySatisfy: [ :each |
-			 each includesSubstring: 'MIT License' ]).
+			(each isKindOf: ToLabel) ifTrue: [ texts add: each text asString ].
+			(each isKindOf: ToButton) ifTrue: [ each label ifNotNil: [ :label | texts add: label text asString ] ] ].
+	self assert: (texts anySatisfy: [ :each | each includesSubstring: 'Done with Pharo' ]).
+	self assert: (texts anySatisfy: [ :each | each includesSubstring: 'Copyright © 2026 Guille Polito' ]).
+	self assert: (texts anySatisfy: [ :each | each includesSubstring: 'MIT License' ]).
 	self assert: (texts includes: 'https://github.com/guillep/chess-coach')
 ]
 
@@ -767,10 +721,10 @@ ChessCoachAppElementTest >> testSettingsTabsShowOneSection [
 
 	| settings shown |
 	app showPage: #Settings.
-	scripter pulse.
+	scripter settle.
 	settings := app settingsElement.
 	settings showSection: 'About'.
-	scripter pulse.
+	scripter settle.
 	shown := settings shownSections.
 	self assert: shown size equals: 1.
 	self assert: settings indexButtons size equals: 4
@@ -783,7 +737,7 @@ ChessCoachAppElementTest >> testSetupWizard [
 	session settings at: 'setupDone' put: false.
 	self assert: session isFirstRun.
 	wizard := app showWizard.
-	scripter pulse.
+	scripter settle.
 	self deny: app navigation isAttachedToSceneGraph.
 	self assert: wizard currentStep equals: #welcome.
 	wizard next.
@@ -791,14 +745,13 @@ ChessCoachAppElementTest >> testSetupWizard [
 	self assert: (wizard texts includes: 'Login').
 	session login.
 	wizard next.
-	self assert: (wizard texts includes:
-			 'If Test fails, install it with: brew install stockfish').
+	self assert: (wizard texts includes: 'If Test fails, install it with: brew install stockfish').
 	wizard next.
 	self assert: wizard currentStep equals: #ollama.
 	wizard next.
 	self assert: wizard currentStep equals: #done.
 	wizard finish.
-	scripter pulse.
+	scripter settle.
 	self assert: (session settings at: 'setupDone').
 	self assert: app navigation isAttachedToSceneGraph.
 	self assert: app games size equals: 20.
@@ -815,15 +768,13 @@ ChessCoachAppElementTest >> testShowInTheHomeNotificationOpensGames [
 			 title: '2 new games'
 			 text: '').
 	app showPage: #Home.
-	scripter pulse.
+	scripter settle.
 	app home update.
-	scripter pulse.
+	scripter settle.
 	app home allChildrenBreadthFirstDo: [ :each |
-		(each isKindOf: ToButton) ifTrue: [
-			(each label notNil and: [ each label text asString = 'Show' ])
-				ifTrue: [ show := each ] ] ].
+		(each isKindOf: ToButton) ifTrue: [ (each label notNil and: [ each label text asString = 'Show' ]) ifTrue: [ show := each ] ] ].
 	BlSpace simulateClickOn: show.
-	scripter pulse.
+	scripter settle.
 	self assert: app navigation selecter selectedIndexes asArray equals: #( 3 )
 ]
 
@@ -833,24 +784,19 @@ ChessCoachAppElementTest >> testSortingKeepsTheShownGameSelected [
 	| reviewed column |
 	session login.
 	session loadMoreGames.
-	scripter pulse.
+	scripter settle.
 	reviewed := app games last.
 	session saveReview: (session newReviewFor: reviewed).
-	scripter pulse.
+	scripter settle.
 	app selectGameAt: app games size.
-	scripter pulse.
+	scripter settle.
 	column := app gameTable columns last.
 	column nextSort.
-	app gameTable dispatchEvent:
-		(ToTableColumnSortRequestEvent column: column).
+	app gameTable dispatchEvent: (ToTableColumnSortRequestEvent column: column).
 	scripter pulse.
-	self assert:
-		(app games first == reviewed or: [ app games last == reviewed ]).
-	self
-		deny: app games last == reviewed
-		description: 'reviewed games first'.
-	self assert:
-		(app games at: app gameList selectionModel firstIndex) == reviewed
+	self assert: (app games first == reviewed or: [ app games last == reviewed ]).
+	self deny: app games last == reviewed description: 'reviewed games first'.
+	self assert: (app games at: app gameList selectionModel firstIndex) == reviewed
 ]
 
 { #category : 'tests' }
@@ -867,9 +813,9 @@ ChessCoachAppElementTest >> testStatsAndOpeningsRememberTheChoices [
 
 	| openings |
 	app showPage: #Stats.
-	scripter pulse.
+	scripter settle.
 	app dashboard chooseSpeed: 'blitz'.
-	scripter pulse.
+	scripter settle.
 	self assert: (session settings at: 'statsSpeed') equals: 'blitz'.
 	app dashboard speed: nil.
 	app updateDashboard.
@@ -886,14 +832,13 @@ ChessCoachAppElementTest >> testStatsAndOpeningsRememberTheChoices [
 ChessCoachAppElementTest >> testStatsFilterByTimeControl [
 
 	app showPage: #Stats.
-	scripter pulse.
+	scripter settle.
 	app dashboard chooseSpeed: 'rapid'.
-	scripter pulse.
+	scripter settle.
 	self assert: app dashboard speed equals: 'rapid'.
 	self assert: (app dashboard
 			 allChildrenBreadthFirstDetect: [ :each |
-					 (each isKindOf: ToToggleButton) and: [
-						 each isChecked and: [ each labelText asString = '✓ Rapid' ] ] ]
+			 (each isKindOf: ToToggleButton) and: [ each isChecked and: [ each labelText asString = '✓ Rapid' ] ] ]
 			 ifFound: [ :each | true ]
 			 ifNone: [ false ])
 ]
@@ -905,11 +850,11 @@ ChessCoachAppElementTest >> testSwitchingBackToGamesWithGamesListed [
 	self click: app loginButton.
 	self click: app loadMoreButton.
 	app selectGameAt: 3.
-	scripter pulse.
+	scripter settle.
 	app showPage: #Stats.
-	scripter pulse.
+	scripter settle.
 	app updateFromSession.
-	scripter pulse.
+	scripter settle.
 	app showPage: #Games.
 	scripter pulse.
 	self assert: app selectedEntry == app games third.
@@ -928,18 +873,14 @@ ChessCoachAppElementTest >> testTheBellShowsUnreadNotifications [
 			 kind: #newGames
 			 title: '2 new games'
 			 text: 'Downloaded from your accounts').
-	scripter pulse.
+	scripter settle.
 	self assert: app bellBadge isVisible description: 'dot after posting'.
-	self
-		assert: app bell bounds inSpace right > (app space extent x - 60)
-		description: 'bell at the right'.
+	self assert: app bell bounds inSpace right > (app space extent x - 60) description: 'bell at the right'.
 	BlSpace simulateMouseDownOn: app bell.
-	scripter pulse.
-	self
-		assert: app notificationsWindow currentWindow notNil
-		description: 'popup open'.
+	scripter settle.
+	self assert: app notificationsWindow currentWindow notNil description: 'popup open'.
 	self assert: session notifications unreadCount equals: 0.
-	scripter pulse.
+	scripter settle.
 	self deny: app bellBadge isVisible description: 'no dot once read'
 ]
 
@@ -949,14 +890,12 @@ ChessCoachAppElementTest >> testTheGameListScrollbarIsBesideTheRows [
 	| scrollbar |
 	self click: app loginButton.
 	self click: app loadMoreButton.
-	scripter pulse.
-	scrollbar := app gameList children detect: [ :each |
-		             each isKindOf: ToScrollbarElement ].
+	scripter settle.
+	scrollbar := app gameList children detect: [ :each | each isKindOf: ToScrollbarElement ].
 	self assert: scrollbar constraints ignoredByLayout.
 	self
 		assert: app gameList innerElement bounds inSpace bottom
-		closeTo:
-		app gameList bounds inSpace bottom - app gameList padding bottom
+		closeTo: app gameList bounds inSpace bottom - app gameList padding bottom
 ]
 
 { #category : 'tests' }
@@ -968,9 +907,8 @@ ChessCoachAppElementTest >> testTheGameTableKeepsItsColumnsWhenFirstShownFromAno
 	statsApp showPage: #Stats.
 	statsScripter := self scripterOn: statsApp.
 	statsApp showPage: #Games.
-	4 timesRepeat: [ statsScripter pulse ].
-	lefts := statsApp gameTable header cellContainers collect: [ :each |
-		         each bounds inSpace left ].
+	4 timesRepeat: [ statsScripter settle ].
+	lefts := statsApp gameTable header cellContainers collect: [ :each | each bounds inSpace left ].
 	self assert: lefts asSet size equals: lefts size
 ]
 
@@ -989,10 +927,8 @@ ChessCoachAppElementTest >> testTheLogoNeedsNoRepository [
 ChessCoachAppElementTest >> testTimeControlDropdownSaysWhatItFilters [
 
 	app showPage: #Games.
-	scripter pulse.
-	self
-		assert: app speedSelect selectedDataItem key
-		equals: 'All time controls'
+	scripter settle.
+	self assert: app speedSelect selectedDataItem key equals: 'All time controls'
 ]
 
 { #category : 'tests' }
@@ -1015,12 +951,10 @@ ChessCoachAppElementTest >> testUpdateButtonIsEnabledWhenANewerVersionExists [
 			 current: 'v1.1.1' tags: #( 'v1.2.0' ) failure: nil;
 			 yourself).
 	session checkForUpdate.
-	scripter pulse.
+	scripter settle.
 	self assert: app updateButton isEnabled.
-	self
-		assert: app updateButton labelText asString
-		equals: 'Update to v1.2.0'.
+	self assert: app updateButton labelText asString equals: 'Update to v1.2.0'.
 	app updateApp.
-	scripter pulse.
+	scripter settle.
 	self deny: app updateButton isAttachedToSceneGraph
 ]

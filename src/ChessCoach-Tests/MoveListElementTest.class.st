@@ -30,8 +30,7 @@ MoveListElementTest >> testClickingAMoveEnablesArrowKeys [
 	list game: (PGNParser new parse: '1. e4 e5 2. Nf3').
 	scripter := BlDevScripter new.
 	scripter element: list.
-	scripter testClick onChildFromBlock: [ :element |
-		(element childAt: 3) childAt: 2 ].
+	scripter click onChildFromBlock: [ :element | (element childAt: 3) childAt: 2 ].
 	scripter keyClick: KeyboardKey right.
 	scripter syncPlay.
 	self assert: list selectedMoveIndex equals: 2

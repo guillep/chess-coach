@@ -115,11 +115,11 @@ ChessComImportTest >> testAppFiltersTheListBySpeed [
 	scripter element: app.
 	scripter space extent: 1200 @ 700.
 	app showPage: #Games.
-	scripter pulse.
+	scripter settle.
 	ids := [ app games collect: [ :each | each gameId ] ].
 	self assert: ids value size equals: 3.
 	app filterBySpeed: 'blitz'.
-	scripter pulse.
+	scripter settle.
 	self assert: ids value equals: #( 'chesscom-101' ).
 	app filterBySpeed: nil.
 	scripter pulse.

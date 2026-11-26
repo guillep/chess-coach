@@ -18,7 +18,7 @@ CoachElementTest >> answer: aString [
 
 	coach answerField text: aString.
 	coach submitText.
-	scripter pulse
+	scripter settle
 ]
 
 { #category : 'helpers' }
@@ -31,10 +31,9 @@ CoachElementTest >> arrowsOfStyle: aSymbol [
 { #category : 'helpers' }
 CoachElementTest >> clickOn: aSquare [
 
-	scripter testClick onChildFromBlock: [ :root |
-		coach board squareElementAt: aSquare ].
+	scripter click onChildFromBlock: [ :root | coach board squareElementAt: aSquare ].
 	scripter syncContinue.
-	scripter pulse
+	scripter settle
 ]
 
 { #category : 'helpers' }
@@ -67,43 +66,34 @@ CoachElementTest >> setUp [
 	fixture := CoachReviewTest new.
 	fixture setUp.
 	review := fixture newReview.
-	session := (LichessAPIClientStub withGames: 0) newSessionOn:
-		           FileSystem memory root.
+	session := (LichessAPIClientStub withGames: 0) newSessionOn: FileSystem memory root.
 	coach := CoachElement new.
 	coach backgroundRunner: [ :work | work value ].
 	coach session: session entry: nil review: review.
 	scripter := BlDevScripter new.
 	scripter element: coach.
 	scripter space extent: 1100 @ 700.
-	scripter pulse
+	scripter settle
 ]
 
 { #category : 'tests' }
 CoachElementTest >> testAWholeMoment [
 
 	self assert: coach mode equals: #list.
-	self assert:
-		(self momentRows includes: 'Move 2 (Nf3) · only move found · −0.00').
-	self assert:
-		(self momentRows includes: 'Move 4 (Ng5) · mistake · −2.00').
-	self
-		assert: (coach stateIconNameOf: review moments last)
-		equals: 'outlined_radiobuttonunchecked'.
+	self assert: (self momentRows includes: 'Move 2 (Nf3) · only move found · −0.00').
+	self assert: (self momentRows includes: 'Move 4 (Ng5) · mistake · −2.00').
+	self assert: (coach stateIconNameOf: review moments last) equals: 'outlined_radiobuttonunchecked'.
 	coach continueReview.
-	scripter pulse.
+	scripter settle.
 	self assert: review currentQuestion kind equals: #whatDidYouSee.
 	self assert: (self zoneTexts includes: 'I calculated the line').
 	self answer: 'The bishop'.
-	self assert:
-		(self zoneTexts includes: 'Well found: no mistake to tag.').
+	self assert: (self zoneTexts includes: 'Well found: no mistake to tag.').
 	self assert: review moments first labels isEmpty.
-	self
-		assert: (coach stateIconNameOf: review moments first)
-		equals: 'outlined_checkcircle'.
+	self assert: (coach stateIconNameOf: review moments first) equals: 'outlined_checkcircle'.
 	coach nextMoment.
-	scripter pulse.
-	self assert: (coach header text asString includesSubstring:
-			 'Moment 2 of 2 · move 4 (Ng5)').
+	scripter settle.
+	self assert: (coach header text asString includesSubstring: 'Moment 2 of 2 · move 4 (Ng5)').
 	self assert: coach board orientation equals: #white.
 	"First find what punishes Ng5, on the position after it: one move"
 	self assert: review currentQuestion kind equals: #refutation.
@@ -112,71 +102,49 @@ CoachElementTest >> testAWholeMoment [
 	self clickOn: 'd5'.
 	self clickOn: 'h7'.
 	self clickOn: 'h6'.
-	self
-		assert: (self arrowsOfStyle: #candidate) asArray
-		equals: #( 'h7h6' ).
+	self assert: (self arrowsOfStyle: #candidate) asArray equals: #( 'h7h6' ).
 	self assert: (self zoneTexts includes: 'Marked: h6').
 	self clickOn: 'e1'.
 	self clickOn: 'e5'.
 	self assert: coach message equals: 'Illegal move'.
 	coach submitMoves.
-	scripter pulse.
+	scripter settle.
 	self assert: (self zoneTexts includes: 'Why did you play Ng5?').
-	self assert:
-		(self zoneTexts includes: 'It looked natural (intuition)').
+	self assert: (self zoneTexts includes: 'It looked natural (intuition)').
 	self deny: (self zoneTexts includes: 'Intuition').
 	coach addQuickAnswer: 'It looked natural (intuition)'.
 	coach addQuickAnswer: 'No time'.
-	self
-		assert: coach answerField text asString
-		equals: 'It looked natural (intuition). No time. '.
+	self assert: coach answerField text asString equals: 'It looked natural (intuition). No time. '.
 	self answer: 'I wanted to attack f7'.
-	self assert: (coach history children anySatisfy: [ :each |
-				 (each isKindOf: ToLabel) and: [
-					 each text asString = '→ I wanted to attack f7' ] ]).
+	self assert:
+		(coach history children anySatisfy: [ :each | (each isKindOf: ToLabel) and: [ each text asString = '→ I wanted to attack f7' ] ]).
 	"Then the candidates, on the position before my move"
-	self
-		assert: (self arrowsOfStyle: #played) asArray
-		equals: #( 'f3g5' ).
+	self assert: (self arrowsOfStyle: #played) asArray equals: #( 'f3g5' ).
 	self clickOn: 'd2'.
 	self clickOn: 'd3'.
-	self
-		assert: (self arrowsOfStyle: #candidate) asArray
-		equals: #( 'd2d3' ).
+	self assert: (self arrowsOfStyle: #candidate) asArray equals: #( 'd2d3' ).
 	self assert: (self zoneTexts includes: 'Marked: d3').
 	coach submitMoves.
 	scripter pulse.
-	self assert:
-		(self zoneTexts includes: 'You didn''t consider d4. Why?').
+	self assert: (self zoneTexts includes: 'You didn''t consider d4. Why?').
 	self assert: (self zoneTexts includes: 'I didn''t see it').
-	self
-		assert: (self arrowsOfStyle: #subject) asArray
-		equals: #( 'd2d4' ).
+	self assert: (self arrowsOfStyle: #subject) asArray equals: #( 'd2d4' ).
 	3 timesRepeat: [ self answer: 'I did not see it' ].
 	self assert: review currentMoment isRevealed.
 	self assert: (self zoneTexts includes: 'Engine line (+0.50): d4').
-	self assert: (self zoneTexts anySatisfy: [ :each |
-			 each beginsWith: 'The refutation: ' ]).
-	self assert:
-		(self zoneTexts includes:
-			 'Missed opponent threat · perception (70%)').
+	self assert: (self zoneTexts anySatisfy: [ :each | each beginsWith: 'The refutation: ' ]).
+	self assert: (self zoneTexts includes: 'Missed opponent threat · perception (70%)').
 	self assert: review mistakeRecords first labels size equals: 1.
-	self
-		assert: (self arrowsOfStyle: #engine) asArray
-		equals: #( 'd2d4' ).
+	self assert: (self arrowsOfStyle: #engine) asArray equals: #( 'd2d4' ).
 	coach toggleTag: 'missed-opponent-threat'.
 	self assert: review mistakeRecords first labels isEmpty.
 	coach toggleTag: 'missed-opponent-threat'.
-	self assert:
-		(self zoneTexts includes:
-			 'Missed opponent threat · perception (70%)').
+	self assert: (self zoneTexts includes: 'Missed opponent threat · perception (70%)').
 	self assert: review mistakeRecords first labels size equals: 1.
 	coach nextMoment.
 	scripter pulse.
 	self assert: coach mode equals: #summary.
-	self assert:
-		(self zoneTexts anySatisfy: [ :each |
-			 each beginsWith: 'Move 4 (Ng5)' ])
+	self assert: (self zoneTexts anySatisfy: [ :each | each beginsWith: 'Move 4 (Ng5)' ])
 ]
 
 { #category : 'tests' }
@@ -203,13 +171,11 @@ CoachElementTest >> testBusyShowsAProgressBar [
 	| bars circles |
 	coach backgroundRunner: [ :aBlock | "the work never ends" ].
 	coach busy: 'Working' while: [ ] then: [ ].
-	circles := coach allChildrenBreadthFirstSelect: [ :each |
-		           each isKindOf: ToProgressCircle ].
+	circles := coach allChildrenBreadthFirstSelect: [ :each | each isKindOf: ToProgressCircle ].
 	self assert: circles size equals: 1.
 	coach showBusy: 'Half way' progress: 1 / 2.
-	scripter pulse.
-	bars := coach allChildrenBreadthFirstSelect: [ :each |
-		        each isKindOf: ToProgressBar ].
+	scripter settle.
+	bars := coach allChildrenBreadthFirstSelect: [ :each | each isKindOf: ToProgressBar ].
 	self assert: bars size equals: 1.
 	self assert: bars first valueInPercentage equals: 50
 ]
@@ -227,16 +193,12 @@ CoachElementTest >> testCopyFENAndPGN [
 			 fitContent;
 			 addChildren: buttons;
 			 yourself).
-	space pulse.
+	space settle.
 	[
 		BlSpace simulateClickOn: buttons first.
-		self
-			assert: Clipboard clipboardText asString
-			equals: coach board chessPosition fen.
+		self assert: Clipboard clipboardText asString equals: coach board chessPosition fen.
 		BlSpace simulateClickOn: buttons second.
-		self assert:
-			(Clipboard clipboardText asString includesSubstring: '4. Ng5') ]
-		ensure: [ Clipboard clipboardText: saved ]
+		self assert: (Clipboard clipboardText asString includesSubstring: '4. Ng5') ] ensure: [ Clipboard clipboardText: saved ]
 ]
 
 { #category : 'tests' }
@@ -245,26 +207,22 @@ CoachElementTest >> testListShowsPastMomentsAndReviewsOneMoment [
 	| moment |
 	moment := review moments last.
 	coach showMoment: moment.
-	scripter pulse.
+	scripter settle.
 	self assert: (self zoneTexts includes: 'Not reviewed yet.').
 	coach reviewShown.
-	scripter pulse.
+	scripter settle.
 	self assert: review currentMoment equals: moment.
 	coach submitMoves.
 	self answer: 'Attack'.
 	coach stop.
-	scripter pulse.
+	scripter settle.
 	self assert: coach mode equals: #list.
 	self assert: review currentMoment isNil.
-	self assert:
-		(self momentRows includes: 'Move 4 (Ng5) · mistake · −2.00').
-	self
-		assert: (coach stateIconNameOf: moment)
-		equals: 'outlined_timelapse'.
+	self assert: (self momentRows includes: 'Move 4 (Ng5) · mistake · −2.00').
+	self assert: (coach stateIconNameOf: moment) equals: 'outlined_timelapse'.
 	coach showMoment: moment.
 	scripter pulse.
-	self assert: (self zoneTexts includes:
-			 'You started this moment but did not finish it.').
+	self assert: (self zoneTexts includes: 'You started this moment but did not finish it.').
 	coach reviewShown.
 	self assert: review currentQuestion kind equals: #candidates
 ]
@@ -300,13 +258,11 @@ CoachElementTest >> testMarkingWithTheKeyboard [
 CoachElementTest >> testRefreshKeepsTheAnswerBeingTyped [
 
 	coach continueReview.
-	scripter pulse.
+	scripter settle.
 	coach answerField text: 'I was looking at'.
 	coach refresh.
-	scripter pulse.
-	self
-		assert: coach answerField text asString
-		equals: 'I was looking at'.
+	scripter settle.
+	self assert: coach answerField text asString equals: 'I was looking at'.
 	self answer: 'The bishop'.
 	self assert: coach answerField isNil
 ]
@@ -320,21 +276,17 @@ CoachElementTest >> testReport [
 	coach submitMoves.
 	self answer: 'Attack'.
 	coach submitMoves.
-	scripter pulse.
+	scripter settle.
 	[ review currentMoment isRevealed ] whileFalse: [ self answer: 'No' ].
 	review classifyPending.
 	coach nextMoment.
 	scripter pulse.
 	self assert: coach mode equals: #summary.
 	self assert: (self zoneTexts includes: 'Reviewed 2 of 2 moments').
-	self assert:
-		(self zoneTexts includes: 'Mistakes 1 · Only moves found 1').
-	self assert:
-		(self zoneTexts includes: 'Perception: Missed opponent threat ×1').
-	self assert: (self zoneTexts includes:
-			 'Not enough earlier reviews to compare with yet.').
-	self assert:
-		(self zoneTexts anySatisfy: [ :each | each beginsWith: 'Total ' ])
+	self assert: (self zoneTexts includes: 'Mistakes 1 · Only moves found 1').
+	self assert: (self zoneTexts includes: 'Perception: Missed opponent threat ×1').
+	self assert: (self zoneTexts includes: 'Not enough earlier reviews to compare with yet.').
+	self assert: (self zoneTexts anySatisfy: [ :each | each beginsWith: 'Total ' ])
 ]
 
 { #category : 'tests' }
@@ -365,35 +317,32 @@ CoachElementTest >> testSelectingAMomentRowOpensIt [
 
 	| table |
 	coach currentZone allChildrenBreadthFirstDo: [ :each |
-			(table isNil and: [ each isKindOf: MMTableElement ]) ifTrue: [
-				table := each ] ].
+		(table isNil and: [ each isKindOf: MMTableElement ]) ifTrue: [ table := each ] ].
 	self assert: table notNil.
-	self deny: (coach currentZone children anySatisfy: [ :each |
-				 (each isKindOf: ToButton) and: [
-					 each labelText asString beginsWith: 'Move ' ] ]).
+	self deny:
+		(coach currentZone children anySatisfy: [ :each |
+			 (each isKindOf: ToButton) and: [ each labelText asString beginsWith: 'Move ' ] ]).
 	table list selecter selectIndex: 2.
-	scripter pulse.
+	scripter settle.
 	self assert: coach mode equals: #moment.
-	self assert:
-		(coach header text asString includesSubstring: 'move 4 (Ng5)')
+	self assert: (coach header text asString includesSubstring: 'move 4 (Ng5)')
 ]
 
 { #category : 'tests' }
 CoachElementTest >> testShiftReturnAnswers [
 
 	coach continueReview.
-	scripter pulse.
+	scripter settle.
 	coach answerField text: 'The bishop'.
 	coach answerField requestFocus.
-	scripter pulse.
+	scripter settle.
 	scripter keyDown: KeyboardKey shiftLeft.
 	scripter keyClick: KeyboardKey enter.
 	scripter keyUp: KeyboardKey shiftLeft.
 	scripter syncContinue.
-	scripter pulse.
+	scripter settle.
 	self assert: (coach history children anySatisfy: [ :each |
-				 (each isKindOf: ToLabel) and: [
-					 each text asString includesSubstring: 'The bishop' ] ])
+			 (each isKindOf: ToLabel) and: [ each text asString includesSubstring: 'The bishop' ] ])
 ]
 
 { #category : 'tests' }
@@ -402,15 +351,15 @@ CoachElementTest >> testSkippingAMoment [
 	| moment |
 	moment := review moments last.
 	coach showMoment: moment.
-	scripter pulse.
+	scripter settle.
 	self assert: (self zoneTexts includes: 'Skip this moment').
 	coach toggleDismissShown.
-	scripter pulse.
+	scripter settle.
 	self assert: (self zoneTexts includes: 'You skipped this moment.').
 	self assert: (self zoneTexts includes: 'Bring it back').
 	self assert: (coach stateIconNameOf: moment) equals: 'outlined_block'.
 	coach toggleDismissShown.
-	scripter pulse.
+	scripter settle.
 	self assert: (self zoneTexts includes: 'Not reviewed yet.')
 ]
 
@@ -428,7 +377,7 @@ CoachElementTest >> testTheTimeBoxCutsBeforeTheNextMoment [
 
 	review timeBox: -1.
 	coach startNextAfter: 0.
-	scripter pulse.
+	scripter settle.
 	self assert: coach mode equals: #summary.
 	self assert: review currentMoment isNil
 ]

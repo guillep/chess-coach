@@ -412,7 +412,7 @@ CoachElement >> buildReportTime [
 
 { #category : 'building' }
 CoachElement >> buildReveal [
-	"What the engine says (with a button to play on from the position on an analysis board), the time spent and the tags, in sections"
+	"What the engine says (with a button to play on from the position on an analysis board) and the tags, in sections"
 
 	| reveal before after |
 	reveal := review revealOf: shownMoment.
@@ -430,8 +430,6 @@ CoachElement >> buildReveal [
 				ifFalse: [
 						currentZone addChild: (self paragraph:
 								 'Stockfish isn''t available, so there is no engine evaluation for this moment.') ].
-			currentZone addChild: (self paragraph:
-					 'Time on this moment: ' , (self minutes: shownMoment seconds)).
 			currentZone addChild: self analyseButton ].
 	self section: 'Mistakes' build: [ self buildTagsOf: shownMoment ].
 	currentZone addChild:

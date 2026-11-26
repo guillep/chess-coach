@@ -142,7 +142,7 @@ CoachElementTest >> testAWholeMoment [
 	self assert: (self zoneTexts includes: 'Missed opponent threat · perception (70%)').
 	self assert: review mistakeRecords first labels size equals: 1.
 	coach nextMoment.
-	scripter pulse.
+	scripter settle.
 	self assert: coach mode equals: #summary.
 	self assert: (self zoneTexts anySatisfy: [ :each | each beginsWith: 'Move 4 (Ng5)' ])
 ]

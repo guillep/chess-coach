@@ -57,6 +57,7 @@ ChessCoachAppElement >> analysisIconNameFor: aGameIndexEntry [
 	state = #ready ifTrue: [ ^ 'outlined_checkcircle' ].
 	state = #queued ifTrue: [ ^ 'outlined_hourglassempty' ].
 	state = #analysing ifTrue: [ ^ 'outlined_sync' ].
+	state = #failed ifTrue: [ ^ 'outlined_erroroutline' ].
 	^ nil
 ]
 

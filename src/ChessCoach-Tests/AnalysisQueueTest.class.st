@@ -32,6 +32,20 @@ AnalysisQueueTest >> setUp [
 ]
 
 { #category : 'tests' }
+AnalysisQueueTest >> testAFailingGameIsLoggedAndTheQueueGoesOn [
+
+	| games |
+	games := session games.
+	engine beFailing.
+	queue enqueueUnanalysed.
+	self assert: queue runNext.
+	self assert: (queue stateOf: games first) equals: #failed.
+	self assert: queue progress isNil.
+	self assert: (session errorLog contents includesSubstring: 'Engine failure').
+	self assert: queue pendingGameIds size equals: 2
+]
+
+{ #category : 'tests' }
 AnalysisQueueTest >> testAlreadyAnalysedGamesAreReady [
 
 	session analysisFor: session games first.

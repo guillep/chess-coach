@@ -13,7 +13,8 @@ Class {
 		'ready',
 		'paused',
 		'process',
-		'mutex'
+		'mutex',
+		'failed'
 	],
 	#category : 'ChessCoach-App',
 	#package : 'ChessCoach-App'
@@ -41,13 +42,14 @@ AnalysisQueue >> announce: aGameIdOrNil [
 
 { #category : 'queueing' }
 AnalysisQueue >> enqueue: aGameIndexEntry [
-	"Queue one game at the front, unless it is analysed, being analysed or already queued"
+	"Queue one game at the front, unless it is analysed, being analysed or already queued. A game that failed is tried again."
 
 	| id |
 	id := aGameIndexEntry gameId.
 	(mutex critical: [
 		 (pending includes: id) or: [
 			 current = id or: [ ready includes: id ] ] ]) ifTrue: [ ^ self ].
+	mutex critical: [ failed remove: id ifAbsent: [ ] ].
 	(session isAnalysed: aGameIndexEntry)
 		ifTrue: [ mutex critical: [ ready add: id ] ]
 		ifFalse: [ mutex critical: [ pending addFirst: id ] ].
@@ -56,14 +58,14 @@ AnalysisQueue >> enqueue: aGameIndexEntry [
 
 { #category : 'queueing' }
 AnalysisQueue >> enqueueUnanalysed [
-	"Queue the stored games that have no analysis yet, newest first"
+	"Queue the stored games that have no analysis yet, newest first. Games that failed stay out, so that one bad game doesn't run again and again."
 
 	session games do: [ :entry |
 			| id |
 			id := entry gameId.
 			(mutex critical: [
 				 (pending includes: id) or: [
-					 current = id or: [ ready includes: id ] ] ]) ifFalse: [
+					 current = id or: [ (ready includes: id) or: [ failed includes: id ] ] ] ]) ifFalse: [
 					(session isAnalysed: entry)
 						ifTrue: [ mutex critical: [ ready add: id ] ]
 						ifFalse: [ mutex critical: [ pending add: id ] ] ] ].
@@ -123,9 +125,9 @@ AnalysisQueue >> resume [
 
 { #category : 'running' }
 AnalysisQueue >> runNext [
-	"Analyse the first queued game; answer whether there was one"
+	"Analyse the first queued game; answer whether there was one. An error is logged and the game marked failed: it must not escape my process, where it would quit a packaged app."
 
-	| entry |
+	| entry succeeded |
 	mutex critical: [
 			pending ifNotEmpty: [
 					current := pending removeFirst.
@@ -133,11 +135,19 @@ AnalysisQueue >> runNext [
 	current ifNil: [ ^ false ].
 	entry := session games detect: [ :each | each gameId = current ].
 	self announce: current.
-	session analyse: entry with: analyser onProgress: [ :done :total |
-			progress := done -> total.
-			self announce: entry gameId ].
+	succeeded := [
+	             session analyse: entry with: analyser onProgress: [ :done :total |
+			             progress := done -> total.
+			             self announce: entry gameId ].
+	             true ]
+		             on: Error
+		             do: [ :error |
+			             session logError: error.
+			             false ].
 	mutex critical: [
-			ready add: current.
+			(succeeded
+				 ifTrue: [ ready ]
+				 ifFalse: [ failed ]) add: current.
 			current := nil.
 			progress := nil ].
 	self announce: entry gameId.
@@ -151,6 +161,7 @@ AnalysisQueue >> setSession: aChessCoachSession analyser: aGameAnalyser [
 	analyser := aGameAnalyser.
 	pending := OrderedCollection new.
 	ready := Set new.
+	failed := Set new.
 	paused := false.
 	mutex := Mutex new
 ]
@@ -170,7 +181,7 @@ AnalysisQueue >> start [
 
 { #category : 'accessing' }
 AnalysisQueue >> stateOf: aGameIndexEntry [
-	"#ready, #analysing, #queued or #unknown (not queued yet)"
+	"#ready, #analysing, #queued, #failed or #unknown (not queued yet)"
 
 	| id |
 	id := aGameIndexEntry gameId.
@@ -183,7 +194,10 @@ AnalysisQueue >> stateOf: aGameIndexEntry [
 							  ifFalse: [
 									  (pending includes: id)
 										  ifTrue: [ #queued ]
-										  ifFalse: [ #unknown ] ] ] ]
+										  ifFalse: [
+											  (failed includes: id)
+												  ifTrue: [ #failed ]
+												  ifFalse: [ #unknown ] ] ] ] ]
 ]
 
 { #category : 'running' }

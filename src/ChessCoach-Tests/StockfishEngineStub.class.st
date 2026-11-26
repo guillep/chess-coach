@@ -8,7 +8,8 @@ Class {
 		'scores',
 		'analysedCount',
 		'moveScores',
-		'missing'
+		'missing',
+		'failing'
 	],
 	#category : 'ChessCoach-Tests',
 	#package : 'ChessCoach-Tests'
@@ -18,6 +19,7 @@ Class {
 StockfishEngineStub >> analyse: aFEN multiPV: lineCount depth: aDepth searchMoves: someUCIMoves [
 	"Lines start with a rook-pawn move of the side to move, legal in the opening positions the tests use"
 
+	failing = true ifTrue: [ self error: 'Engine failure' ].
 	analysedCount := analysedCount + 1.
 	someUCIMoves ifNotEmpty: [
 			^ someUCIMoves asArray collect: [ :move |
@@ -44,6 +46,13 @@ StockfishEngineStub >> analysedCount [
 StockfishEngineStub >> at: aFEN whiteCentipawns: someScores [
 
 	scores at: aFEN put: someScores
+]
+
+{ #category : 'accessing' }
+StockfishEngineStub >> beFailing [
+	"Fail every analysis, as an engine error would"
+
+	failing := true
 ]
 
 { #category : 'accessing' }

@@ -27,6 +27,7 @@ GameReviewsElement >> analysisStateText [
 	state := session analysisQueue stateOf: entry.
 	state = #analysing ifTrue: [ ^ 'analysing now' ].
 	state = #queued ifTrue: [ ^ 'waiting in the queue' ].
+	state = #failed ifTrue: [ ^ 'analysis failed (details in errors.log)' ].
 	^ 'not analysed yet'
 ]
 

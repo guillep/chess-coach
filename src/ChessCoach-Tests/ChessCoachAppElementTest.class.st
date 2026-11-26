@@ -98,6 +98,28 @@ ChessCoachAppElementTest >> setUp [
 ]
 
 { #category : 'tests' }
+ChessCoachAppElementTest >> testAHiddenPageFollowsTheTheme [
+	"A page hidden while the theme changes has the new theme when shown"
+
+	| settings button lightBackground |
+	scripter space extent: 1200 @ 1200.
+	app showPage: #Games.
+	scripter settle.
+	button := (app gamesPage allChildrenBreadthFirstSelect: [ :each | each isKindOf: ToButton ]) first.
+	lightBackground := button background paint color.
+	app showPage: #Settings.
+	scripter settle.
+	settings := app settingsElement.
+	settings showSection: 'Appearance'.
+	scripter settle.
+	self click: (settings buttonLabeled: 'Dark').
+	scripter settle.
+	app showPage: #Games.
+	scripter settle.
+	self deny: button background paint color equals: lightBackground
+]
+
+{ #category : 'tests' }
 ChessCoachAppElementTest >> testAnalysisBoardOpensInAClosableTabAndPausesTheQueue [
 
 	| board |

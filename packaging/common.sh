@@ -19,7 +19,7 @@ mkdir -p "$WORK"
 cd "$WORK"
 curl -fsSL https://get.pharo.org/64/140+vm | bash
 
-./pharo Pharo.image metacello install "tonel://$ROOT_PATH/src" BaselineOfChessCoach
+./pharo Pharo.image metacello install "tonel://$ROOT_PATH/src" ChessCoach
 
 if [ "${RUN_TESTS:-0}" = 1 ]; then
   ./pharo Pharo.image test --fail-on-failure "ChessCoach-Tests" "Mamotreto-Tests"

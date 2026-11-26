@@ -650,7 +650,7 @@ CoachElement >> busyElement [
 						   ToProgressBar new
 							   hMatchParent;
 							   height: 8;
-							   valueInPercentage: (progress * 100) rounded;
+							   valueInPercentage: progress;
 							   yourself ]);
 		  yourself
 ]

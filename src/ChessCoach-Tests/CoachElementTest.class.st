@@ -177,7 +177,7 @@ CoachElementTest >> testBusyShowsAProgressBar [
 	scripter settle.
 	bars := coach allChildrenBreadthFirstSelect: [ :each | each isKindOf: ToProgressBar ].
 	self assert: bars size equals: 1.
-	self assert: bars first valueInPercentage equals: 50
+	self assert: bars first valueInPercentage equals: 1 / 2
 ]
 
 { #category : 'tests' }

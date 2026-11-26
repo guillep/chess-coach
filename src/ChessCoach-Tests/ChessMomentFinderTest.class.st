@@ -182,6 +182,14 @@ ChessMomentFinderTest >> testMarksOnMyOpponentsMovesAreLeftOut [
 ]
 
 { #category : 'tests' }
+ChessMomentFinderTest >> testMatingIsNotAMoment [
+
+	| moments |
+	moments := (EvaluationJumpFinder on: (self analysisWithWhiteCentipawns: #( #( '#-2' ) #( '#-1' ) #( '#0' ) ))) moments.
+	self assert: moments isEmpty
+]
+
+{ #category : 'tests' }
 ChessMomentFinderTest >> testNoOnlyMoveWhenSeveralMovesAreGoodOrTheGameIsDecided [
 
 	self assert: (OnlyMoveFinder on:
@@ -248,6 +256,14 @@ ChessMomentFinderTest >> testSmallDropsAreIgnoredAndBlackDropsCount [
 	self assert: moments first ply equals: 2.
 	self assert: moments first color equals: #black.
 	self assert: (moments first kinds includes: #mistake)
+]
+
+{ #category : 'tests' }
+ChessMomentFinderTest >> testStayingDecisivelyWinningIsNotAMoment [
+
+	| moments |
+	moments := (EvaluationJumpFinder on: (self analysisWithWhiteCentipawns: #( #( 3700 ) #( '#10' ) #( 900 ) ))) moments.
+	self assert: moments isEmpty
 ]
 
 { #category : 'tests' }

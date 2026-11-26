@@ -117,12 +117,13 @@ EngineLine >> moves [
 
 { #category : 'accessing' }
 EngineLine >> pawnsFor: aColor [
-	"The score in pawns from aColor's side. A forced mate counts as 100 pawns for the side that mates; mate 0 (the side to move is already mated, which I can't tell apart) counts as 0."
+	"The score in pawns from aColor's side. A forced mate counts as 100 pawns for the side that mates, mate 0 included: whiteWinPercent tells who mated."
 
 	| whitePawns |
-	whitePawns := mate
-		              ifNil: [ centipawns / 100 ]
-		              ifNotNil: [ mate sign * 100 ].
+	whitePawns := mate ifNil: [ centipawns / 100 ] ifNotNil: [
+			              whiteWinPercent > 50
+				              ifTrue: [ 100 ]
+				              ifFalse: [ -100 ] ].
 	^ aColor = #white
 		  ifTrue: [ whitePawns ]
 		  ifFalse: [ whitePawns negated ]

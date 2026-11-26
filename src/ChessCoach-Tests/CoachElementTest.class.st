@@ -141,6 +141,10 @@ CoachElementTest >> testAWholeMoment [
 	coach toggleTag: 'missed-opponent-threat'.
 	self assert: (self zoneTexts includes: 'Missed opponent threat · perception (70%)').
 	self assert: review mistakeRecords first labels size equals: 1.
+	"Any other tag is added from the dropdown"
+	(coach currentZone childWithId: #addTag) selecter selectIndex: 1.
+	scripter settle.
+	self assert: review mistakeRecords first labels size equals: 2.
 	coach nextMoment.
 	scripter settle.
 	self assert: coach mode equals: #summary.

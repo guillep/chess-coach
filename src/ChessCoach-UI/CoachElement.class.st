@@ -24,7 +24,6 @@ Class {
 		'shownMoment',
 		'walking',
 		'noteField',
-		'addingTag',
 		'replay',
 		'draft',
 		'draftQuestion',
@@ -476,31 +475,8 @@ CoachElement >> buildSummary [
 ]
 
 { #category : 'building' }
-CoachElement >> buildTagPickerFor: aMomentReview [
-	"Every tag not proposed yet, by category, with its description as tooltip"
-
-	| taxonomy proposed |
-	taxonomy := MistakeTaxonomy default.
-	proposed := aMomentReview labels collect: [ :each | each tagId ].
-	(taxonomy tags collect: [ :each | each category ]) asSet asArray sort
-		do: [ :category |
-				currentZone addChild: (self paragraph: category capitalized , ':').
-				currentZone addChild: (self row: ((taxonomy tags select: [ :tag |
-							   tag category = category and: [
-								   (proposed includes: tag id) not ] ]) collect: [ :tag |
-								  (self button: tag name do: [
-											   addingTag := false.
-											   self toggleTag: tag id ])
-									  tooltipString: tag description;
-									  yourself ])) ].
-	currentZone addChild: (self button: 'Cancel' do: [
-				 addingTag := false.
-				 self refresh ])
-]
-
-{ #category : 'building' }
 CoachElement >> buildTagsOf: aMomentReview [
-	"Each proposed tag is a toggle with a check box icon: checked counts as a mistake, unchecked doesn't. Its label says how sure the model was; a tag below the minimum confidence is only a 'maybe?', unchecked until I confirm it. The tag's description is its tooltip. When time trouble counts, it is shown as the main cause. Without the local model, the tag picker opens so the tags are chosen by hand. A move that was not a mistake has nothing to tag."
+	"Each proposed tag is a toggle with a check box icon: checked counts as a mistake, unchecked doesn't. Its label says how sure the model was; a tag below the minimum confidence is only a 'maybe?', unchecked until I confirm it. The tag's description is its tooltip. When time trouble counts, it is shown as the main cause. A dropdown adds any other tag; without the local model, it is how the tags are chosen by hand. A move that was not a mistake has nothing to tag."
 
 	| taxonomy labels manual |
 	(review isSuccess: aMomentReview) ifTrue: [
@@ -547,12 +523,7 @@ CoachElement >> buildTagsOf: aMomentReview [
 			button tooltipString: tag description.
 			label isTentative ifTrue: [ button opacity: 0.6 ].
 			currentZone addChild: button ].
-	(manual or: [ addingTag == true ])
-		ifTrue: [ self buildTagPickerFor: aMomentReview ]
-		ifFalse: [
-				currentZone addChild: (self button: 'Add a tag' do: [
-							 addingTag := true.
-							 self refresh ]) ]
+	currentZone addChild: (self tagDropdownFor: aMomentReview)
 ]
 
 { #category : 'building' }
@@ -1459,6 +1430,26 @@ CoachElement >> submitText [
 	self
 		runInBackground: [ review classifyPending ]
 		then: [ self refresh ]
+]
+
+{ #category : 'building' }
+CoachElement >> tagDropdownFor: aMomentReview [
+	"Every tag not proposed yet, as 'Category: name', in a dropdown that adds the one picked"
+
+	| taxonomy proposed tags |
+	taxonomy := MistakeTaxonomy default.
+	proposed := aMomentReview labels collect: [ :each | each tagId ].
+	tags := (taxonomy tags reject: [ :tag | proposed includes: tag id ])
+		        asArray sort: [ :a :b |
+		        a category < b category or: [
+			        a category = b category and: [ a name <= b name ] ] ].
+	^ (MMWidgets
+		   dropdown: (tags collect: [ :tag |
+				    tag category capitalized , ': ' , tag name -> tag id ])
+		   placeholder: 'Add a tag'
+		   do: [ :tagId | self toggleTag: tagId ])
+		  id: #addTag;
+		  yourself
 ]
 
 { #category : 'building' }

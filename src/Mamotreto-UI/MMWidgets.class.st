@@ -115,6 +115,19 @@ MMWidgets class >> dropdown: someAssociations [
 ]
 
 { #category : 'building' }
+MMWidgets class >> dropdown: someAssociations placeholder: aString do: aBlock [
+	"A dropdown of label -> value associations showing aString and nothing selected; each value chosen is passed to aBlock. For actions that pick from a list, such as adding a tag: the popup closes on a pick, on Escape or on a click outside."
+
+	| select |
+	select := self dropdown: someAssociations.
+	select selecter deselectAll.
+	select placeholderString: aString.
+	select addEventHandlerOn: ToSelectChangedEvent do: [ :event |
+			select selectedDataItem ifNotNil: [ :assoc | aBlock value: assoc value ] ].
+	^ select
+]
+
+{ #category : 'building' }
 MMWidgets class >> dropdown: someAssociations selecting: aValue do: aBlock [
 	"A dropdown of label -> value associations showing aValue (the first one if aValue isn't there); choosing another value passes it to aBlock. Selection events that don't change the value (Toplo sends one when the dropdown is set up) are ignored, so that aBlock can rebuild the dropdown. For settings and remembered filters."
 

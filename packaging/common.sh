@@ -1,4 +1,4 @@
-# Shared by build-macos.sh and build-windows.sh: a fresh Pharo 13 image with
+# Shared by build-macos.sh and build-windows.sh: a fresh Pharo 14 image with
 # Chessmate, then MMPackager writes PharoApplicationGenerator's project in
 # $WORK/build. Sourced with HERE set; sets WORK and VERSION.
 set -euo pipefail
@@ -17,7 +17,7 @@ WORK_PATH="$(native "$WORK")"
 rm -rf "$WORK"
 mkdir -p "$WORK"
 cd "$WORK"
-curl -fsSL https://get.pharo.org/64/130+vm | bash
+curl -fsSL https://get.pharo.org/64/140+vm | bash
 
 ./pharo Pharo.image metacello install "tonel://$ROOT_PATH/src" BaselineOfChessCoach
 

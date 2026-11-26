@@ -56,4 +56,4 @@ Chessmate checks for new releases and shows **Update** in its title bar when one
 
 ## Building
 
-`packaging/build-macos.sh` and `packaging/build-windows.sh` build the release zips from a fresh Pharo 13 image (`RUN_TESTS=1` also runs the tests). The macOS build is signed ad hoc, not notarized, which is why the quarantine flag has to be removed.
+`packaging/build-macos.sh` and `packaging/build-windows.sh` build the release zips from a fresh Pharo 14 image (`RUN_TESTS=1` also runs the tests). The macOS build is signed ad hoc, not notarized, which is why the quarantine flag has to be removed.

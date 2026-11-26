@@ -1,6 +1,6 @@
 Class {
 	#name : 'GameAnalysisElementTest',
-	#superclass : 'TestCase',
+	#superclass : 'MMSpaceTestCase',
 	#category : 'ChessCoach-Tests',
 	#package : 'ChessCoach-Tests'
 }
@@ -101,7 +101,7 @@ GameAnalysisElementTest >> testOperaGameLastPly [
 { #category : 'tests' }
 GameAnalysisElementTest >> testSelectedMoveStaysInView [
 
-	| pgn view space selected scroller |
+	| pgn view selected scroller |
 	pgn := String streamContents: [ :stream |
 			       1 to: 40 do: [ :n |
 					       stream nextPutAll: n printString , (n odd
@@ -109,7 +109,6 @@ GameAnalysisElementTest >> testSelectedMoveStaysInView [
 							        ifFalse: [ '. Ng1 Ng8 ' ]) ] ].
 	view := GameAnalysisElement new.
 	view game: (PGNParser new parse: pgn).
-	space := BlSpace new.
 	space extent: 700 @ 300.
 	space root addChild: view.
 	space settle.

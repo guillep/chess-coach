@@ -3,7 +3,7 @@ I check the skeleton of list pages: fixed actions, tabs filled for the selection
 "
 Class {
 	#name : 'MMListPageTest',
-	#superclass : 'TestCase',
+	#superclass : 'MMSpaceTestCase',
 	#instVars : [
 		'page',
 		'scripter',
@@ -55,7 +55,7 @@ MMListPageTest >> testTheTabsFollowTheSelectionAndAConfirmationTakesTheirPlace [
 	scripter settle.
 	self assert: (self shownTexts includes: 'More on PR 5').
 	page showInPane: (ToLabel text: 'Really?').
-	scripter pulse.
+	scripter settle.
 	self assert: (self shownTexts includes: 'Really?').
 	self deny: (self shownTexts includes: 'More on PR 5').
 	self assert: (page childWithId: #act) isAttachedToSceneGraph.

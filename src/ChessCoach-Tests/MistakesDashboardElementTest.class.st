@@ -1,6 +1,6 @@
 Class {
 	#name : 'MistakesDashboardElementTest',
-	#superclass : 'TestCase',
+	#superclass : 'MMSpaceTestCase',
 	#category : 'ChessCoach-Tests',
 	#package : 'ChessCoach-Tests'
 }
@@ -72,7 +72,7 @@ MistakesDashboardElementTest >> testEmptyState [
 { #category : 'tests' }
 MistakesDashboardElementTest >> testShowsFrequenciesPhasesTrendAndDetail [
 
-	| dashboard selected space |
+	| dashboard selected |
 	dashboard := MistakesDashboardElement new.
 	dashboard database: self database.
 	dashboard whenRecordSelectedDo: [ :record | selected := record ].
@@ -82,7 +82,6 @@ MistakesDashboardElementTest >> testShowsFrequenciesPhasesTrendAndDetail [
 	self assert: (dashboard texts includes: 'Perception').
 	dashboard selectTag: 'hope-chess'.
 	self assert: (dashboard texts includes: '2026-10-01 · game g1, move 11: too fast').
-	space := BlSpace new.
 	space extent: 1200 @ 1600.
 	space root addChild: dashboard.
 	4 timesRepeat: [ space settle ].

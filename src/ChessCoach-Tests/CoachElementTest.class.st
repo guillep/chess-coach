@@ -3,7 +3,7 @@ Drives CoachElement through a whole moment with stubbed Stockfish and Ollama (th
 "
 Class {
 	#name : 'CoachElementTest',
-	#superclass : 'TestCase',
+	#superclass : 'MMSpaceTestCase',
 	#instVars : [
 		'review',
 		'coach',
@@ -125,7 +125,7 @@ CoachElementTest >> testAWholeMoment [
 	self assert: (self arrowsOfStyle: #candidate) asArray equals: #( 'd2d3' ).
 	self assert: (self zoneTexts includes: 'Marked: d3').
 	coach submitMoves.
-	scripter pulse.
+	scripter settle.
 	self assert: (self zoneTexts includes: 'You didn''t consider d4. Why?').
 	self assert: (self zoneTexts includes: 'I didn''t see it').
 	self assert: (self arrowsOfStyle: #subject) asArray equals: #( 'd2d4' ).
@@ -183,10 +183,9 @@ CoachElementTest >> testBusyShowsAProgressBar [
 { #category : 'tests' }
 CoachElementTest >> testCopyFENAndPGN [
 
-	| buttons saved space |
+	| buttons saved |
 	saved := Clipboard clipboardText.
 	buttons := coach titleActions first: 2.
-	space := BlSpace new.
 	space extent: 400 @ 200.
 	space root addChild: (ToElement new
 			 layout: (BlLinearLayout horizontal cellSpacing: 10);
@@ -221,7 +220,7 @@ CoachElementTest >> testListShowsPastMomentsAndReviewsOneMoment [
 	self assert: (self momentRows includes: 'Move 4 (Ng5) · mistake · −2.00').
 	self assert: (coach stateIconNameOf: moment) equals: 'outlined_timelapse'.
 	coach showMoment: moment.
-	scripter pulse.
+	scripter settle.
 	self assert: (self zoneTexts includes: 'You started this moment but did not finish it.').
 	coach reviewShown.
 	self assert: review currentQuestion kind equals: #candidates
@@ -280,7 +279,7 @@ CoachElementTest >> testReport [
 	[ review currentMoment isRevealed ] whileFalse: [ self answer: 'No' ].
 	review classifyPending.
 	coach nextMoment.
-	scripter pulse.
+	scripter settle.
 	self assert: coach mode equals: #summary.
 	self assert: (self zoneTexts includes: 'Reviewed 2 of 2 moments').
 	self assert: (self zoneTexts includes: 'Mistakes 1 · Only moves found 1').

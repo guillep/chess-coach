@@ -1,6 +1,6 @@
 Class {
 	#name : 'MoveComparisonTableTest',
-	#superclass : 'TestCase',
+	#superclass : 'MMSpaceTestCase',
 	#category : 'ChessCoach-Tests',
 	#package : 'ChessCoach-Tests'
 }
@@ -41,7 +41,7 @@ MoveComparisonTableTest >> testDatabaseColumns [
 { #category : 'tests' }
 MoveComparisonTableTest >> testLaysOutInASpace [
 
-	| fixture session table space |
+	| fixture session table |
 	fixture := CoachReviewTest new.
 	fixture setUp.
 	session := (LichessAPIClientStub withGames: 0) newSessionOn: FileSystem memory root.
@@ -52,7 +52,6 @@ MoveComparisonTableTest >> testLaysOutInASpace [
 		         analysis: fixture analysisForTests
 		         candidates: Dictionary new
 		         runner: [ :aBlock | aBlock value ].
-	space := BlSpace new.
 	space extent: 400 @ 400.
 	space root addChild: (ToElement new
 			 layout: BlLinearLayout vertical;

@@ -1,6 +1,6 @@
 Class {
 	#name : 'ChessBoardElementTest',
-	#superclass : 'TestCase',
+	#superclass : 'MMSpaceTestCase',
 	#category : 'ChessCoach-Tests',
 	#package : 'ChessCoach-Tests'
 }

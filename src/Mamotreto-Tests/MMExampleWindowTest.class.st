@@ -3,7 +3,7 @@ The shell on its own: the example app's window, with its session on a memory fil
 "
 Class {
 	#name : 'MMExampleWindowTest',
-	#superclass : 'TestCase',
+	#superclass : 'MMSpaceTestCase',
 	#instVars : [
 		'session',
 		'window',
@@ -66,7 +66,7 @@ MMExampleWindowTest >> testGreetButtonRunsTheService [
 	button := self buttonLabelled: 'Greet'.
 	scripter click onChildFromBlock: [ :root | button ].
 	scripter syncContinue.
-	scripter pulse.
+	scripter settle.
 	self assert: session notifications visible first title equals: 'Hello'
 ]
 

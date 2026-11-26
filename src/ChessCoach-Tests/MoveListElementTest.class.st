@@ -1,6 +1,6 @@
 Class {
 	#name : 'MoveListElementTest',
-	#superclass : 'TestCase',
+	#superclass : 'MMSpaceTestCase',
 	#category : 'ChessCoach-Tests',
 	#package : 'ChessCoach-Tests'
 }

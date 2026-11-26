@@ -1,12 +1,11 @@
 Class {
 	#name : 'HomeElementTest',
-	#superclass : 'TestCase',
+	#superclass : 'MMSpaceTestCase',
 	#instVars : [
 		'root',
 		'api',
 		'session',
-		'home',
-		'space'
+		'home'
 	],
 	#category : 'ChessCoach-Tests',
 	#package : 'ChessCoach-Tests'
@@ -48,7 +47,6 @@ HomeElementTest >> setUp [
 	session login.
 	session loadMoreGames.
 	home := HomeElement new.
-	space := BlSpace new.
 	space extent: 1000 @ 800.
 	space root addChild: home.
 	home session: session.
@@ -239,9 +237,7 @@ HomeElementTest >> testNarrowWindowStacksWithoutChangingCells [
 	tops := home cards collect: [ :each | each position y ].
 	self assert: tops asSet size equals: 4.
 	self assert: (home cards allSatisfy: [ :each | each position x = 0 ]).
-	self
-		assert: (self widgets collect: [ :each | each cell ])
-		equals: cells
+	self assert: (self widgets collect: [ :each | each cell ]) equals: cells
 ]
 
 { #category : 'tests' }

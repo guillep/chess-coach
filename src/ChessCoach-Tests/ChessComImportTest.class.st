@@ -1,6 +1,6 @@
 Class {
 	#name : 'ChessComImportTest',
-	#superclass : 'TestCase',
+	#superclass : 'MMSpaceTestCase',
 	#instVars : [
 		'session',
 		'api'
@@ -122,7 +122,7 @@ ChessComImportTest >> testAppFiltersTheListBySpeed [
 	scripter settle.
 	self assert: ids value equals: #( 'chesscom-101' ).
 	app filterBySpeed: nil.
-	scripter pulse.
+	scripter settle.
 	self assert: ids value size equals: 3
 ]
 

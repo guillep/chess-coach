@@ -1,6 +1,6 @@
 Class {
 	#name : 'ChessCoachAppElementTest',
-	#superclass : 'TestCase',
+	#superclass : 'MMSpaceTestCase',
 	#instVars : [
 		'api',
 		'session',
@@ -132,7 +132,7 @@ ChessCoachAppElementTest >> testAppTheme [
 	self assert: (settings texts includes: '✓ Dark').
 	self assert: (app space root localTheme isKindOf: ToRawDarkTheme).
 	self click: (settings buttonLabeled: 'Light').
-	scripter pulse.
+	scripter settle.
 	self assert: session settings appTheme equals: 'Light'.
 	self deny: (app space root localTheme isKindOf: ToRawDarkTheme)
 ]
@@ -228,10 +228,10 @@ ChessCoachAppElementTest >> testCoachAndPlayThroughOpenInClosableTabs [
 	scripter settle.
 	self assert: (coach review instVarNamed: #pausedAt) notNil.
 	app showTab: coachTab.
-	scripter pulse.
+	scripter settle.
 	self assert: (coach review instVarNamed: #pausedAt) isNil.
 	app playThrough: app selectedEntry.
-	scripter pulse.
+	scripter settle.
 	self assert: app navigation items size equals: 9.
 	app navigation removeItem: coachTab.
 	scripter pulse.
@@ -289,10 +289,10 @@ ChessCoachAppElementTest >> testGamesFilterByReviewState [
 	scripter settle.
 	self assert: app games size equals: games size - 1.
 	app filterByReview: 'inProgress'.
-	scripter pulse.
+	scripter settle.
 	self assert: app games size equals: 1.
 	app filterByReview: 'reviewed'.
-	scripter pulse.
+	scripter settle.
 	self assert: app games isEmpty.
 	app filterByReview: nil.
 	scripter pulse.
@@ -311,7 +311,7 @@ ChessCoachAppElementTest >> testGamesListedWhileOnStatsShowLater [
 	app showPage: #Games.
 	scripter settle.
 	app selectGameAt: 1.
-	scripter pulse.
+	scripter settle.
 	self deny: scripter space hasLayoutError.
 	self assert: app gameView isAttachedToSceneGraph
 ]
@@ -494,10 +494,10 @@ ChessCoachAppElementTest >> testNewAnalysisMarksThenReviewsAndIsListed [
 	self assert: coach shownMoment ply equals: 1.
 	self assert: coach shownMoment isMarked.
 	coach stop.
-	scripter pulse.
+	scripter settle.
 	self assert: coach mode equals: #list.
 	app exitCoach.
-	scripter pulse.
+	scripter settle.
 	self assert: app coach isNil.
 	self assert: app gameView isAttachedToSceneGraph.
 	self assert: (app gameView reviewsZone children first children first labelText asString beginsWith: 'Analysis 1 · ').
@@ -663,7 +663,7 @@ ChessCoachAppElementTest >> testSettingsPage [
 	self assert: session settings gamesPerLoad equals: 30.
 	self assert: (settings texts includes: 'Games per Load more: 30').
 	settings showSection: 'Appearance'.
-	scripter pulse.
+	scripter settle.
 	self click: (settings buttonLabeled: 'Livius').
 	self assert: session settings pieceSet equals: 'Livius'.
 	self assert: (settings previewBoard pieceSet isKindOf: LiviusPieceSet).
@@ -671,7 +671,7 @@ ChessCoachAppElementTest >> testSettingsPage [
 	self assert: session settings boardTheme equals: 'Blue'.
 	self assert: settings previewBoard theme equals: 'Blue'.
 	settings showSection: 'Accounts'.
-	scripter pulse.
+	scripter settle.
 	settings chessComField text: 'nobody'.
 	self click: (settings buttonLabeled: 'Validate').
 	self assert: (settings texts includes: 'Not found: no such Chess.com player').
@@ -793,7 +793,7 @@ ChessCoachAppElementTest >> testSortingKeepsTheShownGameSelected [
 	column := app gameTable columns last.
 	column nextSort.
 	app gameTable dispatchEvent: (ToTableColumnSortRequestEvent column: column).
-	scripter pulse.
+	scripter settle.
 	self assert: (app games first == reviewed or: [ app games last == reviewed ]).
 	self deny: app games last == reviewed description: 'reviewed games first'.
 	self assert: (app games at: app gameList selectionModel firstIndex) == reviewed
@@ -856,10 +856,10 @@ ChessCoachAppElementTest >> testSwitchingBackToGamesWithGamesListed [
 	app updateFromSession.
 	scripter settle.
 	app showPage: #Games.
-	scripter pulse.
+	scripter settle.
 	self assert: app selectedEntry == app games third.
 	app selectGameAt: 2.
-	scripter pulse.
+	scripter settle.
 	self deny: scripter space hasLayoutError.
 	self assert: app gameView isAttachedToSceneGraph
 ]

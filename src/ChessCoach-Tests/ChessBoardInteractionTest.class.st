@@ -3,7 +3,7 @@ Move input, orientation and arrows of ChessBoardElement, driven through BlDevScr
 "
 Class {
 	#name : 'ChessBoardInteractionTest',
-	#superclass : 'TestCase',
+	#superclass : 'MMSpaceTestCase',
 	#instVars : [
 		'board',
 		'scripter',

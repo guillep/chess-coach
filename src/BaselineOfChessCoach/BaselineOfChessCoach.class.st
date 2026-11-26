@@ -19,7 +19,7 @@ BaselineOfChessCoach >> baseline: spec [
 
 			spec baseline: 'OSSubprocess' with: [ spec repository: 'github://pharo-contributions/OSSubprocess:v2.0.1/repository' ].
 
-			spec baseline: 'ApplicationGenerator' with: [ spec repository: 'github://tesonep/PharoApplicationGenerator:v1.0.0/src' ].
+			spec baseline: 'ApplicationGenerator' with: [ spec repository: 'github://tesonep/PharoApplicationGenerator:v2.0.0/src' ].
 
 			spec package: 'Mamotreto-Core'.
 
